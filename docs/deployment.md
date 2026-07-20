@@ -108,17 +108,17 @@ Connect `i3dnann/wst`, deploy branch `main`, and use the repository root.
 - `VITE_API_BASE_URL=/backend`
 - `NODE_VERSION=22`
 
-For same-origin administrator cookies, add this rule before the existing SPA fallback in `netlify.toml`, replacing the placeholder with the real HTTPS API hostname:
+For same-origin administrator cookies, `netlify.toml` proxies `/backend/*` to the World Star API on the VPS:
 
 ```toml
 [[redirects]]
   from = "/backend/*"
-  to = "https://api.your-domain.example/:splat"
+  to = "http://31.57.97.59:4177/:splat"
   status = 200
   force = true
 ```
 
-The existing `/*` rule must remain last. Trigger a new Netlify deployment after changing Vite environment variables or redirect rules.
+The existing `/*` rule must remain last. Port `4177` must allow inbound TCP traffic in Windows Firewall. Trigger a new Netlify deployment after changing Vite environment variables or redirect rules.
 
 ## Updates
 
