@@ -16,10 +16,14 @@ export function registerErrorHandler(app: FastifyInstance): void {
       });
     }
     if (error instanceof ZodError) {
+      const firstIssue = error.issues[0];
+      const field = firstIssue?.path.join(".");
       return reply.code(422).send({
         error: {
           code: "VALIDATION_ERROR",
-          message: "The request is invalid.",
+          message: firstIssue
+            ? `${field ? `${field}: ` : ""}${firstIssue.message}`
+            : "The request is invalid.",
           details: z.treeifyError(error),
           requestId: request.id,
         },

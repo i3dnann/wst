@@ -115,6 +115,15 @@ function optional(value: string): string | undefined {
   return value.trim() ? value.trim() : undefined;
 }
 
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
 function toIso(value: string): string | undefined {
   return value ? new Date(value).toISOString() : undefined;
 }
@@ -262,6 +271,7 @@ function valuesFromRecord(kind: RecordKind, record: AdminRecord): FormValues {
     const tournament = record.tournament as { id?: string } | null;
     const gangA = record.gangA as { id?: string } | null;
     const gangB = record.gangB as { id?: string } | null;
+    const winnerGang = record.winnerGang as { id?: string } | null;
     return {
       tournamentId: tournament?.id ?? valueOf(record, "tournamentId"),
       gangAId: gangA?.id ?? valueOf(record, "gangAId"),
@@ -269,6 +279,10 @@ function valuesFromRecord(kind: RecordKind, record: AdminRecord): FormValues {
       bestOf: valueOf(record, "bestOf"),
       scheduledAt: dateTimeInput(record.scheduledAt),
       status: valueOf(record, "status"),
+      gangAScore: valueOf(record, "gangAScore") || "0",
+      gangBScore: valueOf(record, "gangBScore") || "0",
+      winnerGangId: winnerGang?.id ?? valueOf(record, "winnerGangId"),
+      version: valueOf(record, "version") || "0",
     };
   }
   return {
@@ -332,7 +346,9 @@ function payloadFor(kind: RecordKind, values: FormValues) {
     };
   return {
     title: String(values.title ?? ""),
-    slug: String(values.slug ?? ""),
+    slug:
+      optional(String(values.slug ?? "")) ??
+      slugify(String(values.title ?? "")),
     description: optional(String(values.description ?? "")),
     imageUrl: optional(String(values.imageUrl ?? "")),
     location: optional(String(values.location ?? "")),
@@ -418,6 +434,7 @@ function RecordTableCells({
   if (kind === "match") {
     const gangA = record.gangA as { name?: string } | null;
     const gangB = record.gangB as { name?: string } | null;
+    const winner = record.winnerGang as { name?: string } | null;
     const tournament = record.tournament as { name?: string } | null;
     return (
       <>
@@ -425,7 +442,12 @@ function RecordTableCells({
           <strong>
             {gangA?.name ?? "TBD"} vs {gangB?.name ?? "TBD"}
           </strong>
-          <small>{tournament?.name ?? "Independent match"}</small>
+          <small>
+            {tournament?.name ?? "Independent match"}
+            {winner?.name
+              ? ` · Winner: ${winner.name} (${valueOf(record, "gangAScore")}-${valueOf(record, "gangBScore")})`
+              : ""}
+          </small>
         </td>
         <td>
           <span className="record-status active">
@@ -775,6 +797,52 @@ function RecordEditorFields({
           setValue={setValue}
           type="datetime-local"
         />
+        {values.version !== undefined ? (
+          <>
+            <Field
+              label="Gang A score"
+              name="gangAScore"
+              values={values}
+              setValue={setValue}
+              type="number"
+              required
+            />
+            <Field
+              label="Gang B score"
+              name="gangBScore"
+              values={values}
+              setValue={setValue}
+              type="number"
+              required
+            />
+            <SelectField
+              label="Winner and next-stage qualifier"
+              name="winnerGangId"
+              values={values}
+              setValue={setValue}
+              options={[
+                { value: "", label: "No winner selected" },
+                ...gangs
+                  .filter((item) =>
+                    [values.gangAId, values.gangBId].includes(item.id),
+                  )
+                  .map((item) => ({
+                    value: item.id,
+                    label: valueOf(item, "name"),
+                  })),
+              ]}
+            />
+            <p className="admin-form-note full-width">
+              Selecting a winner completes this match, marks the loser as
+              eliminated, and places the winner in the next bracket stage.
+            </p>
+          </>
+        ) : (
+          <p className="admin-form-note full-width">
+            Create the match first, then edit it to record scores and advance a
+            winner.
+          </p>
+        )}
       </>
     );
   return (
@@ -787,13 +855,7 @@ function RecordEditorFields({
         required
         full
       />
-      <Field
-        label="URL slug"
-        name="slug"
-        values={values}
-        setValue={setValue}
-        required
-      />
+      <Field label="URL slug" name="slug" values={values} setValue={setValue} />
       <Field
         label="Location"
         name="location"
@@ -828,7 +890,15 @@ function RecordEditorFields({
         name="status"
         values={values}
         setValue={setValue}
-        options={eventStatuses.map((value) => ({ value, label: value }))}
+        options={eventStatuses.map((value) => ({
+          value,
+          label:
+            value === "DRAFT"
+              ? "DRAFT (hidden from website)"
+              : value === "ARCHIVED"
+                ? "ARCHIVED (hidden from website)"
+                : `${value} (published)`,
+        }))}
       />
       <ToggleField
         label="Featured event"
@@ -903,7 +973,17 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
         if (kind === "player") return api.updatePlayer(selected.id, payload);
         if (kind === "tournament")
           return api.updateTournament(selected.id, payload);
-        if (kind === "match") return api.updateMatch(selected.id, payload);
+        if (kind === "match") {
+          const updated = await api.updateMatch(selected.id, payload);
+          const winnerGangId = optional(String(values.winnerGangId ?? ""));
+          if (!winnerGangId) return updated;
+          return api.advanceMatch(selected.id, {
+            winnerGangId,
+            gangAScore: Number(values.gangAScore ?? 0),
+            gangBScore: Number(values.gangBScore ?? 0),
+            version: Number(values.version ?? selected.version ?? 0),
+          });
+        }
         return api.updateEvent(selected.id, payload);
       }
       if (kind === "gang") return api.createGang(payload);
@@ -919,6 +999,7 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
       setValues(blankValues(kind));
       void queryClient.invalidateQueries();
     },
+    onError: (error) => toast.error(error.message),
   });
   const remove = useMutation({
     mutationFn: async (record: AdminRecord) => {

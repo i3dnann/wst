@@ -3293,7 +3293,7 @@ textarea:focus-visible {
 }
 .seed-manager li {
   display: grid;
-  grid-template-columns: 48px 1fr 36px;
+  grid-template-columns: 48px minmax(120px, 1fr) 112px 36px;
   align-items: center;
   gap: 9px;
   padding: 8px;
@@ -3302,6 +3302,12 @@ textarea:focus-visible {
 }
 .seed-manager li input {
   width: 48px;
+}
+.seed-manager li > select {
+  min-width: 0;
+  height: 32px;
+  padding: 0 7px;
+  font-size: 9px;
 }
 .seed-manager li > div {
   display: grid;
@@ -3729,6 +3735,17 @@ textarea:focus-visible {
   resize: vertical;
 }
 
+.admin-form-note {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgb(200 154 82 / 0.2);
+  border-radius: 10px;
+  background: rgb(200 154 82 / 0.06);
+  color: #a89677;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 .admin-toggle-field {
   flex-direction: row !important;
   align-items: center;
@@ -3951,6 +3968,15 @@ textarea:focus-visible {
 }
 
 @media (max-width: 760px) {
+  .seed-manager li {
+    grid-template-columns: 44px minmax(0, 1fr) 36px;
+  }
+
+  .seed-manager li > select {
+    grid-column: 2 / 4;
+    grid-row: 2;
+  }
+
   .admin-dataset-heading,
   .admin-table-toolbar {
     align-items: stretch;

@@ -113,9 +113,23 @@ const participantInputSchema = z.object({
   gangId: z.string().min(20).max(40),
   seed: z.number().int().min(1).max(256).optional(),
 });
-const participantSeedSchema = z.object({
-  seed: z.number().int().min(1).max(256),
-});
+const participantUpdateSchema = z
+  .object({
+    seed: z.number().int().min(1).max(256).optional(),
+    status: z
+      .enum([
+        "PENDING",
+        "APPROVED",
+        "REJECTED",
+        "WITHDRAWN",
+        "ELIMINATED",
+        "CHAMPION",
+      ])
+      .optional(),
+  })
+  .refine((input) => input.seed !== undefined || input.status !== undefined, {
+    message: "Provide a seed or participant status.",
+  });
 const eventInputSchema = z.object({
   title: z.string().trim().min(2).max(160),
   slug: slugSchema,
@@ -213,6 +227,74 @@ function bracketRoundName(roundNumber: number, totalRounds: number): string {
   if (remaining === 2) return "Semifinals";
   if (remaining === 3) return "Quarterfinals";
   return `Round of ${String(2 ** remaining)}`;
+}
+
+function assertWinnerHasHigherScore(
+  gangAId: string | null,
+  winnerGangId: string,
+  gangAScore: number,
+  gangBScore: number,
+): void {
+  const winnerScore = winnerGangId === gangAId ? gangAScore : gangBScore;
+  const loserScore = winnerGangId === gangAId ? gangBScore : gangAScore;
+  if (winnerScore <= loserScore)
+    throw new HttpError(
+      422,
+      "WINNER_SCORE_INVALID",
+      "The selected winner must have the higher score.",
+    );
+}
+
+type ProgressionMatch = {
+  id: string;
+  tournamentId: string | null;
+  nextMatchId: string | null;
+  winnerGangId: string | null;
+};
+
+async function clearDownstreamWinner(
+  tx: Prisma.TransactionClient,
+  source: ProgressionMatch,
+): Promise<void> {
+  if (!source.nextMatchId || !source.winnerGangId) return;
+  const next = await tx.match.findUnique({ where: { id: source.nextMatchId } });
+  if (!next) return;
+  if (next.winnerGangId) await clearDownstreamWinner(tx, next);
+
+  const slotData =
+    next.gangAId === source.winnerGangId
+      ? { gangAId: null }
+      : next.gangBId === source.winnerGangId
+        ? { gangBId: null }
+        : {};
+  await tx.match.update({
+    where: { id: next.id },
+    data: {
+      ...slotData,
+      gangAScore: null,
+      gangBScore: null,
+      winnerGangId: null,
+      status: "SCHEDULED",
+      finalizedAt: null,
+      finalizedByUserId: null,
+      version: { increment: 1 },
+    },
+  });
+  if (next.tournamentId) {
+    const restoredGangIds = [next.gangAId, next.gangBId].filter(
+      (gangId): gangId is string => Boolean(gangId),
+    );
+    if (restoredGangIds.length) {
+      await tx.tournamentParticipant.updateMany({
+        where: {
+          tournamentId: next.tournamentId,
+          gangId: { in: restoredGangIds },
+          status: { in: ["ELIMINATED", "CHAMPION"] },
+        },
+        data: { status: "APPROVED" },
+      });
+    }
+  }
 }
 
 function compact(input: object): Record<string, unknown> {
@@ -327,7 +409,10 @@ export function adminRoutes(app: FastifyInstance): void {
       include: {
         gangA: { select: { id: true, name: true, tag: true } },
         gangB: { select: { id: true, name: true, tag: true } },
+        winnerGang: { select: { id: true, name: true, tag: true } },
         tournament: { select: { id: true, name: true, slug: true } },
+        bracketRound: { select: { id: true, name: true, roundNumber: true } },
+        nextMatch: { select: { id: true, position: true } },
       },
       take: 500,
     });
@@ -557,18 +642,22 @@ export function adminRoutes(app: FastifyInstance): void {
     "/api/v1/admin/tournaments/:id/participants/:participantId",
     async (request) => {
       const auth = requirePermission(request, "tournament.bracket.manage");
-      const input = participantSeedSchema.parse(request.body);
+      const input = participantUpdateSchema.parse(request.body);
       const participant = await prisma.tournamentParticipant.update({
         where: {
           id: request.params.participantId,
           tournamentId: request.params.id,
         },
-        data: { seed: input.seed, status: "APPROVED", approvedAt: new Date() },
+        data: compact({
+          seed: input.seed,
+          status: input.status,
+          approvedAt: input.status === "APPROVED" ? new Date() : undefined,
+        }),
         include: { gang: true },
       });
       await recordAudit(
         auth.userId,
-        "tournament.participant.seed",
+        "tournament.participant.update",
         "Tournament",
         request.params.id,
         participant,
@@ -581,11 +670,65 @@ export function adminRoutes(app: FastifyInstance): void {
     "/api/v1/admin/tournaments/:id/participants/:participantId",
     async (request, reply) => {
       const auth = requirePermission(request, "tournament.bracket.manage");
-      const participant = await prisma.tournamentParticipant.delete({
-        where: {
-          id: request.params.participantId,
-          tournamentId: request.params.id,
-        },
+      const participant = await prisma.$transaction(async (tx) => {
+        const existing = await tx.tournamentParticipant.findFirst({
+          where: {
+            id: request.params.participantId,
+            tournamentId: request.params.id,
+          },
+          include: { gang: true },
+        });
+        if (!existing)
+          throw new HttpError(
+            404,
+            "PARTICIPANT_NOT_FOUND",
+            "The tournament gang was not found.",
+          );
+
+        const affectedMatches = await tx.match.findMany({
+          where: {
+            tournamentId: request.params.id,
+            OR: [
+              { gangAId: existing.gangId },
+              { gangBId: existing.gangId },
+              { winnerGangId: existing.gangId },
+            ],
+          },
+        });
+        for (const match of affectedMatches) {
+          if (match.winnerGangId) await clearDownstreamWinner(tx, match);
+        }
+
+        const resetResult = {
+          gangAScore: null,
+          gangBScore: null,
+          winnerGangId: null,
+          status: "SCHEDULED" as const,
+          finalizedAt: null,
+          finalizedByUserId: null,
+          version: { increment: 1 },
+        };
+        await tx.match.updateMany({
+          where: { tournamentId: request.params.id, gangAId: existing.gangId },
+          data: { ...resetResult, gangAId: null },
+        });
+        await tx.match.updateMany({
+          where: { tournamentId: request.params.id, gangBId: existing.gangId },
+          data: { ...resetResult, gangBId: null },
+        });
+        await tx.match.updateMany({
+          where: {
+            tournamentId: request.params.id,
+            winnerGangId: existing.gangId,
+          },
+          data: resetResult,
+        });
+        await tx.tournamentParticipant.delete({ where: { id: existing.id } });
+        await tx.tournament.update({
+          where: { id: request.params.id },
+          data: { bracketVersion: { increment: 1 } },
+        });
+        return existing;
       });
       await recordAudit(
         auth.userId,
@@ -921,6 +1064,12 @@ export function adminRoutes(app: FastifyInstance): void {
               "WINNER_REQUIRED",
               "A finalized elimination match cannot be tied.",
             );
+          assertWinnerHasHigherScore(
+            match.gangAId,
+            input.winnerGangId,
+            input.gangAScore,
+            input.gangBScore,
+          );
 
           await tx.matchPlayerStat.createMany({
             data: input.playerStats.map((stat) => ({
@@ -1004,6 +1153,12 @@ export function adminRoutes(app: FastifyInstance): void {
               "WINNER_REQUIRED",
               "An elimination match cannot finish tied.",
             );
+          assertWinnerHasHigherScore(
+            match.gangAId,
+            input.winnerGangId,
+            input.gangAScore,
+            input.gangBScore,
+          );
           const updated = await tx.match.update({
             where: { id: match.id, version: input.version },
             data: {
@@ -1017,12 +1172,69 @@ export function adminRoutes(app: FastifyInstance): void {
             },
           });
           if (match.nextMatchId) {
-            await tx.match.update({
+            const next = await tx.match.findUnique({
               where: { id: match.nextMatchId },
-              data:
-                match.position && match.position % 2 === 0
+            });
+            if (!next)
+              throw new HttpError(
+                409,
+                "NEXT_MATCH_NOT_FOUND",
+                "The next bracket match no longer exists. Regenerate the bracket.",
+              );
+            const winnerEntersGangB = Boolean(
+              match.position && match.position % 2 === 0,
+            );
+            const existingQualifier = winnerEntersGangB
+              ? next.gangBId
+              : next.gangAId;
+            const resultInvalidated = Boolean(
+              existingQualifier && existingQualifier !== input.winnerGangId,
+            );
+            if (resultInvalidated && next.winnerGangId) {
+              await clearDownstreamWinner(tx, next);
+            }
+            await tx.match.update({
+              where: { id: next.id },
+              data: {
+                ...(winnerEntersGangB
                   ? { gangBId: input.winnerGangId }
-                  : { gangAId: input.winnerGangId },
+                  : { gangAId: input.winnerGangId }),
+                ...(resultInvalidated
+                  ? {
+                      gangAScore: null,
+                      gangBScore: null,
+                      winnerGangId: null,
+                      status: "SCHEDULED" as const,
+                      finalizedAt: null,
+                      finalizedByUserId: null,
+                      version: { increment: 1 },
+                    }
+                  : {}),
+              },
+            });
+          }
+          if (match.tournamentId) {
+            const loserGangId =
+              input.winnerGangId === match.gangAId
+                ? match.gangBId
+                : match.gangAId;
+            if (loserGangId) {
+              await tx.tournamentParticipant.updateMany({
+                where: {
+                  tournamentId: match.tournamentId,
+                  gangId: loserGangId,
+                },
+                data: { status: "ELIMINATED" },
+              });
+            }
+            await tx.tournamentParticipant.updateMany({
+              where: {
+                tournamentId: match.tournamentId,
+                gangId: input.winnerGangId,
+              },
+              data: {
+                status: match.nextMatchId ? "APPROVED" : "CHAMPION",
+              },
             });
           }
           return { before: match, updated };

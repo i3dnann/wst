@@ -367,12 +367,17 @@ function MatchAdvanceEditor({
       void queryClient.invalidateQueries({
         queryKey: ["bracket", tournamentSlug],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ["tournament", tournamentSlug],
+      });
     },
+    onError: (error) => toast.error(error.message),
   });
   return (
     <article className="admin-match-editor">
       <span>
         Match {match.position ?? "—"} · {match.status.replaceAll("_", " ")}
+        {match.winnerGangId ? " · winner selected" : ""}
       </span>
       {[match.gangA, match.gangB].map((gang, index) => (
         <div key={gang?.id ?? `slot-${String(index)}`}>
@@ -395,10 +400,13 @@ function MatchAdvanceEditor({
             disabled={!gang || advance.isPending}
             onClick={() => gang && advance.mutate(gang.id)}
           >
-            Advance
+            Set Winner &amp; Advance
           </Button>
         </div>
       ))}
+      {advance.isError ? (
+        <p className="form-error">{advance.error.message}</p>
+      ) : null}
     </article>
   );
 }
@@ -461,6 +469,7 @@ export function BracketManager() {
       setGangId("");
       void refresh();
     },
+    onError: (error) => toast.error(error.message),
   });
   const remove = useMutation({
     mutationFn: (participantId: string) =>
@@ -469,6 +478,7 @@ export function BracketManager() {
       toast.success("Gang removed.");
       void refresh();
     },
+    onError: (error) => toast.error(error.message),
   });
   const reseed = useMutation({
     mutationFn: ({
@@ -477,11 +487,30 @@ export function BracketManager() {
     }: {
       participantId: string;
       nextSeed: number;
-    }) => api.updateTournamentParticipant(selectedId, participantId, nextSeed),
+    }) =>
+      api.updateTournamentParticipant(selectedId, participantId, {
+        seed: nextSeed,
+      }),
     onSuccess: () => {
       toast.success("Seed updated.");
       void refresh();
     },
+    onError: (error) => toast.error(error.message),
+  });
+  const updateParticipantStatus = useMutation({
+    mutationFn: ({
+      participantId,
+      status,
+    }: {
+      participantId: string;
+      status: string;
+    }) =>
+      api.updateTournamentParticipant(selectedId, participantId, { status }),
+    onSuccess: () => {
+      toast.success("Tournament gang status updated.");
+      void refresh();
+    },
+    onError: (error) => toast.error(error.message),
   });
   const generate = useMutation({
     mutationFn: () => api.generateBracket(selectedId),
@@ -489,6 +518,7 @@ export function BracketManager() {
       toast.success(`${String(result.data.slotCount)}-slot bracket generated.`);
       void refresh();
     },
+    onError: (error) => toast.error(error.message),
   });
   const availableGangs = useMemo(() => {
     const used = new Set(
@@ -602,6 +632,25 @@ export function BracketManager() {
                     <strong>{participant.gang.name}</strong>
                     <small>{participant.gang.tag}</small>
                   </div>
+                  <select
+                    aria-label={`${participant.gang.name} tournament status`}
+                    value={participant.status}
+                    disabled={updateParticipantStatus.isPending}
+                    onChange={(event) =>
+                      updateParticipantStatus.mutate({
+                        participantId: participant.id,
+                        status: event.target.value,
+                      })
+                    }
+                  >
+                    {["APPROVED", "ELIMINATED", "CHAMPION", "WITHDRAWN"].map(
+                      (status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ),
+                    )}
+                  </select>
                   <button
                     type="button"
                     aria-label={`Remove ${participant.gang.name}`}
@@ -659,26 +708,39 @@ function EventManager() {
   const setValue = (name: string, value: string) =>
     setValues((current) => ({ ...current, [name]: value }));
   const create = useMutation({
-    mutationFn: () =>
-      api.createEvent({
+    mutationFn: () => {
+      const title = values.title?.trim() ?? "";
+      const slug =
+        values.slug?.trim() ||
+        title
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "");
+      return api.createEvent({
         ...values,
+        title,
+        slug,
         startsAt: new Date(values.startsAt ?? "").toISOString(),
         endsAt: values.endsAt
           ? new Date(values.endsAt).toISOString()
           : undefined,
         featured: values.featured === "true",
-      }),
+      });
+    },
     onSuccess: () => {
       toast.success("Event published.");
       setValues({ status: "SCHEDULED" });
       void queryClient.invalidateQueries({ queryKey: ["events"] });
     },
+    onError: (error) => toast.error(error.message),
   });
   const update = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       api.updateEvent(id, { status }),
     onSuccess: () =>
       void queryClient.invalidateQueries({ queryKey: ["events"] }),
+    onError: (error) => toast.error(error.message),
   });
   const archive = useMutation({
     mutationFn: api.archiveEvent,
@@ -686,6 +748,7 @@ function EventManager() {
       toast.success("Event archived.");
       void queryClient.invalidateQueries({ queryKey: ["events"] });
     },
+    onError: (error) => toast.error(error.message),
   });
   return (
     <section className="admin-manager-panel">
@@ -714,6 +777,7 @@ function EventManager() {
           name="slug"
           value={values.slug ?? ""}
           onChange={setValue}
+          required={false}
         />
         <FormField
           label="Start"
@@ -758,11 +822,11 @@ function EventManager() {
             value={values.status ?? "SCHEDULED"}
             onChange={(event) => setValue("status", event.target.value)}
           >
-            <option>DRAFT</option>
-            <option>SCHEDULED</option>
-            <option>LIVE</option>
-            <option>COMPLETED</option>
-            <option>CANCELLED</option>
+            <option value="DRAFT">DRAFT (hidden)</option>
+            <option value="SCHEDULED">SCHEDULED (published)</option>
+            <option value="LIVE">LIVE (published)</option>
+            <option value="COMPLETED">COMPLETED (published)</option>
+            <option value="CANCELLED">CANCELLED (published)</option>
           </select>
         </label>
         <Button type="submit" disabled={create.isPending}>

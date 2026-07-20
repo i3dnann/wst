@@ -245,11 +245,11 @@ export const api = {
   updateTournamentParticipant: (
     tournamentId: string,
     participantId: string,
-    seed: number,
+    input: { seed?: number; status?: string },
   ) =>
     apiRequest<ApiEnvelope<Record<string, unknown>>>(
       `/api/v1/admin/tournaments/${encodeURIComponent(tournamentId)}/participants/${encodeURIComponent(participantId)}`,
-      { method: "PATCH", body: JSON.stringify({ seed }) },
+      { method: "PATCH", body: JSON.stringify(input) },
     ),
   removeTournamentParticipant: (tournamentId: string, participantId: string) =>
     apiRequest<unknown>(
