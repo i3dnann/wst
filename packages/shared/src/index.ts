@@ -59,16 +59,12 @@ export const matchResultSchema = z.object({
   ),
 });
 
-export const fiveMEventSchema = z.object({
-  externalEventId: z.string().min(8).max(128),
-  type: z.enum([
-    "GANG_SYNC",
-    "MEMBERSHIP_SYNC",
-    "MATCH_EVENT",
-    "PLAYER_STATUS",
-  ]),
-  occurredAt: z.iso.datetime(),
-  data: z.record(z.string(), z.unknown()),
+export const adminLoginSchema = z.object({
+  email: z
+    .email()
+    .max(254)
+    .transform((value) => value.toLowerCase()),
+  password: z.string().min(12).max(128),
 });
 
 export interface ApiEnvelope<T> {

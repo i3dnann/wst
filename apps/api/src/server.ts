@@ -7,7 +7,6 @@ import { registerSecurity } from "./plugins/security.js";
 import { adminRoutes } from "./routes/admin.js";
 import { authRoutes } from "./routes/auth.js";
 import { healthRoutes } from "./routes/health.js";
-import { integrationRoutes } from "./routes/integrations.js";
 import { mediaRoutes } from "./routes/media.js";
 import { publicRoutes } from "./routes/public.js";
 
@@ -27,7 +26,6 @@ publicRoutes(app);
 authRoutes(app);
 adminRoutes(app);
 mediaRoutes(app);
-integrationRoutes(app);
 
 const close = async (signal: string) => {
   app.log.info({ signal }, "shutting down");

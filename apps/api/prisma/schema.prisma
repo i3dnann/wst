@@ -85,17 +85,10 @@ enum MediaStatus {
   DELETED
 }
 
-enum SyncStatus {
-  RECEIVED
-  PROCESSING
-  PROCESSED
-  FAILED
-  REJECTED
-}
-
 model User {
   id                String         @id @default(cuid())
-  discordId         String?        @unique
+  email             String?        @unique
+  passwordHash      String?
   username          String
   displayName       String
   avatarUrl         String?
@@ -232,7 +225,6 @@ model Player {
   avatarUrl        String?
   biography        String?
   status           RecordStatus     @default(ACTIVE)
-  externalFiveMId  String?          @unique
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   archivedAt       DateTime?
@@ -565,19 +557,4 @@ model PlatformSetting {
   updatedByUserId String
   updatedAt       DateTime @updatedAt
   updatedBy       User     @relation(fields: [updatedByUserId], references: [id], onDelete: Restrict)
-}
-
-model SyncEvent {
-  id              String     @id @default(cuid())
-  source          String
-  externalEventId String
-  type            String
-  payloadHash     String
-  status          SyncStatus @default(RECEIVED)
-  error           String?
-  receivedAt      DateTime   @default(now())
-  processedAt     DateTime?
-
-  @@unique([source, externalEventId])
-  @@index([status, receivedAt])
 }

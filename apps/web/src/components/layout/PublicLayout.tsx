@@ -1,4 +1,4 @@
-import { Menu, Shield, UserRound } from "lucide-react";
+import { LockKeyhole, Menu, ShieldCheck } from "lucide-react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const navItems = [
+  ["Home", "/"],
   ["Gangs", "/gangs"],
   ["Players", "/players"],
   ["Tournaments", "/tournaments"],
@@ -19,6 +20,17 @@ const navItems = [
   ["Matches", "/matches"],
   ["Rules", "/rules"],
 ] as const;
+
+function Brand() {
+  return (
+    <Link to="/" className="wst-brand" aria-label="World Star home">
+      <img src="/assets/wst/wst-round.png" alt="" />
+      <span>
+        WORLD STAR<small>Official registry</small>
+      </span>
+    </Link>
+  );
+}
 
 function Navigation({ mobile = false }: { mobile?: boolean }) {
   return (
@@ -30,6 +42,7 @@ function Navigation({ mobile = false }: { mobile?: boolean }) {
         <NavLink
           key={href}
           to={href}
+          end={href === "/"}
           className={({ isActive }) =>
             cn("nav-link", isActive && "nav-link--active")
           }
@@ -45,14 +58,12 @@ export function PublicLayout() {
   return (
     <div className="site-frame">
       <header className="site-header">
-        <Link to="/" className="wordmark" aria-label="Mafia home">
-          MAFIA
-        </Link>
+        <Brand />
         <Navigation />
         <Button asChild variant="outline" className="login-button">
-          <Link to="/login">
-            <UserRound data-icon="inline-start" />
-            Login
+          <Link to="/admin/login">
+            <LockKeyhole />
+            Admin Login
           </Link>
         </Button>
         <Sheet>
@@ -68,16 +79,16 @@ export function PublicLayout() {
           </SheetTrigger>
           <SheetContent side="right" className="mobile-sheet">
             <SheetHeader>
-              <SheetTitle>MAFIA</SheetTitle>
+              <SheetTitle>WORLD STAR</SheetTitle>
               <SheetDescription>
-                Navigate the criminal network registry.
+                Browse the official World Star records.
               </SheetDescription>
             </SheetHeader>
             <Navigation mobile />
             <Button asChild variant="outline">
-              <Link to="/login">
-                <UserRound data-icon="inline-start" />
-                Login
+              <Link to="/admin/login">
+                <LockKeyhole />
+                Admin Login
               </Link>
             </Button>
           </SheetContent>
@@ -85,11 +96,9 @@ export function PublicLayout() {
       </header>
       <Outlet />
       <footer className="site-footer">
-        <div>
-          <Link to="/" className="wordmark wordmark--footer">
-            MAFIA
-          </Link>
-          <p>The official FiveM criminal network registry.</p>
+        <div className="footer-brand">
+          <Brand />
+          <p>The official World Star community registry.</p>
         </div>
         <nav aria-label="Footer navigation">
           {navItems.map(([label, href]) => (
@@ -100,8 +109,8 @@ export function PublicLayout() {
           <Link to="/about">About</Link>
         </nav>
         <div className="footer-security">
-          <Shield aria-hidden="true" />
-          <span>All public records are API-sourced.</span>
+          <ShieldCheck aria-hidden="true" />
+          <span>Published records are maintained by administrators.</span>
         </div>
       </footer>
     </div>

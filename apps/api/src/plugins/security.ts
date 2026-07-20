@@ -40,15 +40,15 @@ export async function registerSecurity(app: FastifyInstance): Promise<void> {
 
   app.decorateRequest("auth", null);
   app.addHook("onRequest", async (request, reply) => {
-    const token = request.cookies.mafia_access;
+    const token = request.cookies.wst_access;
     if (token) {
       try {
         const verified = await jwtVerify(
           token,
           new TextEncoder().encode(env.SESSION_SECRET),
           {
-            issuer: "mafia-api",
-            audience: "mafia-web",
+            issuer: "wst-api",
+            audience: "wst-web",
           },
         );
         const claims = verified.payload as unknown as AccessClaims;
@@ -58,15 +58,12 @@ export async function registerSecurity(app: FastifyInstance): Promise<void> {
           gangScopes: new Set(claims.gangScopes),
         };
       } catch {
-        reply.clearCookie("mafia_access", { path: "/" });
+        reply.clearCookie("wst_access", { path: "/" });
       }
     }
 
-    if (
-      ["POST", "PATCH", "PUT", "DELETE"].includes(request.method) &&
-      !request.url.startsWith("/api/v1/integrations/")
-    ) {
-      const csrfCookie = request.cookies.mafia_csrf;
+    if (["POST", "PATCH", "PUT", "DELETE"].includes(request.method)) {
+      const csrfCookie = request.cookies.wst_csrf;
       const csrfHeader = request.headers["x-csrf-token"];
       const csrfMatches =
         csrfCookie &&

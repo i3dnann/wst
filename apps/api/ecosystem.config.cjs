@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "mafia-api",
+      name: "worldstar-api",
       cwd: __dirname,
       script: "dist/server.js",
       instances: 2,

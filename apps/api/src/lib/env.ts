@@ -18,16 +18,12 @@ const envSchema = z.object({
   FRONTEND_URL: z.url(),
   CORS_ALLOWED_ORIGINS: z.string().min(1),
   SESSION_SECRET: z.string().min(32),
-  DISCORD_CLIENT_ID: optionalString,
-  DISCORD_CLIENT_SECRET: optionalString,
-  DISCORD_REDIRECT_URI: optionalUrl,
   S3_ENDPOINT: optionalUrl,
   S3_REGION: z.string().default("auto"),
   S3_BUCKET: optionalString,
   S3_ACCESS_KEY_ID: optionalString,
   S3_SECRET_ACCESS_KEY: optionalString,
   S3_PUBLIC_BASE_URL: optionalUrl,
-  FIVEM_INTEGRATION_SECRET: z.string().min(32),
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),

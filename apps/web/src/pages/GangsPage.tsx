@@ -1,4 +1,4 @@
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -43,12 +43,10 @@ export default function GangsPage() {
           <h1>The Syndicate Registry</h1>
           <p>
             The sanctioned directory of approved criminal organizations
-            operating across the server.
+            operating across the World Star community.
           </p>
         </div>
-        <div className="registry-seal" aria-hidden="true">
-          M
-        </div>
+        <img className="registry-seal" src="/assets/wst/wst-round.png" alt="" />
       </header>
       <section className="filter-rail" aria-label="Gang filters">
         <label className="search-control">
@@ -102,10 +100,6 @@ export default function GangsPage() {
       </section>
       <div className="results-toolbar">
         <strong>{gangs.data?.meta.total ?? 0} results</strong>
-        <Button variant="outline" size="sm">
-          <SlidersHorizontal data-icon="inline-start" />
-          Filters
-        </Button>
       </div>
       {gangs.isPending ? (
         <PageSkeleton />
@@ -122,8 +116,8 @@ export default function GangsPage() {
             <article className="registry-dossier" key={gang.id}>
               {index === 0 ? (
                 <BorderBeam
-                  colorFrom="#7A1725"
-                  colorTo="#D0B36A"
+                  colorFrom="#8CD8FF"
+                  colorTo="#315F77"
                   duration={10}
                   size={100}
                 />

@@ -22,6 +22,13 @@ export async function apiRequest<T>(
   if (!headers.has("content-type")) {
     headers.set("content-type", "application/json");
   }
+  if (init?.method && !["GET", "HEAD"].includes(init.method.toUpperCase())) {
+    const csrf = document.cookie
+      .split("; ")
+      .find((entry) => entry.startsWith("wst_csrf="))
+      ?.split("=")[1];
+    if (csrf) headers.set("x-csrf-token", decodeURIComponent(csrf));
+  }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -68,6 +75,13 @@ export interface AdminOverviewData {
   }>;
 }
 
+export interface AdminUser {
+  id: string;
+  email: string | null;
+  displayName: string;
+  permissions: string[];
+}
+
 export const api = {
   home: () => apiRequest<ApiEnvelope<HomeData>>("/api/v1/public/home"),
   gangs: (query = "") =>
@@ -101,4 +115,32 @@ export const api = {
     ),
   adminOverview: () =>
     apiRequest<ApiEnvelope<AdminOverviewData>>("/api/v1/admin/overview"),
+  adminLogin: (email: string, password: string) =>
+    apiRequest<ApiEnvelope<Pick<AdminUser, "id" | "email" | "displayName">>>(
+      "/api/v1/auth/login",
+      { method: "POST", body: JSON.stringify({ email, password }) },
+    ),
+  adminMe: () => apiRequest<ApiEnvelope<AdminUser>>("/api/v1/auth/me"),
+  adminLogout: () =>
+    apiRequest<unknown>("/api/v1/auth/logout", { method: "POST" }),
+  createGang: (input: Record<string, unknown>) =>
+    apiRequest<ApiEnvelope<Record<string, unknown>>>("/api/v1/admin/gangs", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  createPlayer: (input: Record<string, unknown>) =>
+    apiRequest<ApiEnvelope<Record<string, unknown>>>("/api/v1/admin/players", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  createTournament: (input: Record<string, unknown>) =>
+    apiRequest<ApiEnvelope<Record<string, unknown>>>(
+      "/api/v1/admin/tournaments",
+      { method: "POST", body: JSON.stringify(input) },
+    ),
+  createMatch: (input: Record<string, unknown>) =>
+    apiRequest<ApiEnvelope<Record<string, unknown>>>("/api/v1/admin/matches", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
 };

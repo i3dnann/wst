@@ -57,7 +57,10 @@ export function App() {
                 path="matches/:id"
                 element={<DirectoryPage type="match-detail" />}
               />
-              <Route path="login" element={<LoginPage />} />
+              <Route
+                path="login"
+                element={<Navigate to="/admin/login" replace />}
+              />
               <Route path="rules" element={<InformationPage kind="rules" />} />
               <Route path="about" element={<InformationPage kind="about" />} />
               <Route
@@ -67,6 +70,7 @@ export function App() {
               <Route path="404" element={<NotFoundPage />} />
               <Route path="*" element={<Navigate to="/404" replace />} />
             </Route>
+            <Route path="admin/login" element={<LoginPage />} />
             <Route path="admin/*" element={<AdminPage />} />
           </Routes>
         </Suspense>
