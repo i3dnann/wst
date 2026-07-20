@@ -8,8 +8,18 @@ import {
   nextPowerOfTwo,
 } from "../domain/bracket.js";
 import { envelope } from "../lib/envelope.js";
+import {
+  discordAuditCategories,
+  discordAuditSettingKey,
+  executeDiscordWebhook,
+  getDiscordAuditConfig,
+  maskWebhookUrl,
+  recordAudit as writeAudit,
+} from "../lib/audit.js";
 import { HttpError } from "../lib/http-error.js";
+import { hashPassword } from "../lib/password.js";
 import { prisma } from "../lib/prisma.js";
+import { refreshStreamStatus } from "../lib/stream-status.js";
 import { requirePermission } from "../middleware/authorize.js";
 
 const slugSchema = z
@@ -126,12 +136,69 @@ const streamInputSchema = z.object({
   channelUrl: httpsUrlSchema,
   embedUrl: httpsUrlSchema.optional(),
   thumbnailUrl: httpsUrlSchema.optional(),
+  providerChannelId: z.string().trim().max(255).optional(),
+  autoDetect: z.boolean().default(true),
   status: z
     .enum(["SCHEDULED", "LIVE", "OFFLINE", "ARCHIVED"])
     .default("OFFLINE"),
   featured: z.boolean().default(false),
   tournamentId: z.string().min(20).max(40).optional(),
   startsAt: z.coerce.date().optional(),
+});
+const matchUpdateSchema = z.object({
+  tournamentId: z.string().min(20).max(40).nullable().optional(),
+  gangAId: z.string().min(20).max(40).nullable().optional(),
+  gangBId: z.string().min(20).max(40).nullable().optional(),
+  bestOf: z.number().int().min(1).max(15).optional(),
+  scheduledAt: z.coerce.date().nullable().optional(),
+  status: z
+    .enum([
+      "SCHEDULED",
+      "CHECK_IN",
+      "LIVE",
+      "AWAITING_RESULT",
+      "DISPUTED",
+      "COMPLETED",
+      "CANCELLED",
+      "FORFEIT",
+    ])
+    .optional(),
+});
+const administratorCreateSchema = z.object({
+  email: z
+    .email()
+    .max(254)
+    .transform((value) => value.toLowerCase()),
+  displayName: z.string().trim().min(2).max(100),
+  password: z.string().min(12).max(128),
+});
+const administratorUpdateSchema = z.object({
+  email: z
+    .email()
+    .max(254)
+    .transform((value) => value.toLowerCase())
+    .optional(),
+  displayName: z.string().trim().min(2).max(100).optional(),
+  password: z.string().min(12).max(128).optional(),
+  status: recordStatusSchema.optional(),
+});
+const discordWebhookSchema = z.object({
+  enabled: z.boolean(),
+  webhookUrl: z
+    .url()
+    .refine((value) => {
+      const url = new URL(value);
+      return (
+        url.protocol === "https:" &&
+        ["discord.com", "discordapp.com"].includes(url.hostname) &&
+        /^\/api\/webhooks\/\d+\/[A-Za-z0-9._-]+$/.test(url.pathname)
+      );
+    }, "Enter a valid Discord incoming webhook URL.")
+    .optional(),
+  categories: z.array(z.enum(discordAuditCategories)).min(1),
+});
+const discordWebhookTestSchema = z.object({
+  webhookUrl: discordWebhookSchema.shape.webhookUrl,
 });
 const advanceMatchSchema = z.object({
   winnerGangId: z.string().min(20).max(40),
@@ -161,8 +228,12 @@ async function recordAudit(
   entityId: string,
   afterData: object,
 ): Promise<void> {
-  await prisma.auditLog.create({
-    data: { actorUserId, action, entityType, entityId, afterData },
+  await writeAudit({
+    actorUserId,
+    action,
+    entityType,
+    entityId,
+    afterData,
   });
 }
 
@@ -209,6 +280,79 @@ export function adminRoutes(app: FastifyInstance): void {
       },
       activity,
     });
+  });
+
+  app.get("/api/v1/admin/gangs", async (request) => {
+    requirePermission(request, "gang.read");
+    const gangs = await prisma.gang.findMany({
+      orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
+      include: {
+        _count: { select: { memberships: { where: { active: true } } } },
+      },
+      take: 250,
+    });
+    return envelope(request, gangs);
+  });
+
+  app.get("/api/v1/admin/players", async (request) => {
+    requirePermission(request, "user.manage");
+    const players = await prisma.player.findMany({
+      orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
+      include: {
+        memberships: {
+          where: { active: true },
+          take: 1,
+          include: { gang: { select: { id: true, name: true, tag: true } } },
+        },
+      },
+      take: 500,
+    });
+    return envelope(request, players);
+  });
+
+  app.get("/api/v1/admin/tournaments", async (request) => {
+    requirePermission(request, "tournament.read");
+    const tournaments = await prisma.tournament.findMany({
+      orderBy: { updatedAt: "desc" },
+      include: { _count: { select: { participants: true, matches: true } } },
+      take: 250,
+    });
+    return envelope(request, tournaments);
+  });
+
+  app.get("/api/v1/admin/matches", async (request) => {
+    requirePermission(request, "match.update");
+    const matches = await prisma.match.findMany({
+      orderBy: [{ scheduledAt: "desc" }, { updatedAt: "desc" }],
+      include: {
+        gangA: { select: { id: true, name: true, tag: true } },
+        gangB: { select: { id: true, name: true, tag: true } },
+        tournament: { select: { id: true, name: true, slug: true } },
+      },
+      take: 500,
+    });
+    return envelope(request, matches);
+  });
+
+  app.get("/api/v1/admin/events", async (request) => {
+    requirePermission(request, "event.manage");
+    const events = await prisma.event.findMany({
+      orderBy: { startsAt: "desc" },
+      take: 250,
+    });
+    return envelope(request, events);
+  });
+
+  app.get("/api/v1/admin/live-streams", async (request) => {
+    requirePermission(request, "stream.manage");
+    const streams = await prisma.liveStream.findMany({
+      orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
+      include: {
+        tournament: { select: { id: true, slug: true, name: true } },
+      },
+      take: 250,
+    });
+    return envelope(request, streams);
   });
 
   app.post("/api/v1/admin/gangs", async (request, reply) => {
@@ -284,6 +428,25 @@ export function adminRoutes(app: FastifyInstance): void {
     },
   );
 
+  app.delete<{ Params: { id: string } }>(
+    "/api/v1/admin/players/:id",
+    async (request, reply) => {
+      const auth = requirePermission(request, "user.manage");
+      const player = await prisma.player.update({
+        where: { id: request.params.id },
+        data: { status: "ARCHIVED", archivedAt: new Date() },
+      });
+      await recordAudit(
+        auth.userId,
+        "player.archive",
+        "Player",
+        player.id,
+        player,
+      );
+      return reply.code(204).send();
+    },
+  );
+
   app.post("/api/v1/admin/tournaments", async (request, reply) => {
     const auth = requirePermission(request, "tournament.create");
     const input = tournamentInputSchema.parse(request.body);
@@ -320,6 +483,25 @@ export function adminRoutes(app: FastifyInstance): void {
         tournament,
       );
       return envelope(request, tournament);
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>(
+    "/api/v1/admin/tournaments/:id",
+    async (request, reply) => {
+      const auth = requirePermission(request, "tournament.update");
+      const tournament = await prisma.tournament.update({
+        where: { id: request.params.id },
+        data: { status: "ARCHIVED", archivedAt: new Date() },
+      });
+      await recordAudit(
+        auth.userId,
+        "tournament.archive",
+        "Tournament",
+        tournament.id,
+        tournament,
+      );
+      return reply.code(204).send();
     },
   );
 
@@ -602,22 +784,16 @@ export function adminRoutes(app: FastifyInstance): void {
             data: { bracketVersion: { increment: 1 } },
             select: { id: true, bracketVersion: true },
           });
-          await tx.auditLog.create({
-            data: {
-              actorUserId: auth.userId,
-              action: "tournament.bracket.generate",
-              entityType: "Tournament",
-              entityId: tournament.id,
-              afterData: {
-                slotCount,
-                roundCount,
-                bracketVersion: updated.bracketVersion,
-              },
-            },
-          });
           return { ...updated, slotCount, roundCount };
         },
         { isolationLevel: "Serializable" },
+      );
+      await recordAudit(
+        auth.userId,
+        "tournament.bracket.generate",
+        "Tournament",
+        result.id,
+        result,
       );
       return envelope(request, result);
     },
@@ -639,6 +815,54 @@ export function adminRoutes(app: FastifyInstance): void {
     await recordAudit(auth.userId, "match.create", "Match", match.id, match);
     return reply.code(201).send(envelope(request, match));
   });
+
+  app.patch<{ Params: { id: string } }>(
+    "/api/v1/admin/matches/:id",
+    async (request) => {
+      const auth = requirePermission(request, "match.update");
+      const input = matchUpdateSchema.parse(request.body);
+      if (input.gangAId && input.gangBId && input.gangAId === input.gangBId)
+        throw new HttpError(
+          422,
+          "MATCH_GANGS_INVALID",
+          "A gang cannot compete against itself.",
+        );
+      const before = await prisma.match.findUniqueOrThrow({
+        where: { id: request.params.id },
+      });
+      const match = await prisma.match.update({
+        where: { id: request.params.id },
+        data: compact(input),
+      });
+      await writeAudit({
+        actorUserId: auth.userId,
+        action: "match.update",
+        entityType: "Match",
+        entityId: match.id,
+        beforeData: before,
+        afterData: match,
+      });
+      return envelope(request, match);
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>(
+    "/api/v1/admin/matches/:id",
+    async (request, reply) => {
+      const auth = requirePermission(request, "match.update");
+      const match = await prisma.match.delete({
+        where: { id: request.params.id },
+      });
+      await writeAudit({
+        actorUserId: auth.userId,
+        action: "match.delete",
+        entityType: "Match",
+        entityId: match.id,
+        beforeData: match,
+      });
+      return reply.code(204).send();
+    },
+  );
 
   app.put("/api/v1/admin/settings", async (request) => {
     const auth = requirePermission(request, "settings.manage");
@@ -739,21 +963,19 @@ export function adminRoutes(app: FastifyInstance): void {
               );
             await tx.match.update({ where: { id: next.id }, data });
           }
-          await tx.auditLog.create({
-            data: {
-              actorUserId: auth.userId,
-              action: "match.finalize",
-              entityType: "Match",
-              entityId: match.id,
-              beforeData: match,
-              afterData: updated,
-            },
-          });
-          return updated;
+          return { before: match, updated };
         },
         { isolationLevel: "Serializable" },
       );
-      return envelope(request, result);
+      await writeAudit({
+        actorUserId: auth.userId,
+        action: "match.finalize",
+        entityType: "Match",
+        entityId: result.updated.id,
+        beforeData: result.before,
+        afterData: result.updated,
+      });
+      return envelope(request, result.updated);
     },
   );
 
@@ -803,21 +1025,19 @@ export function adminRoutes(app: FastifyInstance): void {
                   : { gangAId: input.winnerGangId },
             });
           }
-          await tx.auditLog.create({
-            data: {
-              actorUserId: auth.userId,
-              action: "match.advance",
-              entityType: "Match",
-              entityId: match.id,
-              beforeData: match,
-              afterData: updated,
-            },
-          });
-          return updated;
+          return { before: match, updated };
         },
         { isolationLevel: "Serializable" },
       );
-      return envelope(request, result);
+      await writeAudit({
+        actorUserId: auth.userId,
+        action: "match.advance",
+        entityType: "Match",
+        entityId: result.updated.id,
+        beforeData: result.before,
+        afterData: result.updated,
+      });
+      return envelope(request, result.updated);
     },
   );
 
@@ -918,6 +1138,295 @@ export function adminRoutes(app: FastifyInstance): void {
       return reply.code(204).send();
     },
   );
+
+  app.post<{ Params: { id: string } }>(
+    "/api/v1/admin/live-streams/:id/refresh",
+    async (request) => {
+      const auth = requirePermission(request, "stream.manage");
+      const stream = await refreshStreamStatus(request.params.id);
+      await recordAudit(
+        auth.userId,
+        "stream.status.refresh",
+        "LiveStream",
+        stream.id,
+        {
+          status: stream.status,
+          lastCheckedAt: stream.lastCheckedAt,
+          lastStatusError: stream.lastStatusError,
+        },
+      );
+      return envelope(request, stream);
+    },
+  );
+
+  app.post("/api/v1/admin/live-streams/refresh", async (request) => {
+    const auth = requirePermission(request, "stream.manage");
+    const ids = await prisma.liveStream.findMany({
+      where: { autoDetect: true, status: { not: "ARCHIVED" } },
+      select: { id: true },
+      take: 100,
+    });
+    const streams = await Promise.all(
+      ids.map((stream) => refreshStreamStatus(stream.id)),
+    );
+    await recordAudit(
+      auth.userId,
+      "stream.status.refresh-all",
+      "LiveStream",
+      "all",
+      { checked: streams.length },
+    );
+    return envelope(request, streams);
+  });
+
+  app.get("/api/v1/admin/administrators", async (request) => {
+    requirePermission(request, "user.manage");
+    const administrators = await prisma.user.findMany({
+      where: { roles: { some: { role: { name: "Super Administrator" } } } },
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        status: true,
+        lastLoginAt: true,
+        createdAt: true,
+        roles: { select: { role: { select: { name: true } } } },
+      },
+    });
+    return envelope(request, administrators);
+  });
+
+  app.post("/api/v1/admin/administrators", async (request, reply) => {
+    const auth = requirePermission(request, "user.manage");
+    const input = administratorCreateSchema.parse(request.body);
+    const passwordHash = await hashPassword(input.password);
+    const role = await prisma.role.findUnique({
+      where: { name: "Super Administrator" },
+    });
+    if (!role)
+      throw new HttpError(
+        409,
+        "ADMIN_ROLE_MISSING",
+        "Run the database seed before creating administrators.",
+      );
+    const administrator = await prisma.user.create({
+      data: {
+        email: input.email,
+        username: input.email.split("@")[0] ?? "administrator",
+        displayName: input.displayName,
+        passwordHash,
+        status: "ACTIVE",
+        roles: { create: { roleId: role.id } },
+      },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        status: true,
+        lastLoginAt: true,
+        createdAt: true,
+      },
+    });
+    await recordAudit(
+      auth.userId,
+      "admin.create",
+      "User",
+      administrator.id,
+      administrator,
+    );
+    return reply.code(201).send(envelope(request, administrator));
+  });
+
+  app.patch<{ Params: { id: string } }>(
+    "/api/v1/admin/administrators/:id",
+    async (request) => {
+      const auth = requirePermission(request, "user.manage");
+      const input = administratorUpdateSchema.parse(request.body);
+      if (
+        request.params.id === auth.userId &&
+        input.status &&
+        input.status !== "ACTIVE"
+      )
+        throw new HttpError(
+          409,
+          "ADMIN_SELF_DISABLE",
+          "You cannot disable your own administrator account.",
+        );
+      const before = await prisma.user.findUniqueOrThrow({
+        where: { id: request.params.id },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          status: true,
+          lastLoginAt: true,
+        },
+      });
+      const administrator = await prisma.user.update({
+        where: { id: request.params.id },
+        data: compact({
+          email: input.email,
+          displayName: input.displayName,
+          status: input.status,
+          passwordHash: input.password
+            ? await hashPassword(input.password)
+            : undefined,
+        }),
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          status: true,
+          lastLoginAt: true,
+          createdAt: true,
+        },
+      });
+      if (input.password || (input.status && input.status !== "ACTIVE"))
+        await prisma.refreshToken.deleteMany({
+          where: { userId: administrator.id },
+        });
+      await writeAudit({
+        actorUserId: auth.userId,
+        action: "admin.update",
+        entityType: "User",
+        entityId: administrator.id,
+        beforeData: before,
+        afterData: administrator,
+      });
+      return envelope(request, administrator);
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>(
+    "/api/v1/admin/administrators/:id",
+    async (request, reply) => {
+      const auth = requirePermission(request, "user.manage");
+      if (request.params.id === auth.userId)
+        throw new HttpError(
+          409,
+          "ADMIN_SELF_DELETE",
+          "You cannot remove your own administrator account.",
+        );
+      const activeCount = await prisma.user.count({
+        where: {
+          status: "ACTIVE",
+          roles: { some: { role: { name: "Super Administrator" } } },
+        },
+      });
+      if (activeCount <= 1)
+        throw new HttpError(
+          409,
+          "LAST_ADMIN_REQUIRED",
+          "At least one active administrator must remain.",
+        );
+      const administrator = await prisma.user.update({
+        where: { id: request.params.id },
+        data: {
+          status: "ARCHIVED",
+          sessions: { deleteMany: {} },
+        },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          status: true,
+        },
+      });
+      await recordAudit(
+        auth.userId,
+        "admin.remove",
+        "User",
+        administrator.id,
+        administrator,
+      );
+      return reply.code(204).send();
+    },
+  );
+
+  app.get("/api/v1/admin/discord-audit", async (request) => {
+    requirePermission(request, "settings.manage");
+    const config = await getDiscordAuditConfig();
+    return envelope(request, {
+      enabled: config.enabled,
+      configured: Boolean(config.webhookUrl),
+      maskedWebhookUrl: maskWebhookUrl(config.webhookUrl),
+      categories: config.categories,
+    });
+  });
+
+  app.put("/api/v1/admin/discord-audit", async (request) => {
+    const auth = requirePermission(request, "settings.manage");
+    const input = discordWebhookSchema.parse(request.body);
+    const current = await getDiscordAuditConfig();
+    const webhookUrl = input.webhookUrl ?? current.webhookUrl;
+    if (input.enabled && !webhookUrl)
+      throw new HttpError(
+        422,
+        "DISCORD_WEBHOOK_REQUIRED",
+        "Add a Discord webhook URL before enabling logs.",
+      );
+    const value = {
+      enabled: input.enabled,
+      webhookUrl,
+      categories: input.categories,
+    };
+    const setting = await prisma.platformSetting.upsert({
+      where: { key: discordAuditSettingKey },
+      update: { value, updatedByUserId: auth.userId },
+      create: {
+        key: discordAuditSettingKey,
+        value,
+        updatedByUserId: auth.userId,
+      },
+    });
+    await recordAudit(
+      auth.userId,
+      "setting.discord-audit.update",
+      "PlatformSetting",
+      setting.id,
+      {
+        enabled: value.enabled,
+        configured: Boolean(value.webhookUrl),
+        categories: value.categories,
+      },
+    );
+    return envelope(request, {
+      enabled: value.enabled,
+      configured: Boolean(value.webhookUrl),
+      maskedWebhookUrl: maskWebhookUrl(value.webhookUrl),
+      categories: value.categories,
+    });
+  });
+
+  app.post("/api/v1/admin/discord-audit/test", async (request) => {
+    const auth = requirePermission(request, "settings.manage");
+    const input = discordWebhookTestSchema.parse(request.body ?? {});
+    const current = await getDiscordAuditConfig();
+    const webhookUrl = input.webhookUrl ?? current.webhookUrl;
+    if (!webhookUrl)
+      throw new HttpError(
+        422,
+        "DISCORD_WEBHOOK_REQUIRED",
+        "Add a Discord webhook URL before testing.",
+      );
+    await executeDiscordWebhook(webhookUrl, {
+      username: "World Star Audit",
+      embeds: [
+        {
+          title: "AUDIT WEBHOOK CONNECTED",
+          description: "World Star administrator activity will be logged here.",
+          color: 13_147_218,
+          fields: [
+            { name: "Administrator", value: auth.userId, inline: true },
+            { name: "Status", value: "Connected", inline: true },
+          ],
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    });
+    return envelope(request, { delivered: true });
+  });
 
   app.get("/api/v1/admin/audit-logs", async (request) => {
     requirePermission(request, "audit.read");

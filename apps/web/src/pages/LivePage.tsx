@@ -4,10 +4,20 @@ import { ArrowUpRight, CalendarDays, Play, Radio } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import type { PublicLiveStream } from "@mafia/shared";
 
-function safeEmbedUrl(value: string | null): string | null {
-  if (!value) return null;
+function safeEmbedUrl(stream: PublicLiveStream | undefined): string | null {
+  if (!stream) return null;
   try {
+    let value = stream.embedUrl;
+    const identifier = stream.providerChannelId?.trim();
+    if (!value && stream.platform === "YOUTUBE" && stream.liveVideoId)
+      value = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(stream.liveVideoId)}`;
+    if (!value && stream.platform === "TWITCH" && identifier)
+      value = `https://player.twitch.tv/?channel=${encodeURIComponent(identifier)}`;
+    if (!value && stream.platform === "KICK" && identifier)
+      value = `https://player.kick.com/${encodeURIComponent(identifier)}`;
+    if (!value) return null;
     const url = new URL(value);
     const allowed = [
       "youtube.com",
@@ -22,6 +32,10 @@ function safeEmbedUrl(value: string | null): string | null {
       )
     )
       return null;
+    if (url.hostname === "player.twitch.tv") {
+      url.searchParams.set("parent", window.location.hostname);
+      url.searchParams.set("muted", "true");
+    }
     return url.toString();
   } catch {
     return null;
@@ -31,7 +45,12 @@ function safeEmbedUrl(value: string | null): string | null {
 export default function LivePage() {
   const [streams, events] = useQueries({
     queries: [
-      { queryKey: ["live-streams"], queryFn: api.liveStreams, retry: false },
+      {
+        queryKey: ["live-streams"],
+        queryFn: api.liveStreams,
+        retry: false,
+        refetchInterval: 60_000,
+      },
       { queryKey: ["events"], queryFn: api.events, retry: false },
     ],
   });
@@ -44,7 +63,7 @@ export default function LivePage() {
       list[0],
     [list, selectedId],
   );
-  const embedUrl = safeEmbedUrl(selected?.embedUrl ?? null);
+  const embedUrl = safeEmbedUrl(selected);
 
   return (
     <main className="gold-content-page live-page">
@@ -98,6 +117,11 @@ export default function LivePage() {
                 {selected?.tournament?.name ??
                   "Approved tournament coverage will appear here."}
               </p>
+              {selected?.lastStatusError ? (
+                <small className="stream-check-error">
+                  Status check: {selected.lastStatusError}
+                </small>
+              ) : null}
             </div>
             {selected ? (
               <Button asChild variant="outline">

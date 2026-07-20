@@ -3,6 +3,7 @@ import { gangListQuerySchema } from "@mafia/shared";
 import { envelope } from "../lib/envelope.js";
 import { HttpError } from "../lib/http-error.js";
 import { prisma } from "../lib/prisma.js";
+import { refreshStaleStreams } from "../lib/stream-status.js";
 
 const gangInclude = {
   memberships: { where: { active: true }, select: { id: true } },
@@ -300,6 +301,7 @@ export function publicRoutes(app: FastifyInstance): void {
   });
 
   app.get("/api/v1/live-streams", async (request) => {
+    await refreshStaleStreams();
     const streams = await prisma.liveStream.findMany({
       where: { status: { not: "ARCHIVED" } },
       orderBy: [{ status: "asc" }, { featured: "desc" }, { updatedAt: "desc" }],

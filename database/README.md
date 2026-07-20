@@ -1,6 +1,6 @@
 # HeidiSQL database import
 
-`DATABASE_SCHEMA.sql` is the complete MySQL/MariaDB schema for World Star. It creates the `worldstar_wst` database, all 27 application tables, indexes, foreign keys, and Prisma's migration-history table using `utf8mb4`.
+`DATABASE_SCHEMA.sql` is the complete MySQL/MariaDB schema for World Star. It creates the `worldstar_wst` database, all 27 application tables, current stream-monitoring fields, indexes, foreign keys, and Prisma's migration-history table using `utf8mb4`.
 
 ## Import
 

@@ -2676,6 +2676,13 @@ textarea:focus-visible {
   color: #8d816e;
   font-size: 12px;
 }
+.stream-check-error {
+  display: block;
+  margin-top: 8px;
+  color: #c9a56b;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
 .live-indicator,
 .offline-indicator {
   color: #ff5e55;
@@ -3412,6 +3419,559 @@ textarea:focus-visible {
   border-radius: 12px;
   background: #070503;
   color: #edd7af;
+}
+
+.command-center-v2 .control-sidebar nav {
+  gap: 3px;
+  overflow-y: auto;
+}
+
+.command-center-v2 .control-sidebar nav button {
+  min-height: 42px;
+}
+
+.command-center-v2 .control-main {
+  min-width: 0;
+}
+
+.admin-dataset,
+.stream-admin-layout,
+.audit-admin-layout {
+  min-width: 0;
+  padding: clamp(18px, 2.4vw, 32px);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 100% 0%, rgb(145 94 37 / 0.09), transparent 28%),
+    linear-gradient(145deg, #100c08, #080604);
+}
+
+.admin-dataset-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.admin-dataset-heading > div:last-child {
+  display: flex;
+  gap: 9px;
+}
+
+.admin-dataset-heading h2,
+.stream-admin-editor h3,
+.admin-account-form h3,
+.discord-settings-panel h3 {
+  margin: 0;
+  color: #dfbb76;
+  font-family: var(--display);
+  font-weight: 500;
+  letter-spacing: 0.025em;
+}
+
+.admin-dataset-heading h2 {
+  font-size: clamp(25px, 3vw, 36px);
+}
+
+.admin-dataset-heading p,
+.discord-settings-panel p {
+  margin: 5px 0 0;
+  color: #83745e;
+  font-size: 12px;
+}
+
+.admin-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.admin-table-toolbar label {
+  display: flex;
+  align-items: center;
+  width: min(480px, 100%);
+  min-height: 44px;
+  padding: 0 13px;
+  border: 1px solid #4c361f;
+  border-radius: 13px;
+  background: #070503;
+  color: #98764a;
+}
+
+.admin-table-toolbar svg {
+  width: 17px;
+}
+
+.admin-table-toolbar input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #e1cda5;
+  outline: 0;
+}
+
+.admin-table-toolbar span {
+  color: #786a56;
+  font-size: 11px;
+}
+
+.admin-table-scroll {
+  max-width: 100%;
+  overflow: auto;
+  border: 1px solid rgb(200 154 82 / 0.2);
+  border-radius: 15px;
+}
+
+.admin-data-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.admin-data-table th,
+.admin-data-table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid rgb(200 154 82 / 0.14);
+  color: #9d8e76;
+  font-size: 11px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.admin-data-table th {
+  color: #a98652;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.admin-data-table tbody tr {
+  transition: background 160ms ease;
+}
+
+.admin-data-table tbody tr:hover {
+  background: rgb(153 101 42 / 0.07);
+}
+
+.admin-data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-data-table td strong,
+.admin-data-table td small {
+  display: block;
+}
+
+.admin-data-table td strong {
+  color: #dec28c;
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.admin-data-table td small {
+  margin-top: 3px;
+  color: #6f6351;
+  font-size: 9px;
+}
+
+.admin-data-table code {
+  color: #8d7856;
+  font-size: 9px;
+}
+
+.record-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #a99779;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.record-status::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a98248;
+  content: "";
+}
+
+.record-status.active::before {
+  background: #56a65a;
+}
+
+.record-status.inactive::before,
+.record-status.archived::before {
+  background: #716b62;
+}
+
+.record-status.suspended::before {
+  background: #c8564c;
+}
+
+.admin-row-actions {
+  display: flex;
+  gap: 7px;
+}
+
+.admin-row-actions button,
+.admin-edit-drawer > header button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #554023;
+  border-radius: 10px;
+  background: #0a0705;
+  color: #c59856;
+}
+
+.admin-row-actions button.danger,
+.danger-button {
+  border-color: #62312d !important;
+  color: #d3655b !important;
+}
+
+.admin-row-actions svg,
+.admin-edit-drawer > header svg {
+  width: 15px;
+}
+
+.admin-drawer-backdrop,
+.admin-confirm-backdrop {
+  position: fixed;
+  z-index: 90;
+  inset: 0;
+  background: rgb(0 0 0 / 0.64);
+  backdrop-filter: blur(4px);
+}
+
+.admin-edit-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(560px, 100%);
+  height: 100%;
+  overflow-y: auto;
+  border-left: 1px solid #654923;
+  background:
+    radial-gradient(circle at 80% 0%, rgb(116 75 29 / 0.18), transparent 28%),
+    #090705;
+  box-shadow: -30px 0 80px rgb(0 0 0 / 0.55);
+}
+
+.admin-edit-drawer > header {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--line);
+  background: rgb(9 7 5 / 0.96);
+  backdrop-filter: blur(14px);
+}
+
+.admin-edit-drawer > header h2 {
+  margin: 0;
+  color: #dfbd7e;
+  font: 500 25px/1.1 var(--display);
+}
+
+.admin-edit-drawer > header p {
+  margin: 5px 0 0;
+  color: #776a55;
+  font-size: 10px;
+}
+
+.admin-drawer-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 24px;
+}
+
+.admin-drawer-form label,
+.admin-account-form label,
+.discord-settings-panel > label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #9a896e;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.admin-drawer-form input,
+.admin-drawer-form select,
+.admin-drawer-form textarea,
+.admin-account-form input,
+.admin-account-form select,
+.discord-settings-panel input {
+  min-height: 43px;
+  padding: 10px 12px;
+  border: 1px solid #4d361e;
+  border-radius: 11px;
+  background: #050403;
+  color: #e0ca9f;
+}
+
+.admin-drawer-form textarea {
+  min-height: 108px;
+  resize: vertical;
+}
+
+.admin-toggle-field {
+  flex-direction: row !important;
+  align-items: center;
+  min-height: 43px;
+  padding: 9px 12px;
+  border: 1px solid rgb(200 154 82 / 0.16);
+  border-radius: 11px;
+}
+
+.admin-toggle-field input {
+  width: 17px;
+  min-height: 17px !important;
+  accent-color: #b9823d;
+}
+
+.admin-profile-preview {
+  grid-column: 1 / -1;
+  width: 92px;
+  height: 92px;
+  padding: 4px;
+  border: 1px solid #654822;
+  border-radius: 16px;
+  object-fit: cover;
+}
+
+.admin-drawer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding-top: 8px;
+}
+
+.admin-confirm-backdrop {
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.admin-confirm-dialog {
+  width: min(440px, 100%);
+  padding: 28px;
+  border: 1px solid #6a4826;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #120c08, #080504);
+  box-shadow: 0 35px 90px rgb(0 0 0 / 0.65);
+  text-align: center;
+}
+
+.admin-confirm-dialog > svg {
+  width: 36px;
+  color: #c05a51;
+}
+
+.admin-confirm-dialog h2 {
+  color: #dfbd7e;
+  font-family: var(--display);
+}
+
+.admin-confirm-dialog p {
+  color: #887964;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.admin-confirm-dialog > div {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.stream-admin-grid {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.7fr) minmax(420px, 1.3fr);
+  gap: 14px;
+}
+
+.stream-admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 610px;
+  overflow-y: auto;
+}
+
+.stream-admin-list > button {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 2px 8px;
+  padding: 12px;
+  border: 1px solid rgb(200 154 82 / 0.15);
+  border-radius: 12px;
+  background: #080604;
+  color: #93836b;
+  text-align: left;
+}
+
+.stream-admin-list > button.selected {
+  border-color: #a16d31;
+  background: rgb(143 92 35 / 0.13);
+}
+
+.stream-admin-list .live-dot {
+  grid-row: 1 / 3;
+  align-self: center;
+}
+
+.stream-admin-list strong {
+  color: #dcc087;
+}
+
+.stream-admin-list small,
+.stream-admin-list time {
+  color: #776a57;
+  font-size: 9px;
+}
+
+.stream-admin-list time {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  align-self: center;
+}
+
+.stream-admin-preview {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgb(200 154 82 / 0.18);
+  border-radius: 15px;
+  background: #050403;
+}
+
+.stream-preview-meta {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 16px;
+}
+
+.stream-preview-meta strong {
+  color: #dbbf88;
+  font-family: var(--display);
+}
+
+.stream-preview-meta a {
+  margin-left: auto;
+  color: #c49653;
+  font-size: 10px;
+}
+
+.stream-admin-editor {
+  grid-column: 1 / -1;
+  padding: 18px;
+  border: 1px solid rgb(200 154 82 / 0.18);
+  border-radius: 15px;
+  background: rgb(0 0 0 / 0.18);
+}
+
+.administrator-admin-grid,
+.audit-admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(300px, 0.7fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.admin-account-form,
+.discord-settings-panel {
+  padding: 18px;
+  border: 1px solid rgb(200 154 82 / 0.18);
+  border-radius: 15px;
+  background: rgb(0 0 0 / 0.18);
+}
+
+.discord-settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.discord-settings-panel > header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.discord-settings-panel > header svg {
+  color: #c39551;
+}
+
+.discord-settings-panel fieldset {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 9px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid rgb(200 154 82 / 0.15);
+  border-radius: 12px;
+}
+
+.discord-settings-panel legend,
+.discord-settings-panel fieldset label {
+  color: #8b7a61;
+  font-size: 10px;
+  text-transform: capitalize;
+}
+
+.discord-settings-panel > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 1180px) {
+  .stream-admin-grid,
+  .administrator-admin-grid,
+  .audit-admin-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-dataset-heading,
+  .admin-table-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-dataset-heading > div:last-child,
+  .admin-confirm-dialog > div {
+    flex-direction: column;
+  }
+
+  .admin-drawer-form,
+  .admin-form-grid,
+  .discord-settings-panel fieldset {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-drawer-form .full-width,
+  .admin-form-grid .full-width {
+    grid-column: auto;
+  }
 }
 
 /* Existing directory and information surfaces inherit the gold system. */

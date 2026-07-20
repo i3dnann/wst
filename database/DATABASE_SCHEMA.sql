@@ -41,6 +41,20 @@ INSERT INTO `_prisma_migrations` (
     1
 );
 
+INSERT INTO `_prisma_migrations` (
+    `id`,
+    `checksum`,
+    `finished_at`,
+    `migration_name`,
+    `applied_steps_count`
+) VALUES (
+    UUID(),
+    '9ca8cc9c91d9a1ae6591fe9e2f111eb9581cdfb6023f70426c672dbf77d253be',
+    CURRENT_TIMESTAMP(3),
+    '0002_admin_stream_operations',
+    1
+);
+
 -- CreateTable
 CREATE TABLE `User` (
     `id` VARCHAR(191) NOT NULL,
@@ -347,7 +361,12 @@ CREATE TABLE `LiveStream` (
     `channelUrl` TEXT NOT NULL,
     `embedUrl` TEXT NULL,
     `thumbnailUrl` TEXT NULL,
+    `providerChannelId` VARCHAR(255) NULL,
+    `liveVideoId` VARCHAR(255) NULL,
     `status` ENUM('SCHEDULED', 'LIVE', 'OFFLINE', 'ARCHIVED') NOT NULL DEFAULT 'OFFLINE',
+    `autoDetect` BOOLEAN NOT NULL DEFAULT true,
+    `lastCheckedAt` DATETIME(3) NULL,
+    `lastStatusError` TEXT NULL,
     `featured` BOOLEAN NOT NULL DEFAULT false,
     `tournamentId` VARCHAR(191) NULL,
     `startsAt` DATETIME(3) NULL,

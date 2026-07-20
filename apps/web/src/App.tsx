@@ -11,7 +11,7 @@ const DirectoryPage = lazy(() => import("./pages/DirectoryPage"));
 const TournamentsPage = lazy(() => import("./pages/TournamentsPage"));
 const TournamentDetailPage = lazy(() => import("./pages/TournamentDetailPage"));
 const RankingsPage = lazy(() => import("./pages/RankingsPage"));
-const AdminPage = lazy(() => import("./pages/AdminPage"));
+const AdminPage = lazy(() => import("./pages/AdminCommandCenterPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const InformationPage = lazy(() => import("./pages/InformationPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));

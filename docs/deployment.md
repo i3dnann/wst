@@ -41,9 +41,27 @@ CORS_ALLOWED_ORIGINS=https://YOUR-SITE.netlify.app
 SESSION_SECRET=REPLACE_WITH_AT_LEAST_32_RANDOM_CHARACTERS
 ADMIN_EMAIL=admin@your-domain.example
 ADMIN_PASSWORD=REPLACE_WITH_A_STRONG_PASSWORD
+TWITCH_CLIENT_ID=
+TWITCH_CLIENT_SECRET=
+YOUTUBE_API_KEY=
+STREAM_STATUS_TTL_SECONDS=60
+YOUTUBE_STATUS_TTL_SECONDS=1800
 ```
 
 Percent-encode reserved characters in the database password before placing it in `DATABASE_URL`. Keep this file outside source control and restrict it to the Windows service account.
+
+## Live-stream detection and previews
+
+- Twitch detection uses a Twitch application client ID and secret. Create an application in the Twitch Developer Console and place its credentials in `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET`.
+- YouTube detection uses a Google Cloud API key with YouTube Data API v3 enabled. Place it in `YOUTUBE_API_KEY`, then enter the channel ID beginning with `UC` in the stream editor.
+- Kick previews use the official `player.kick.com/USERNAME` embed format. Kick status checks are best-effort because its public channel response is not a versioned API contract.
+- The public Live page requests fresh status every minute. Twitch and Kick are checked when the configured 60-second cache expires; YouTube defaults to a 30-minute cache to protect its API quota. Administrators can also use **Refresh Status** or **Check Now**.
+
+Twitch and YouTube channels report a clear configuration error in the admin panel until their credentials are installed. Manual status and embed URLs remain available when automatic detection is disabled.
+
+## Discord administrator logs
+
+Create an incoming webhook for a private Discord channel. In **Admin → Audit Log**, paste the webhook URL, select the event categories, enable logging, and use **Test Webhook**. The URL is stored in the protected database setting and is masked whenever it is returned to the browser. Audit records remain in MySQL even if Discord delivery fails.
 
 ## Install and build on Windows Server
 

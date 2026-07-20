@@ -403,7 +403,7 @@ function MatchAdvanceEditor({
   );
 }
 
-function BracketManager() {
+export function BracketManager() {
   const queryClient = useQueryClient();
   const [tournaments, gangs] = useQueries({
     queries: [

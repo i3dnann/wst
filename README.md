@@ -2,6 +2,8 @@
 
 Production-oriented community registry, flexible tournament system, event calendar, approved live-stream hub, rankings platform, and private administrator command center.
 
+The command center provides complete gang, player, tournament, match, event, stream, and administrator management. It includes profile imagery, searchable record tables, edit drawers, safe archive/delete confirmations, automatic Twitch/YouTube/Kick stream checks, working embedded previews, database audit history, and optional Discord webhook logs.
+
 The visual system uses the supplied World Star imagery and main PNG mark in a cinematic black, walnut, antique-gold, and warm-amber design. Tournament brackets support administrator-managed entrant capacities from small custom fields through 16- and 32-gang competitions, including automatic byes and winner progression.
 
 ## Architecture

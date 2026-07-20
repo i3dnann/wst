@@ -29,6 +29,21 @@ const envSchema = z.object({
     .default("info"),
   RATE_LIMIT_MAX: z.coerce.number().int().min(10).default(100),
   RATE_LIMIT_WINDOW: z.string().default("1 minute"),
+  TWITCH_CLIENT_ID: optionalString,
+  TWITCH_CLIENT_SECRET: optionalString,
+  YOUTUBE_API_KEY: optionalString,
+  STREAM_STATUS_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(30)
+    .max(3600)
+    .default(60),
+  YOUTUBE_STATUS_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(300)
+    .max(86_400)
+    .default(1800),
 });
 
 const result = envSchema.safeParse(process.env);
