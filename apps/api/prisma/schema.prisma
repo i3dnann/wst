@@ -1,0 +1,583 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum RecruitmentStatus {
+  OPEN
+  CLOSED
+  INVITE_ONLY
+}
+
+enum TournamentStatus {
+  DRAFT
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+enum TournamentFormat {
+  SINGLE_ELIMINATION
+  DOUBLE_ELIMINATION
+  ROUND_ROBIN
+  GROUP_KNOCKOUT
+  CUSTOM
+}
+
+enum ParticipantStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  WITHDRAWN
+  ELIMINATED
+  CHAMPION
+}
+
+enum MatchStatus {
+  SCHEDULED
+  CHECK_IN_OPEN
+  READY
+  LIVE
+  AWAITING_RESULT
+  DISPUTED
+  COMPLETED
+  CANCELLED
+  FORFEIT
+}
+
+enum BracketType {
+  WINNERS
+  LOSERS
+  FINALS
+  GROUP
+}
+
+enum SeasonStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+  ARCHIVED
+}
+
+enum RankingEntityType {
+  GANG
+  PLAYER
+}
+
+enum MediaStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DELETED
+}
+
+enum SyncStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  FAILED
+  REJECTED
+}
+
+model User {
+  id                String         @id @default(cuid())
+  discordId         String?        @unique
+  username          String
+  displayName       String
+  avatarUrl         String?
+  status            RecordStatus   @default(ACTIVE)
+  lastLoginAt       DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  sessions          RefreshToken[]
+  roles             UserRole[]
+  player            Player?
+  organized         Tournament[]   @relation("TournamentOrganizer")
+  finalizedMatches  Match[]        @relation("MatchFinalizer")
+  awardsGranted     MvpAward[]      @relation("AwardGranter")
+  rankingEvents     RankingEvent[]  @relation("RankingEventCreator")
+  media             MediaAsset[]    @relation("MediaUploader")
+  mediaReviews      MediaAsset[]    @relation("MediaReviewer")
+  auditLogs         AuditLog[]      @relation("AuditActor")
+  notifications     Notification[]
+  settingsUpdated   PlatformSetting[]
+
+  @@index([status])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  description String?
+  users       UserRole[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  description String?
+  roles       RolePermission[]
+}
+
+model UserRole {
+  id     String @id @default(cuid())
+  userId String
+  roleId String
+  gangId String?
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  gang   Gang? @relation(fields: [gangId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId, gangId])
+  @@index([gangId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model Gang {
+  id                String              @id @default(cuid())
+  slug              String              @unique
+  name              String
+  tag               String              @unique
+  motto             String?
+  description       String?
+  history           String?
+  logoUrl           String?
+  bannerUrl         String?
+  primaryColor      String?
+  secondaryColor    String?
+  status            RecordStatus        @default(ACTIVE)
+  recruitmentStatus RecruitmentStatus   @default(CLOSED)
+  verified          Boolean             @default(false)
+  featured          Boolean             @default(false)
+  foundedAt         DateTime?
+  territory         String?
+  currentRank       Int?
+  previousRank      Int?
+  peakRank          Int?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  archivedAt        DateTime?
+  roles             GangRole[]
+  memberships       GangMembership[]
+  userRoles         UserRole[]
+  participants      TournamentParticipant[]
+  matchesAsA        Match[]             @relation("GangA")
+  matchesAsB        Match[]             @relation("GangB")
+  matchWins         Match[]             @relation("WinnerGang")
+  playerStats       MatchPlayerStat[]
+  awards            MvpAward[]
+  seasonStats       GangSeasonStat[]
+  media             MediaAsset[]
+
+  @@index([status, currentRank])
+  @@index([featured])
+}
+
+model GangRole {
+  id             String           @id @default(cuid())
+  gangId         String
+  name           String
+  hierarchyLevel Int
+  public         Boolean          @default(true)
+  leadership     Boolean          @default(false)
+  sortOrder      Int              @default(0)
+  gang           Gang             @relation(fields: [gangId], references: [id], onDelete: Cascade)
+  memberships    GangMembership[]
+
+  @@unique([gangId, name])
+  @@unique([gangId, hierarchyLevel])
+}
+
+model Player {
+  id               String           @id @default(cuid())
+  slug             String           @unique
+  userId           String?          @unique
+  displayName      String
+  avatarUrl        String?
+  biography        String?
+  status           RecordStatus     @default(ACTIVE)
+  externalFiveMId  String?          @unique
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  archivedAt       DateTime?
+  user             User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  memberships      GangMembership[]
+  rosters          TournamentRoster[]
+  matchStats       MatchPlayerStat[]
+  awards           MvpAward[]
+  seasonStats      PlayerSeasonStat[]
+
+  @@index([status])
+}
+
+model GangMembership {
+  id         String   @id @default(cuid())
+  gangId     String
+  playerId   String
+  gangRoleId String
+  callsign   String?
+  joinedAt   DateTime
+  leftAt     DateTime?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  gang       Gang     @relation(fields: [gangId], references: [id], onDelete: Restrict)
+  player     Player   @relation(fields: [playerId], references: [id], onDelete: Restrict)
+  gangRole   GangRole @relation(fields: [gangRoleId], references: [id], onDelete: Restrict)
+
+  @@index([playerId, active])
+  @@index([gangId, active])
+}
+
+model Season {
+  id                    String             @id @default(cuid())
+  name                  String
+  slug                  String             @unique
+  status                SeasonStatus       @default(DRAFT)
+  startsAt              DateTime
+  endsAt                DateTime?
+  scoringConfigSnapshot Json
+  createdAt             DateTime           @default(now())
+  archivedAt            DateTime?
+  tournaments           Tournament[]
+  gangStats             GangSeasonStat[]
+  playerStats           PlayerSeasonStat[]
+  rankingEvents         RankingEvent[]
+  awards                MvpAward[]
+
+  @@index([status])
+}
+
+model Tournament {
+  id                     String                  @id @default(cuid())
+  slug                   String                  @unique
+  name                   String
+  description            String?
+  bannerUrl              String?
+  format                 TournamentFormat
+  status                 TournamentStatus        @default(DRAFT)
+  seasonId               String?
+  registrationOpenAt     DateTime?
+  registrationCloseAt    DateTime?
+  startAt                DateTime
+  endAt                  DateTime?
+  maximumParticipants    Int
+  rules                   String?
+  prizeDescription       String?
+  organizerUserId        String
+  bracketVersion         Int                     @default(0)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  archivedAt             DateTime?
+  season                 Season?                 @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  organizer              User                    @relation("TournamentOrganizer", fields: [organizerUserId], references: [id], onDelete: Restrict)
+  participants           TournamentParticipant[]
+  rounds                 BracketRound[]
+  matches                Match[]
+  awards                 MvpAward[]
+
+  @@index([status, startAt])
+}
+
+model TournamentParticipant {
+  id           String            @id @default(cuid())
+  tournamentId String
+  gangId       String
+  seed         Int?
+  status       ParticipantStatus @default(PENDING)
+  registeredAt DateTime          @default(now())
+  approvedAt   DateTime?
+  tournament   Tournament       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  gang         Gang             @relation(fields: [gangId], references: [id], onDelete: Restrict)
+  roster       TournamentRoster[]
+
+  @@unique([tournamentId, gangId])
+  @@unique([tournamentId, seed])
+}
+
+model TournamentRoster {
+  id                      String                @id @default(cuid())
+  tournamentParticipantId String
+  playerId                String
+  role                    String?
+  starter                 Boolean               @default(false)
+  approved                Boolean               @default(false)
+  participant             TournamentParticipant @relation(fields: [tournamentParticipantId], references: [id], onDelete: Cascade)
+  player                  Player                @relation(fields: [playerId], references: [id], onDelete: Restrict)
+
+  @@unique([tournamentParticipantId, playerId])
+}
+
+model BracketRound {
+  id           String      @id @default(cuid())
+  tournamentId String
+  bracketType  BracketType
+  roundNumber  Int
+  name         String
+  sortOrder    Int
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  matches      Match[]
+
+  @@unique([tournamentId, bracketType, roundNumber])
+}
+
+model Match {
+  id                String            @id @default(cuid())
+  tournamentId      String?
+  bracketRoundId    String?
+  nextMatchId       String?
+  loserNextMatchId  String?
+  gangAId           String?
+  gangBId           String?
+  gangAScore        Int?
+  gangBScore        Int?
+  winnerGangId      String?
+  status            MatchStatus       @default(SCHEDULED)
+  bestOf            Int               @default(1)
+  scheduledAt       DateTime?
+  startedAt         DateTime?
+  finalizedAt       DateTime?
+  finalizedByUserId String?
+  reopenedAt        DateTime?
+  reopenReason      String?
+  version           Int               @default(0)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  tournament        Tournament?       @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  bracketRound      BracketRound?     @relation(fields: [bracketRoundId], references: [id], onDelete: SetNull)
+  nextMatch         Match?            @relation("WinnerProgression", fields: [nextMatchId], references: [id], onDelete: SetNull)
+  previousMatches   Match[]           @relation("WinnerProgression")
+  loserNextMatch    Match?            @relation("LoserProgression", fields: [loserNextMatchId], references: [id], onDelete: SetNull)
+  loserPrevious     Match[]           @relation("LoserProgression")
+  gangA             Gang?             @relation("GangA", fields: [gangAId], references: [id], onDelete: Restrict)
+  gangB             Gang?             @relation("GangB", fields: [gangBId], references: [id], onDelete: Restrict)
+  winnerGang        Gang?             @relation("WinnerGang", fields: [winnerGangId], references: [id], onDelete: Restrict)
+  finalizedBy       User?             @relation("MatchFinalizer", fields: [finalizedByUserId], references: [id], onDelete: Restrict)
+  playerStats       MatchPlayerStat[]
+  awards            MvpAward[]
+
+  @@index([tournamentId, status, scheduledAt])
+  @@index([nextMatchId])
+}
+
+model MatchPlayerStat {
+  id           String   @id @default(cuid())
+  matchId      String
+  playerId     String
+  gangId       String
+  kills        Int      @default(0)
+  deaths       Int      @default(0)
+  assists      Int      @default(0)
+  roundsPlayed Int      @default(0)
+  mvp          Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  match        Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player       Player   @relation(fields: [playerId], references: [id], onDelete: Restrict)
+  gang         Gang     @relation(fields: [gangId], references: [id], onDelete: Restrict)
+
+  @@unique([matchId, playerId])
+  @@index([gangId, matchId])
+}
+
+model MvpAward {
+  id                 String   @id @default(cuid())
+  playerId           String
+  gangId             String
+  type               String
+  matchId            String?
+  tournamentId       String?
+  seasonId           String?
+  reason             String?
+  statisticsSnapshot Json
+  awardedByUserId    String
+  awardedAt          DateTime @default(now())
+  player             Player   @relation(fields: [playerId], references: [id], onDelete: Restrict)
+  gang               Gang     @relation(fields: [gangId], references: [id], onDelete: Restrict)
+  match              Match?   @relation(fields: [matchId], references: [id], onDelete: SetNull)
+  tournament         Tournament? @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  season             Season?  @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  awardedBy          User     @relation("AwardGranter", fields: [awardedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([matchId, type])
+  @@index([playerId, awardedAt])
+}
+
+model GangSeasonStat {
+  id            String   @id @default(cuid())
+  seasonId      String
+  gangId        String
+  matchesPlayed Int      @default(0)
+  wins          Int      @default(0)
+  losses        Int      @default(0)
+  draws         Int      @default(0)
+  kills         Int      @default(0)
+  deaths        Int      @default(0)
+  points        Int      @default(0)
+  currentRank   Int?
+  previousRank  Int?
+  peakRank      Int?
+  streak        Int      @default(0)
+  updatedAt     DateTime @updatedAt
+  season        Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  gang          Gang     @relation(fields: [gangId], references: [id], onDelete: Restrict)
+
+  @@unique([seasonId, gangId])
+  @@index([seasonId, points])
+}
+
+model PlayerSeasonStat {
+  id            String   @id @default(cuid())
+  seasonId      String
+  playerId      String
+  gangId        String?
+  matchesPlayed Int      @default(0)
+  wins          Int      @default(0)
+  losses        Int      @default(0)
+  kills         Int      @default(0)
+  deaths        Int      @default(0)
+  assists       Int      @default(0)
+  mvpAwards     Int      @default(0)
+  points        Int      @default(0)
+  currentRank   Int?
+  previousRank  Int?
+  peakRank      Int?
+  updatedAt     DateTime @updatedAt
+  season        Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  player        Player   @relation(fields: [playerId], references: [id], onDelete: Restrict)
+
+  @@unique([seasonId, playerId])
+  @@index([seasonId, points])
+}
+
+model RankingEvent {
+  id              String            @id @default(cuid())
+  seasonId        String
+  entityType      RankingEntityType
+  entityId        String
+  eventType       String
+  points          Int
+  sourceType      String
+  sourceId        String
+  description     String?
+  createdByUserId String?
+  createdAt       DateTime          @default(now())
+  season          Season            @relation(fields: [seasonId], references: [id], onDelete: Restrict)
+  createdBy       User?             @relation("RankingEventCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([seasonId, entityType, entityId, sourceType, sourceId, eventType])
+  @@index([seasonId, entityType, entityId, createdAt])
+}
+
+model MediaAsset {
+  id                 String      @id @default(cuid())
+  uploaderUserId     String
+  gangId             String?
+  category           String
+  originalFilename   String
+  storageKey         String      @unique
+  publicUrl          String
+  mimeType           String
+  size               Int
+  width              Int?
+  height             Int?
+  status             MediaStatus @default(PENDING)
+  createdAt          DateTime    @default(now())
+  reviewedAt         DateTime?
+  reviewedByUserId   String?
+  uploader           User        @relation("MediaUploader", fields: [uploaderUserId], references: [id], onDelete: Restrict)
+  gang               Gang?       @relation(fields: [gangId], references: [id], onDelete: SetNull)
+  reviewedBy         User?       @relation("MediaReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  action      String
+  entityType  String
+  entityId    String?
+  beforeData  Json?
+  afterData   Json?
+  reason      String?
+  ipHash      String?
+  createdAt   DateTime @default(now())
+  actor       User?    @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+}
+
+model PlatformSetting {
+  id              String   @id @default(cuid())
+  key             String   @unique
+  value           Json
+  updatedByUserId String
+  updatedAt       DateTime @updatedAt
+  updatedBy       User     @relation(fields: [updatedByUserId], references: [id], onDelete: Restrict)
+}
+
+model SyncEvent {
+  id              String     @id @default(cuid())
+  source          String
+  externalEventId String
+  type            String
+  payloadHash     String
+  status          SyncStatus @default(RECEIVED)
+  error           String?
+  receivedAt      DateTime   @default(now())
+  processedAt     DateTime?
+
+  @@unique([source, externalEventId])
+  @@index([status, receivedAt])
+}

@@ -1,0 +1,22 @@
+{
+  "name": "mafia-platform",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.14.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @mafia/web --filter @mafia/api dev",
+    "dev:web": "pnpm --filter @mafia/web dev",
+    "dev:api": "pnpm --filter @mafia/api dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "prisma:validate": "pnpm --filter @mafia/api prisma:validate",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2"
+  }
+}
