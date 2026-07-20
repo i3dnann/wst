@@ -1,47 +1,133 @@
 # Deployment guide
 
-## Frontend on Netlify
+This deployment targets a Netlify frontend and a Windows VPS running the API on private port `4177`. MySQL or MariaDB is the database engine; HeidiSQL is the graphical client used to manage it.
 
-1. Connect this repository and use the repository root.
-2. Build command: `pnpm --filter @mafia/web build`.
-3. Publish directory: `apps/web/dist`.
-4. Set `VITE_API_BASE_URL=https://api.example.com` and `VITE_APP_NAME=World Star`.
-5. Keep database, session, administrator and object-storage credentials off Netlify.
+## Compatibility note
 
-`netlify.toml` includes the SPA fallback, immutable asset caching and baseline response headers. API requests target the VPS URL configured by `VITE_API_BASE_URL`.
+The Prisma datasource and migration history are MySQL/MariaDB-native. Use a new empty database for the first deployment. PostgreSQL migration files from earlier revisions are intentionally not compatible with this baseline; existing PostgreSQL data must be exported and transformed before importing it into MySQL/MariaDB.
 
-## API on a VPS
+## Create the database with HeidiSQL
 
-Recommended baseline: Ubuntu LTS, Node 22+, PostgreSQL 16+, Nginx, Certbot and PM2.
+Connect HeidiSQL to the local MySQL/MariaDB server as an administrator, open a query tab, and run:
 
-```bash
+```sql
+CREATE DATABASE `worldstar`
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+CREATE USER 'worldstar'@'127.0.0.1'
+  IDENTIFIED BY 'REPLACE_WITH_A_STRONG_PASSWORD';
+
+GRANT ALL PRIVILEGES ON `worldstar`.*
+  TO 'worldstar'@'127.0.0.1';
+
+FLUSH PRIVILEGES;
+```
+
+Keep MySQL/MariaDB on `127.0.0.1:3306`. Do not expose port `3306` through Windows Firewall.
+
+## API environment
+
+Copy `apps/api/.env.example` to `apps/api/.env` and set production values:
+
+```env
+NODE_ENV=production
+PORT=4177
+DATABASE_URL=mysql://worldstar:URL_ENCODED_PASSWORD@127.0.0.1:3306/worldstar
+FRONTEND_URL=https://YOUR-SITE.netlify.app
+CORS_ALLOWED_ORIGINS=https://YOUR-SITE.netlify.app
+SESSION_SECRET=REPLACE_WITH_AT_LEAST_32_RANDOM_CHARACTERS
+ADMIN_EMAIL=admin@your-domain.example
+ADMIN_PASSWORD=REPLACE_WITH_A_STRONG_PASSWORD
+```
+
+Percent-encode reserved characters in the database password before placing it in `DATABASE_URL`. Keep this file outside source control and restrict it to the Windows service account.
+
+## Install and build on Windows Server
+
+Install Git, Node.js 22 LTS, MySQL 8+ or MariaDB, HeidiSQL, and NSSM. Then run Administrator PowerShell:
+
+```powershell
 corepack enable
+corepack prepare pnpm@10.14.0 --activate
+git clone --branch main https://github.com/i3dnann/wst.git C:\Sites\worldstar
+Set-Location C:\Sites\worldstar
 pnpm install --frozen-lockfile
 pnpm --filter @mafia/api prisma:generate
 pnpm --filter @mafia/api prisma:migrate:deploy
-ADMIN_EMAIL=admin@your-domain.tld ADMIN_PASSWORD='a-long-random-password' pnpm --filter @mafia/api prisma:seed
+pnpm --filter @mafia/api prisma:seed
 pnpm --filter @mafia/api build
-cd apps/api
-pm2 start ecosystem.config.cjs --env production
-pm2 save
-pm2 startup
 ```
 
-Place production environment values outside the Git checkout with owner-only permissions and inject them through the service manager. Required values include `DATABASE_URL`, the real `FRONTEND_URL`, strict `CORS_ALLOWED_ORIGINS`, a 32+ byte `SESSION_SECRET`, the bootstrap administrator credentials and any S3-compatible storage credentials.
+The seed is idempotent. It creates permissions, the super-administrator role, and the administrator supplied by `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
 
-## Nginx and HTTPS
+Test locally before creating the service:
 
-Install `deploy/nginx/worldstar-api.conf`, replace `api.example.com`, run `nginx -t`, reload Nginx and issue a certificate with Certbot. Keep Fastify and PostgreSQL on private ports.
+```powershell
+Set-Location C:\Sites\worldstar\apps\api
+node dist\server.js
+```
 
-- Allow 22/tcp only from trusted administrative IPs.
-- Allow 80/tcp and 443/tcp publicly.
-- Deny 4000/tcp and 5432/tcp publicly.
+From another PowerShell window:
 
-## Operations and release checklist
+```powershell
+Invoke-RestMethod http://127.0.0.1:4177/health/live
+Invoke-RestMethod http://127.0.0.1:4177/health/ready
+```
 
-- Liveness: `/health/live`; readiness: `/health/ready`.
-- Rotate logs, monitor HTTP/database/object-storage failures and run encrypted off-host PostgreSQL backups.
-- Run formatting, type checking, linting, tests, builds and Prisma validation before release.
-- Review migrations and take a database backup before `prisma migrate deploy`.
-- Verify strict CORS, secure cookies, CSRF enforcement, login rate limiting, media signing and administrator authorization.
-- Smoke-test nested frontend routes, authentication, manual record creation, audit logging and unauthorized requests.
+## Windows service with NSSM
+
+```powershell
+New-Item -ItemType Directory -Path C:\Sites\worldstar\logs -Force
+nssm install WorldStarApi "C:\Program Files\nodejs\node.exe"
+nssm set WorldStarApi AppDirectory "C:\Sites\worldstar\apps\api"
+nssm set WorldStarApi AppParameters "dist\server.js"
+nssm set WorldStarApi AppStdout "C:\Sites\worldstar\logs\api-output.log"
+nssm set WorldStarApi AppStderr "C:\Sites\worldstar\logs\api-error.log"
+nssm set WorldStarApi Start SERVICE_AUTO_START
+nssm start WorldStarApi
+```
+
+Check the service with `Get-Service WorldStarApi`. Do not create a public firewall rule for port `4177`.
+
+## IIS reverse proxy and HTTPS
+
+Port `80` can remain owned by IIS. Create a new IIS site with the host-name binding `api.your-domain.example` and physical path `C:\Sites\worldstar\deploy\iis`. Install IIS URL Rewrite and Application Request Routing, enable ARR proxying at the server level, and use the included `deploy/iis/web.config`. It forwards requests to `http://127.0.0.1:4177`.
+
+Add an HTTPS binding and a valid certificate for the API hostname. Only ports `80` and `443` should be public.
+
+## Frontend on Netlify
+
+Connect `i3dnann/wst`, deploy branch `main`, and use the repository root.
+
+- Build command: `pnpm --filter @mafia/web build`
+- Publish directory: `apps/web/dist`
+- `VITE_APP_NAME=World Star`
+- `VITE_API_BASE_URL=/backend`
+- `NODE_VERSION=22`
+
+For same-origin administrator cookies, add this rule before the existing SPA fallback in `netlify.toml`, replacing the placeholder with the real HTTPS API hostname:
+
+```toml
+[[redirects]]
+  from = "/backend/*"
+  to = "https://api.your-domain.example/:splat"
+  status = 200
+  force = true
+```
+
+The existing `/*` rule must remain last. Trigger a new Netlify deployment after changing Vite environment variables or redirect rules.
+
+## Updates
+
+```powershell
+Set-Location C:\Sites\worldstar
+git pull origin main
+pnpm install --frozen-lockfile
+pnpm --filter @mafia/api prisma:generate
+pnpm --filter @mafia/api prisma:migrate:deploy
+pnpm --filter @mafia/api build
+Restart-Service WorldStarApi
+```
+
+Back up the `worldstar` database in HeidiSQL before every migration. Verify `/health/live`, `/health/ready`, administrator login, events, streams, and bracket changes after each release.

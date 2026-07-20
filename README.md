@@ -7,16 +7,16 @@ The visual system uses the supplied World Star imagery and main PNG mark in a ci
 ## Architecture
 
 - `apps/web`: React 19, Vite, React Router, TanStack Query, Tailwind CSS, Motion, shadcn and Magic UI components.
-- `apps/api`: Fastify REST API, Prisma ORM, PostgreSQL, private email/password authentication, RBAC, audit logging and signed media uploads.
+- `apps/api`: Fastify REST API, Prisma ORM, MySQL/MariaDB, private email/password authentication, RBAC, audit logging and signed media uploads.
 - `packages/shared`: API contracts, Zod schemas, permissions and domain types.
 
-Only authenticated administrators can create or update published information. The public frontend shows honest empty/offline states until PostgreSQL and the API are configured.
+Only authenticated administrators can create or update published information. The public frontend shows honest empty/offline states until MySQL/MariaDB and the API are configured. HeidiSQL can be used to create, inspect, and back up the database.
 
 ## Local development
 
 1. Install dependencies with `pnpm install`.
 2. Copy `apps/api/.env.example` to `apps/api/.env` and `apps/web/.env.example` to `apps/web/.env.local`.
-3. Start PostgreSQL and set `DATABASE_URL`.
+3. Start MySQL 8+ or MariaDB, create the `worldstar` database in HeidiSQL, and set `DATABASE_URL` using the `mysql://` format.
 4. Set a strong `ADMIN_EMAIL` and `ADMIN_PASSWORD`, then run `pnpm --filter @mafia/api prisma:migrate:dev` and `pnpm --filter @mafia/api prisma:seed`.
 5. Run `pnpm dev`, or `pnpm dev:web` for the frontend-only preview.
 
@@ -32,4 +32,4 @@ pnpm build
 pnpm prisma:validate
 ```
 
-See `docs/deployment.md` for Netlify, VPS, Nginx, PM2, backups, HTTPS and firewall guidance.
+See `docs/deployment.md` for Netlify, a Windows VPS, HeidiSQL, IIS, NSSM, backups, HTTPS and firewall guidance.

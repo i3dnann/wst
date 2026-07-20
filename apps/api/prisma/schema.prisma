@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -109,43 +109,43 @@ enum StreamPlatform {
 }
 
 model User {
-  id                String         @id @default(cuid())
-  email             String?        @unique
-  passwordHash      String?
-  username          String
-  displayName       String
-  avatarUrl         String?
-  status            RecordStatus   @default(ACTIVE)
-  lastLoginAt       DateTime?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  sessions          RefreshToken[]
-  roles             UserRole[]
-  player            Player?
-  organized         Tournament[]   @relation("TournamentOrganizer")
-  finalizedMatches  Match[]        @relation("MatchFinalizer")
-  awardsGranted     MvpAward[]      @relation("AwardGranter")
-  rankingEvents     RankingEvent[]  @relation("RankingEventCreator")
-  media             MediaAsset[]    @relation("MediaUploader")
-  mediaReviews      MediaAsset[]    @relation("MediaReviewer")
-  auditLogs         AuditLog[]      @relation("AuditActor")
-  notifications     Notification[]
-  settingsUpdated   PlatformSetting[]
-  eventsCreated     Event[]           @relation("EventCreator")
-  streamsCreated    LiveStream[]      @relation("StreamCreator")
+  id               String            @id @default(cuid())
+  email            String?           @unique
+  passwordHash     String?           @db.VarChar(255)
+  username         String
+  displayName      String
+  avatarUrl        String?           @db.Text
+  status           RecordStatus      @default(ACTIVE)
+  lastLoginAt      DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  sessions         RefreshToken[]
+  roles            UserRole[]
+  player           Player?
+  organized        Tournament[]      @relation("TournamentOrganizer")
+  finalizedMatches Match[]           @relation("MatchFinalizer")
+  awardsGranted    MvpAward[]        @relation("AwardGranter")
+  rankingEvents    RankingEvent[]    @relation("RankingEventCreator")
+  media            MediaAsset[]      @relation("MediaUploader")
+  mediaReviews     MediaAsset[]      @relation("MediaReviewer")
+  auditLogs        AuditLog[]        @relation("AuditActor")
+  notifications    Notification[]
+  settingsUpdated  PlatformSetting[]
+  eventsCreated    Event[]           @relation("EventCreator")
+  streamsCreated   LiveStream[]      @relation("StreamCreator")
 
   @@index([status])
 }
 
 model RefreshToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  tokenHash String   @unique
+  tokenHash String    @unique @db.Char(64)
   expiresAt DateTime
   revokedAt DateTime?
   metadata  Json?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
 }
@@ -153,7 +153,7 @@ model RefreshToken {
 model Role {
   id          String           @id @default(cuid())
   name        String           @unique
-  description String?
+  description String?          @db.Text
   users       UserRole[]
   permissions RolePermission[]
 }
@@ -161,18 +161,18 @@ model Role {
 model Permission {
   id          String           @id @default(cuid())
   key         String           @unique
-  description String?
+  description String?          @db.Text
   roles       RolePermission[]
 }
 
 model UserRole {
-  id     String @id @default(cuid())
+  id     String  @id @default(cuid())
   userId String
   roleId String
   gangId String?
-  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role   Role  @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  gang   Gang? @relation(fields: [gangId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  gang   Gang?   @relation(fields: [gangId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roleId, gangId])
   @@index([gangId])
@@ -188,36 +188,36 @@ model RolePermission {
 }
 
 model Gang {
-  id                String              @id @default(cuid())
-  slug              String              @unique
+  id                String                  @id @default(cuid())
+  slug              String                  @unique
   name              String
-  tag               String              @unique
-  motto             String?
-  description       String?
-  history           String?
-  logoUrl           String?
-  bannerUrl         String?
+  tag               String                  @unique
+  motto             String?                 @db.VarChar(255)
+  description       String?                 @db.Text
+  history           String?                 @db.LongText
+  logoUrl           String?                 @db.Text
+  bannerUrl         String?                 @db.Text
   primaryColor      String?
   secondaryColor    String?
-  status            RecordStatus        @default(ACTIVE)
-  recruitmentStatus RecruitmentStatus   @default(CLOSED)
-  verified          Boolean             @default(false)
-  featured          Boolean             @default(false)
+  status            RecordStatus            @default(ACTIVE)
+  recruitmentStatus RecruitmentStatus       @default(CLOSED)
+  verified          Boolean                 @default(false)
+  featured          Boolean                 @default(false)
   foundedAt         DateTime?
   territory         String?
   currentRank       Int?
   previousRank      Int?
   peakRank          Int?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
   archivedAt        DateTime?
   roles             GangRole[]
   memberships       GangMembership[]
   userRoles         UserRole[]
   participants      TournamentParticipant[]
-  matchesAsA        Match[]             @relation("GangA")
-  matchesAsB        Match[]             @relation("GangB")
-  matchWins         Match[]             @relation("WinnerGang")
+  matchesAsA        Match[]                 @relation("GangA")
+  matchesAsB        Match[]                 @relation("GangB")
+  matchWins         Match[]                 @relation("WinnerGang")
   playerStats       MatchPlayerStat[]
   awards            MvpAward[]
   seasonStats       GangSeasonStat[]
@@ -243,40 +243,40 @@ model GangRole {
 }
 
 model Player {
-  id               String           @id @default(cuid())
-  slug             String           @unique
-  userId           String?          @unique
-  displayName      String
-  avatarUrl        String?
-  biography        String?
-  status           RecordStatus     @default(ACTIVE)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  archivedAt       DateTime?
-  user             User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
-  memberships      GangMembership[]
-  rosters          TournamentRoster[]
-  matchStats       MatchPlayerStat[]
-  awards           MvpAward[]
-  seasonStats      PlayerSeasonStat[]
+  id          String             @id @default(cuid())
+  slug        String             @unique
+  userId      String?            @unique
+  displayName String
+  avatarUrl   String?            @db.Text
+  biography   String?            @db.Text
+  status      RecordStatus       @default(ACTIVE)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  archivedAt  DateTime?
+  user        User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  memberships GangMembership[]
+  rosters     TournamentRoster[]
+  matchStats  MatchPlayerStat[]
+  awards      MvpAward[]
+  seasonStats PlayerSeasonStat[]
 
   @@index([status])
 }
 
 model GangMembership {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   gangId     String
   playerId   String
   gangRoleId String
   callsign   String?
   joinedAt   DateTime
   leftAt     DateTime?
-  active     Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  gang       Gang     @relation(fields: [gangId], references: [id], onDelete: Restrict)
-  player     Player   @relation(fields: [playerId], references: [id], onDelete: Restrict)
-  gangRole   GangRole @relation(fields: [gangRoleId], references: [id], onDelete: Restrict)
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  gang       Gang      @relation(fields: [gangId], references: [id], onDelete: Restrict)
+  player     Player    @relation(fields: [playerId], references: [id], onDelete: Restrict)
+  gangRole   GangRole  @relation(fields: [gangRoleId], references: [id], onDelete: Restrict)
 
   @@index([playerId, active])
   @@index([gangId, active])
@@ -302,47 +302,47 @@ model Season {
 }
 
 model Tournament {
-  id                     String                  @id @default(cuid())
-  slug                   String                  @unique
-  name                   String
-  description            String?
-  bannerUrl              String?
-  format                 TournamentFormat
-  status                 TournamentStatus        @default(DRAFT)
-  seasonId               String?
-  registrationOpenAt     DateTime?
-  registrationCloseAt    DateTime?
-  startAt                DateTime
-  endAt                  DateTime?
-  maximumParticipants    Int
-  rules                   String?
-  prizeDescription       String?
-  organizerUserId        String
-  bracketVersion         Int                     @default(0)
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  archivedAt             DateTime?
-  season                 Season?                 @relation(fields: [seasonId], references: [id], onDelete: SetNull)
-  organizer              User                    @relation("TournamentOrganizer", fields: [organizerUserId], references: [id], onDelete: Restrict)
-  participants           TournamentParticipant[]
-  rounds                 BracketRound[]
-  matches                Match[]
-  awards                 MvpAward[]
-  liveStreams            LiveStream[]
+  id                  String                  @id @default(cuid())
+  slug                String                  @unique
+  name                String
+  description         String?                 @db.Text
+  bannerUrl           String?                 @db.Text
+  format              TournamentFormat
+  status              TournamentStatus        @default(DRAFT)
+  seasonId            String?
+  registrationOpenAt  DateTime?
+  registrationCloseAt DateTime?
+  startAt             DateTime
+  endAt               DateTime?
+  maximumParticipants Int
+  rules               String?                 @db.LongText
+  prizeDescription    String?                 @db.Text
+  organizerUserId     String
+  bracketVersion      Int                     @default(0)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  archivedAt          DateTime?
+  season              Season?                 @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  organizer           User                    @relation("TournamentOrganizer", fields: [organizerUserId], references: [id], onDelete: Restrict)
+  participants        TournamentParticipant[]
+  rounds              BracketRound[]
+  matches             Match[]
+  awards              MvpAward[]
+  liveStreams         LiveStream[]
 
   @@index([status, startAt])
 }
 
 model TournamentParticipant {
-  id           String            @id @default(cuid())
+  id           String             @id @default(cuid())
   tournamentId String
   gangId       String
   seed         Int?
-  status       ParticipantStatus @default(PENDING)
-  registeredAt DateTime          @default(now())
+  status       ParticipantStatus  @default(PENDING)
+  registeredAt DateTime           @default(now())
   approvedAt   DateTime?
-  tournament   Tournament       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  gang         Gang             @relation(fields: [gangId], references: [id], onDelete: Restrict)
+  tournament   Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  gang         Gang               @relation(fields: [gangId], references: [id], onDelete: Restrict)
   roster       TournamentRoster[]
 
   @@unique([tournamentId, gangId])
@@ -369,7 +369,7 @@ model BracketRound {
   roundNumber  Int
   name         String
   sortOrder    Int
-  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournament   Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   matches      Match[]
 
   @@unique([tournamentId, bracketType, roundNumber])
@@ -393,7 +393,7 @@ model Match {
   finalizedAt       DateTime?
   finalizedByUserId String?
   reopenedAt        DateTime?
-  reopenReason      String?
+  reopenReason      String?           @db.Text
   version           Int               @default(0)
   position          Int?
   createdAt         DateTime          @default(now())
@@ -411,17 +411,17 @@ model Match {
   playerStats       MatchPlayerStat[]
   awards            MvpAward[]
 
+  @@unique([bracketRoundId, position])
   @@index([tournamentId, status, scheduledAt])
   @@index([nextMatchId])
-  @@unique([bracketRoundId, position])
 }
 
 model Event {
   id              String      @id @default(cuid())
   slug            String      @unique
   title           String
-  description     String?
-  imageUrl        String?
+  description     String?     @db.Text
+  imageUrl        String?     @db.Text
   location        String?
   startsAt        DateTime
   endsAt          DateTime?
@@ -441,9 +441,9 @@ model LiveStream {
   slug            String         @unique
   streamerName    String
   platform        StreamPlatform
-  channelUrl      String
-  embedUrl        String?
-  thumbnailUrl    String?
+  channelUrl      String         @db.Text
+  embedUrl        String?        @db.Text
+  thumbnailUrl    String?        @db.Text
   status          StreamStatus   @default(OFFLINE)
   featured        Boolean        @default(false)
   tournamentId    String?
@@ -479,23 +479,23 @@ model MatchPlayerStat {
 }
 
 model MvpAward {
-  id                 String   @id @default(cuid())
+  id                 String      @id @default(cuid())
   playerId           String
   gangId             String
   type               String
   matchId            String?
   tournamentId       String?
   seasonId           String?
-  reason             String?
+  reason             String?     @db.Text
   statisticsSnapshot Json
   awardedByUserId    String
-  awardedAt          DateTime @default(now())
-  player             Player   @relation(fields: [playerId], references: [id], onDelete: Restrict)
-  gang               Gang     @relation(fields: [gangId], references: [id], onDelete: Restrict)
-  match              Match?   @relation(fields: [matchId], references: [id], onDelete: SetNull)
+  awardedAt          DateTime    @default(now())
+  player             Player      @relation(fields: [playerId], references: [id], onDelete: Restrict)
+  gang               Gang        @relation(fields: [gangId], references: [id], onDelete: Restrict)
+  match              Match?      @relation(fields: [matchId], references: [id], onDelete: SetNull)
   tournament         Tournament? @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
-  season             Season?  @relation(fields: [seasonId], references: [id], onDelete: SetNull)
-  awardedBy          User     @relation("AwardGranter", fields: [awardedByUserId], references: [id], onDelete: Restrict)
+  season             Season?     @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  awardedBy          User        @relation("AwardGranter", fields: [awardedByUserId], references: [id], onDelete: Restrict)
 
   @@unique([matchId, type])
   @@index([playerId, awardedAt])
@@ -552,12 +552,12 @@ model RankingEvent {
   id              String            @id @default(cuid())
   seasonId        String
   entityType      RankingEntityType
-  entityId        String
-  eventType       String
+  entityId        String            @db.VarChar(30)
+  eventType       String            @db.VarChar(64)
   points          Int
-  sourceType      String
-  sourceId        String
-  description     String?
+  sourceType      String            @db.VarChar(64)
+  sourceId        String            @db.VarChar(30)
+  description     String?           @db.Text
   createdByUserId String?
   createdAt       DateTime          @default(now())
   season          Season            @relation(fields: [seasonId], references: [id], onDelete: Restrict)
@@ -568,24 +568,24 @@ model RankingEvent {
 }
 
 model MediaAsset {
-  id                 String      @id @default(cuid())
-  uploaderUserId     String
-  gangId             String?
-  category           String
-  originalFilename   String
-  storageKey         String      @unique
-  publicUrl          String
-  mimeType           String
-  size               Int
-  width              Int?
-  height             Int?
-  status             MediaStatus @default(PENDING)
-  createdAt          DateTime    @default(now())
-  reviewedAt         DateTime?
-  reviewedByUserId   String?
-  uploader           User        @relation("MediaUploader", fields: [uploaderUserId], references: [id], onDelete: Restrict)
-  gang               Gang?       @relation(fields: [gangId], references: [id], onDelete: SetNull)
-  reviewedBy         User?       @relation("MediaReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  id               String      @id @default(cuid())
+  uploaderUserId   String
+  gangId           String?
+  category         String
+  originalFilename String      @db.VarChar(255)
+  storageKey       String      @unique
+  publicUrl        String      @db.Text
+  mimeType         String      @db.VarChar(127)
+  size             Int
+  width            Int?
+  height           Int?
+  status           MediaStatus @default(PENDING)
+  createdAt        DateTime    @default(now())
+  reviewedAt       DateTime?
+  reviewedByUserId String?
+  uploader         User        @relation("MediaUploader", fields: [uploaderUserId], references: [id], onDelete: Restrict)
+  gang             Gang?       @relation(fields: [gangId], references: [id], onDelete: SetNull)
+  reviewedBy       User?       @relation("MediaReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
 }
@@ -593,13 +593,13 @@ model MediaAsset {
 model AuditLog {
   id          String   @id @default(cuid())
   actorUserId String?
-  action      String
-  entityType  String
-  entityId    String?
+  action      String   @db.VarChar(128)
+  entityType  String   @db.VarChar(64)
+  entityId    String?  @db.VarChar(30)
   beforeData  Json?
   afterData   Json?
-  reason      String?
-  ipHash      String?
+  reason      String?  @db.Text
+  ipHash      String?  @db.Char(64)
   createdAt   DateTime @default(now())
   actor       User?    @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
@@ -608,14 +608,14 @@ model AuditLog {
 }
 
 model Notification {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
   type      String
-  title     String
-  message   String
+  title     String    @db.VarChar(255)
+  message   String    @db.Text
   readAt    DateTime?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, readAt, createdAt])
 }
