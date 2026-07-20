@@ -7,7 +7,7 @@ import type {
 } from "@mafia/shared";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4177";
 
 export class ApiError extends Error {
   constructor(
