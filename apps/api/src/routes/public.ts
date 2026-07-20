@@ -290,6 +290,27 @@ export function publicRoutes(app: FastifyInstance): void {
     return envelope(request, matches);
   });
 
+  app.get("/api/v1/events", async (request) => {
+    const events = await prisma.event.findMany({
+      where: { status: { notIn: ["DRAFT", "ARCHIVED"] } },
+      orderBy: [{ featured: "desc" }, { startsAt: "asc" }],
+      take: 100,
+    });
+    return envelope(request, events);
+  });
+
+  app.get("/api/v1/live-streams", async (request) => {
+    const streams = await prisma.liveStream.findMany({
+      where: { status: { not: "ARCHIVED" } },
+      orderBy: [{ status: "asc" }, { featured: "desc" }, { updatedAt: "desc" }],
+      include: {
+        tournament: { select: { id: true, slug: true, name: true } },
+      },
+      take: 100,
+    });
+    return envelope(request, streams);
+  });
+
   app.get<{ Params: { id: string } }>(
     "/api/v1/matches/:id",
     async (request) => {

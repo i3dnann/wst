@@ -1,0 +1,174 @@
+import { useMemo, useState } from "react";
+import { useQueries } from "@tanstack/react-query";
+import { ArrowUpRight, CalendarDays, Play, Radio } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api";
+
+function safeEmbedUrl(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const allowed = [
+      "youtube.com",
+      "youtube-nocookie.com",
+      "twitch.tv",
+      "kick.com",
+    ];
+    if (
+      url.protocol !== "https:" ||
+      !allowed.some(
+        (host) => url.hostname === host || url.hostname.endsWith(`.${host}`),
+      )
+    )
+      return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+export default function LivePage() {
+  const [streams, events] = useQueries({
+    queries: [
+      { queryKey: ["live-streams"], queryFn: api.liveStreams, retry: false },
+      { queryKey: ["events"], queryFn: api.events, retry: false },
+    ],
+  });
+  const list = useMemo(() => streams.data?.data ?? [], [streams.data?.data]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = useMemo(
+    () =>
+      list.find((stream) => stream.id === selectedId) ??
+      list.find((stream) => stream.status === "LIVE") ??
+      list[0],
+    [list, selectedId],
+  );
+  const embedUrl = safeEmbedUrl(selected?.embedUrl ?? null);
+
+  return (
+    <main className="gold-content-page live-page">
+      <header className="live-title">
+        <Radio />
+        <h1>LIVE FROM WORLD STAR</h1>
+        <p>Watch approved streamers covering official tournaments.</p>
+      </header>
+      <section className="live-layout">
+        <div className="live-stage">
+          <div className="live-player">
+            {embedUrl ? (
+              <iframe
+                src={embedUrl}
+                title={`${selected?.streamerName ?? "World Star"} live stream`}
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            ) : (
+              <div className="live-player-empty">
+                <img
+                  src="/assets/wst-gold/city-overlook.png"
+                  alt="World Star city at night"
+                />
+                <div>
+                  <Play />
+                  <strong>
+                    {selected
+                      ? "Open the approved channel to watch"
+                      : "No stream is live"}
+                  </strong>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="live-stage-info">
+            <img src="/assets/wst-gold/wst-gold.png" alt="" />
+            <div>
+              <span
+                className={
+                  selected?.status === "LIVE"
+                    ? "live-indicator"
+                    : "offline-indicator"
+                }
+              >
+                {selected?.status ?? "OFFLINE"}
+              </span>
+              <h2>{selected?.streamerName ?? "World Star Live"}</h2>
+              <p>
+                {selected?.tournament?.name ??
+                  "Approved tournament coverage will appear here."}
+              </p>
+            </div>
+            {selected ? (
+              <Button asChild variant="outline">
+                <a href={selected.channelUrl} target="_blank" rel="noreferrer">
+                  Watch on {selected.platform} <ArrowUpRight />
+                </a>
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        <aside className="stream-rail">
+          <h2>Approved Streams</h2>
+          {list.length ? (
+            list.map((stream) => (
+              <button
+                type="button"
+                className={stream.id === selected?.id ? "selected" : ""}
+                key={stream.id}
+                onClick={() => setSelectedId(stream.id)}
+              >
+                <span
+                  className={
+                    stream.status === "LIVE" ? "live-dot" : "offline-dot"
+                  }
+                />
+                <strong>{stream.streamerName}</strong>
+                <small>
+                  {stream.platform} · {stream.status}
+                </small>
+              </button>
+            ))
+          ) : (
+            <div className="gold-empty-copy compact">
+              <Radio />
+              <strong>No approved streams</strong>
+              <p>Nothing is broadcasting right now.</p>
+            </div>
+          )}
+        </aside>
+      </section>
+      <section className="live-events-preview">
+        <div className="gold-section-heading">
+          <div>
+            <span>Server Events</span>
+            <h2>Upcoming from World Star</h2>
+          </div>
+          <Button asChild variant="outline">
+            <Link to="/events">View All Events</Link>
+          </Button>
+        </div>
+        {(events.data?.data ?? []).length ? (
+          <ol>
+            {(events.data?.data ?? []).slice(0, 4).map((event) => (
+              <li key={event.id}>
+                <CalendarDays />
+                <div>
+                  <strong>{event.title}</strong>
+                  <time>{new Date(event.startsAt).toLocaleString()}</time>
+                </div>
+                <span>{event.status}</span>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <div className="gold-empty-copy compact">
+            <CalendarDays />
+            <strong>No events scheduled</strong>
+            <p>Check back after the administrator publishes the next event.</p>
+          </div>
+        )}
+      </section>
+    </main>
+  );
+}

@@ -85,6 +85,29 @@ enum MediaStatus {
   DELETED
 }
 
+enum EventStatus {
+  DRAFT
+  SCHEDULED
+  LIVE
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+enum StreamStatus {
+  SCHEDULED
+  LIVE
+  OFFLINE
+  ARCHIVED
+}
+
+enum StreamPlatform {
+  TWITCH
+  YOUTUBE
+  KICK
+  OTHER
+}
+
 model User {
   id                String         @id @default(cuid())
   email             String?        @unique
@@ -108,6 +131,8 @@ model User {
   auditLogs         AuditLog[]      @relation("AuditActor")
   notifications     Notification[]
   settingsUpdated   PlatformSetting[]
+  eventsCreated     Event[]           @relation("EventCreator")
+  streamsCreated    LiveStream[]      @relation("StreamCreator")
 
   @@index([status])
 }
@@ -303,6 +328,7 @@ model Tournament {
   rounds                 BracketRound[]
   matches                Match[]
   awards                 MvpAward[]
+  liveStreams            LiveStream[]
 
   @@index([status, startAt])
 }
@@ -369,6 +395,7 @@ model Match {
   reopenedAt        DateTime?
   reopenReason      String?
   version           Int               @default(0)
+  position          Int?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   tournament        Tournament?       @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
@@ -386,6 +413,49 @@ model Match {
 
   @@index([tournamentId, status, scheduledAt])
   @@index([nextMatchId])
+  @@unique([bracketRoundId, position])
+}
+
+model Event {
+  id              String      @id @default(cuid())
+  slug            String      @unique
+  title           String
+  description     String?
+  imageUrl        String?
+  location        String?
+  startsAt        DateTime
+  endsAt          DateTime?
+  status          EventStatus @default(DRAFT)
+  featured        Boolean     @default(false)
+  createdByUserId String
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  createdBy       User        @relation("EventCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([status, startsAt])
+  @@index([featured, startsAt])
+}
+
+model LiveStream {
+  id              String         @id @default(cuid())
+  slug            String         @unique
+  streamerName    String
+  platform        StreamPlatform
+  channelUrl      String
+  embedUrl        String?
+  thumbnailUrl    String?
+  status          StreamStatus   @default(OFFLINE)
+  featured        Boolean        @default(false)
+  tournamentId    String?
+  startsAt        DateTime?
+  createdByUserId String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  tournament      Tournament?    @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  createdBy       User           @relation("StreamCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([status, featured, updatedAt])
+  @@index([tournamentId])
 }
 
 model MatchPlayerStat {

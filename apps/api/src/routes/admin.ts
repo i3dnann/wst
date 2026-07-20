@@ -2,7 +2,11 @@ import type { FastifyInstance } from "fastify";
 import { matchResultSchema } from "@mafia/shared";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { assertValidWinner } from "../domain/bracket.js";
+import {
+  assertValidWinner,
+  generateOpeningRound,
+  nextPowerOfTwo,
+} from "../domain/bracket.js";
 import { envelope } from "../lib/envelope.js";
 import { HttpError } from "../lib/http-error.js";
 import { prisma } from "../lib/prisma.js";
@@ -20,6 +24,9 @@ const recordStatusSchema = z.enum([
   "SUSPENDED",
   "ARCHIVED",
 ]);
+const httpsUrlSchema = z.url().refine((value) => value.startsWith("https://"), {
+  message: "Only HTTPS URLs are allowed.",
+});
 const gangInputSchema = z.object({
   name: z.string().trim().min(2).max(100),
   slug: slugSchema,
@@ -92,6 +99,54 @@ const settingInputSchema = z.object({
     .regex(/^[a-z0-9._-]+$/),
   value: z.json(),
 });
+const participantInputSchema = z.object({
+  gangId: z.string().min(20).max(40),
+  seed: z.number().int().min(1).max(256).optional(),
+});
+const participantSeedSchema = z.object({
+  seed: z.number().int().min(1).max(256),
+});
+const eventInputSchema = z.object({
+  title: z.string().trim().min(2).max(160),
+  slug: slugSchema,
+  description: z.string().trim().max(5000).optional(),
+  imageUrl: httpsUrlSchema.optional(),
+  location: z.string().trim().max(160).optional(),
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date().optional(),
+  status: z
+    .enum(["DRAFT", "SCHEDULED", "LIVE", "COMPLETED", "CANCELLED", "ARCHIVED"])
+    .default("DRAFT"),
+  featured: z.boolean().default(false),
+});
+const streamInputSchema = z.object({
+  streamerName: z.string().trim().min(2).max(120),
+  slug: slugSchema,
+  platform: z.enum(["TWITCH", "YOUTUBE", "KICK", "OTHER"]),
+  channelUrl: httpsUrlSchema,
+  embedUrl: httpsUrlSchema.optional(),
+  thumbnailUrl: httpsUrlSchema.optional(),
+  status: z
+    .enum(["SCHEDULED", "LIVE", "OFFLINE", "ARCHIVED"])
+    .default("OFFLINE"),
+  featured: z.boolean().default(false),
+  tournamentId: z.string().min(20).max(40).optional(),
+  startsAt: z.coerce.date().optional(),
+});
+const advanceMatchSchema = z.object({
+  winnerGangId: z.string().min(20).max(40),
+  gangAScore: z.number().int().min(0).max(99),
+  gangBScore: z.number().int().min(0).max(99),
+  version: z.number().int().min(0),
+});
+
+function bracketRoundName(roundNumber: number, totalRounds: number): string {
+  const remaining = totalRounds - roundNumber + 1;
+  if (remaining === 1) return "Final";
+  if (remaining === 2) return "Semifinals";
+  if (remaining === 3) return "Quarterfinals";
+  return `Round of ${String(2 ** remaining)}`;
+}
 
 function compact(input: object): Record<string, unknown> {
   return Object.fromEntries(
@@ -268,6 +323,306 @@ export function adminRoutes(app: FastifyInstance): void {
     },
   );
 
+  app.post<{ Params: { id: string } }>(
+    "/api/v1/admin/tournaments/:id/participants",
+    async (request, reply) => {
+      const auth = requirePermission(request, "tournament.bracket.manage");
+      const input = participantInputSchema.parse(request.body);
+      const tournament = await prisma.tournament.findUnique({
+        where: { id: request.params.id },
+        select: { maximumParticipants: true },
+      });
+      if (!tournament)
+        throw new HttpError(
+          404,
+          "TOURNAMENT_NOT_FOUND",
+          "Tournament was not found.",
+        );
+      const count = await prisma.tournamentParticipant.count({
+        where: {
+          tournamentId: request.params.id,
+          status: { not: "WITHDRAWN" },
+        },
+      });
+      if (count >= tournament.maximumParticipants)
+        throw new HttpError(
+          409,
+          "TOURNAMENT_FULL",
+          "The tournament entrant capacity has been reached.",
+        );
+      const participant = await prisma.tournamentParticipant.create({
+        data: {
+          tournamentId: request.params.id,
+          gangId: input.gangId,
+          seed: input.seed ?? null,
+          status: "APPROVED",
+          approvedAt: new Date(),
+        },
+        include: { gang: true },
+      });
+      await recordAudit(
+        auth.userId,
+        "tournament.participant.add",
+        "Tournament",
+        request.params.id,
+        participant,
+      );
+      return reply.code(201).send(envelope(request, participant));
+    },
+  );
+
+  app.patch<{ Params: { id: string; participantId: string } }>(
+    "/api/v1/admin/tournaments/:id/participants/:participantId",
+    async (request) => {
+      const auth = requirePermission(request, "tournament.bracket.manage");
+      const input = participantSeedSchema.parse(request.body);
+      const participant = await prisma.tournamentParticipant.update({
+        where: {
+          id: request.params.participantId,
+          tournamentId: request.params.id,
+        },
+        data: { seed: input.seed, status: "APPROVED", approvedAt: new Date() },
+        include: { gang: true },
+      });
+      await recordAudit(
+        auth.userId,
+        "tournament.participant.seed",
+        "Tournament",
+        request.params.id,
+        participant,
+      );
+      return envelope(request, participant);
+    },
+  );
+
+  app.delete<{ Params: { id: string; participantId: string } }>(
+    "/api/v1/admin/tournaments/:id/participants/:participantId",
+    async (request, reply) => {
+      const auth = requirePermission(request, "tournament.bracket.manage");
+      const participant = await prisma.tournamentParticipant.delete({
+        where: {
+          id: request.params.participantId,
+          tournamentId: request.params.id,
+        },
+      });
+      await recordAudit(
+        auth.userId,
+        "tournament.participant.remove",
+        "Tournament",
+        request.params.id,
+        participant,
+      );
+      return reply.code(204).send();
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    "/api/v1/admin/tournaments/:id/bracket/generate",
+    async (request) => {
+      const auth = requirePermission(request, "tournament.bracket.manage");
+      const result = await prisma.$transaction(
+        async (tx) => {
+          const tournament = await tx.tournament.findUnique({
+            where: { id: request.params.id },
+            include: {
+              participants: {
+                where: { status: "APPROVED" },
+                orderBy: [{ seed: "asc" }, { registeredAt: "asc" }],
+              },
+            },
+          });
+          if (!tournament)
+            throw new HttpError(
+              404,
+              "TOURNAMENT_NOT_FOUND",
+              "Tournament was not found.",
+            );
+          if (tournament.participants.length < 2)
+            throw new HttpError(
+              409,
+              "BRACKET_TOO_SMALL",
+              "Add at least two approved gangs before generating the bracket.",
+            );
+
+          const usedSeeds = new Set<number>();
+          let nextSeed = 1;
+          const seeded = tournament.participants.map((participant) => {
+            let seed = participant.seed;
+            if (seed === null || usedSeeds.has(seed)) {
+              while (usedSeeds.has(nextSeed)) nextSeed += 1;
+              seed = nextSeed;
+            }
+            usedSeeds.add(seed);
+            return { participant, seed };
+          });
+          for (const entry of seeded) {
+            if (entry.participant.seed !== entry.seed) {
+              await tx.tournamentParticipant.update({
+                where: { id: entry.participant.id },
+                data: { seed: entry.seed },
+              });
+            }
+          }
+
+          const slotCount = nextPowerOfTwo(
+            Math.max(tournament.maximumParticipants, seeded.length),
+          );
+          const roundCount = Math.log2(slotCount);
+          const opening = generateOpeningRound(
+            seeded.map(({ participant, seed }) => ({
+              id: participant.id,
+              seed,
+            })),
+          );
+          const gangByParticipant = new Map(
+            seeded.map(({ participant }) => [
+              participant.id,
+              participant.gangId,
+            ]),
+          );
+
+          await tx.match.deleteMany({
+            where: {
+              tournamentId: tournament.id,
+              bracketRoundId: { not: null },
+            },
+          });
+          await tx.bracketRound.deleteMany({
+            where: { tournamentId: tournament.id },
+          });
+
+          const roundMatches: Array<Array<{ id: string; position: number }>> =
+            [];
+          for (let roundIndex = 0; roundIndex < roundCount; roundIndex += 1) {
+            const roundNumber = roundIndex + 1;
+            const round = await tx.bracketRound.create({
+              data: {
+                tournamentId: tournament.id,
+                bracketType: "WINNERS",
+                roundNumber,
+                name: bracketRoundName(roundNumber, roundCount),
+                sortOrder: roundNumber,
+              },
+            });
+            const matchCount = slotCount / 2 ** roundNumber;
+            const matches = [];
+            for (let position = 1; position <= matchCount; position += 1) {
+              const source =
+                roundIndex === 0 ? opening[position - 1] : undefined;
+              const gangAId = source?.participantAId
+                ? (gangByParticipant.get(source.participantAId) ?? null)
+                : null;
+              const gangBId = source?.participantBId
+                ? (gangByParticipant.get(source.participantBId) ?? null)
+                : null;
+              const byeWinnerId = source?.byeWinnerId
+                ? (gangByParticipant.get(source.byeWinnerId) ?? null)
+                : null;
+              const match = await tx.match.create({
+                data: {
+                  tournamentId: tournament.id,
+                  bracketRoundId: round.id,
+                  position,
+                  gangAId,
+                  gangBId,
+                  winnerGangId: byeWinnerId,
+                  status: byeWinnerId ? "COMPLETED" : "SCHEDULED",
+                  finalizedAt: byeWinnerId ? new Date() : null,
+                },
+                select: { id: true, position: true },
+              });
+              matches.push({
+                id: match.id,
+                position: match.position ?? position,
+              });
+            }
+            roundMatches.push(matches);
+          }
+
+          for (
+            let roundIndex = 0;
+            roundIndex < roundMatches.length - 1;
+            roundIndex += 1
+          ) {
+            const current = roundMatches[roundIndex] ?? [];
+            const next = roundMatches[roundIndex + 1] ?? [];
+            for (let index = 0; index < current.length; index += 1) {
+              const currentMatch = current[index];
+              const nextMatch = next[Math.floor(index / 2)];
+              if (currentMatch && nextMatch) {
+                await tx.match.update({
+                  where: { id: currentMatch.id },
+                  data: { nextMatchId: nextMatch.id },
+                });
+              }
+            }
+          }
+
+          for (
+            let roundIndex = 0;
+            roundIndex < roundMatches.length - 1;
+            roundIndex += 1
+          ) {
+            const matches = await tx.match.findMany({
+              where: {
+                id: {
+                  in: (roundMatches[roundIndex] ?? []).map((match) => match.id),
+                },
+              },
+              orderBy: { position: "asc" },
+            });
+            for (const match of matches) {
+              const onlyGang =
+                match.gangAId && !match.gangBId
+                  ? match.gangAId
+                  : match.gangBId && !match.gangAId
+                    ? match.gangBId
+                    : null;
+              if (!onlyGang || !match.nextMatchId) continue;
+              await tx.match.update({
+                where: { id: match.id },
+                data: {
+                  winnerGangId: onlyGang,
+                  status: "COMPLETED",
+                  finalizedAt: new Date(),
+                },
+              });
+              await tx.match.update({
+                where: { id: match.nextMatchId },
+                data:
+                  match.position && match.position % 2 === 0
+                    ? { gangBId: onlyGang }
+                    : { gangAId: onlyGang },
+              });
+            }
+          }
+
+          const updated = await tx.tournament.update({
+            where: { id: tournament.id },
+            data: { bracketVersion: { increment: 1 } },
+            select: { id: true, bracketVersion: true },
+          });
+          await tx.auditLog.create({
+            data: {
+              actorUserId: auth.userId,
+              action: "tournament.bracket.generate",
+              entityType: "Tournament",
+              entityId: tournament.id,
+              afterData: {
+                slotCount,
+                roundCount,
+                bracketVersion: updated.bracketVersion,
+              },
+            },
+          });
+          return { ...updated, slotCount, roundCount };
+        },
+        { isolationLevel: "Serializable" },
+      );
+      return envelope(request, result);
+    },
+  );
+
   app.post("/api/v1/admin/matches", async (request, reply) => {
     const auth = requirePermission(request, "match.create");
     const input = matchInputSchema.parse(request.body);
@@ -399,6 +754,168 @@ export function adminRoutes(app: FastifyInstance): void {
         { isolationLevel: "Serializable" },
       );
       return envelope(request, result);
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    "/api/v1/admin/matches/:id/advance",
+    async (request) => {
+      const auth = requirePermission(request, "match.finalize");
+      const input = advanceMatchSchema.parse(request.body);
+      const result = await prisma.$transaction(
+        async (tx) => {
+          const match = await tx.match.findUnique({
+            where: { id: request.params.id },
+          });
+          if (!match)
+            throw new HttpError(404, "MATCH_NOT_FOUND", "Match was not found.");
+          if (match.version !== input.version)
+            throw new HttpError(
+              409,
+              "VERSION_CONFLICT",
+              "The match changed. Refresh before advancing a winner.",
+            );
+          assertValidWinner(match.gangAId, match.gangBId, input.winnerGangId);
+          if (input.gangAScore === input.gangBScore)
+            throw new HttpError(
+              422,
+              "WINNER_REQUIRED",
+              "An elimination match cannot finish tied.",
+            );
+          const updated = await tx.match.update({
+            where: { id: match.id, version: input.version },
+            data: {
+              gangAScore: input.gangAScore,
+              gangBScore: input.gangBScore,
+              winnerGangId: input.winnerGangId,
+              status: "COMPLETED",
+              finalizedAt: new Date(),
+              finalizedByUserId: auth.userId,
+              version: { increment: 1 },
+            },
+          });
+          if (match.nextMatchId) {
+            await tx.match.update({
+              where: { id: match.nextMatchId },
+              data:
+                match.position && match.position % 2 === 0
+                  ? { gangBId: input.winnerGangId }
+                  : { gangAId: input.winnerGangId },
+            });
+          }
+          await tx.auditLog.create({
+            data: {
+              actorUserId: auth.userId,
+              action: "match.advance",
+              entityType: "Match",
+              entityId: match.id,
+              beforeData: match,
+              afterData: updated,
+            },
+          });
+          return updated;
+        },
+        { isolationLevel: "Serializable" },
+      );
+      return envelope(request, result);
+    },
+  );
+
+  app.post("/api/v1/admin/events", async (request, reply) => {
+    const auth = requirePermission(request, "event.manage");
+    const input = eventInputSchema.parse(request.body);
+    const event = await prisma.event.create({
+      data: compact({
+        ...input,
+        createdByUserId: auth.userId,
+      }) as Prisma.EventUncheckedCreateInput,
+    });
+    await recordAudit(auth.userId, "event.create", "Event", event.id, event);
+    return reply.code(201).send(envelope(request, event));
+  });
+
+  app.patch<{ Params: { id: string } }>(
+    "/api/v1/admin/events/:id",
+    async (request) => {
+      const auth = requirePermission(request, "event.manage");
+      const input = eventInputSchema.partial().parse(request.body);
+      const event = await prisma.event.update({
+        where: { id: request.params.id },
+        data: compact(input),
+      });
+      await recordAudit(auth.userId, "event.update", "Event", event.id, event);
+      return envelope(request, event);
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>(
+    "/api/v1/admin/events/:id",
+    async (request, reply) => {
+      const auth = requirePermission(request, "event.manage");
+      const event = await prisma.event.update({
+        where: { id: request.params.id },
+        data: { status: "ARCHIVED" },
+      });
+      await recordAudit(auth.userId, "event.archive", "Event", event.id, event);
+      return reply.code(204).send();
+    },
+  );
+
+  app.post("/api/v1/admin/live-streams", async (request, reply) => {
+    const auth = requirePermission(request, "stream.manage");
+    const input = streamInputSchema.parse(request.body);
+    const stream = await prisma.liveStream.create({
+      data: compact({
+        ...input,
+        createdByUserId: auth.userId,
+      }) as Prisma.LiveStreamUncheckedCreateInput,
+    });
+    await recordAudit(
+      auth.userId,
+      "stream.create",
+      "LiveStream",
+      stream.id,
+      stream,
+    );
+    return reply.code(201).send(envelope(request, stream));
+  });
+
+  app.patch<{ Params: { id: string } }>(
+    "/api/v1/admin/live-streams/:id",
+    async (request) => {
+      const auth = requirePermission(request, "stream.manage");
+      const input = streamInputSchema.partial().parse(request.body);
+      const stream = await prisma.liveStream.update({
+        where: { id: request.params.id },
+        data: compact(input),
+      });
+      await recordAudit(
+        auth.userId,
+        "stream.update",
+        "LiveStream",
+        stream.id,
+        stream,
+      );
+      return envelope(request, stream);
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>(
+    "/api/v1/admin/live-streams/:id",
+    async (request, reply) => {
+      const auth = requirePermission(request, "stream.manage");
+      const stream = await prisma.liveStream.update({
+        where: { id: request.params.id },
+        data: { status: "ARCHIVED" },
+      });
+      await recordAudit(
+        auth.userId,
+        "stream.archive",
+        "LiveStream",
+        stream.id,
+        stream,
+      );
+      return reply.code(204).send();
     },
   );
 

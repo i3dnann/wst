@@ -1,57 +1,69 @@
-import { LockKeyhole, Menu, ShieldCheck } from "lucide-react";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { LockKeyhole, Menu, Radio } from "lucide-react";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { cn } from "@/lib/utils";
 
-const navItems = [
+const navigation = [
   ["Home", "/"],
   ["Gangs", "/gangs"],
-  ["Players", "/players"],
   ["Tournaments", "/tournaments"],
+  ["Events", "/events"],
   ["Rankings", "/rankings"],
   ["Matches", "/matches"],
-  ["Rules", "/rules"],
+  ["Live", "/live"],
 ] as const;
 
 function Brand() {
   return (
     <Link to="/" className="wst-brand" aria-label="World Star home">
-      <img src="/assets/wst/wst-round.png" alt="" />
+      <img src="/assets/wst-gold/wst-gold.png" alt="" />
       <span>
-        WORLD STAR<small>Official registry</small>
+        WORLD STAR
+        <small>Loyalty · Power · Respect</small>
       </span>
     </Link>
   );
 }
 
-function Navigation({ mobile = false }: { mobile?: boolean }) {
-  return (
-    <nav
-      aria-label={mobile ? "Mobile navigation" : "Primary navigation"}
-      className={cn("primary-nav", mobile && "primary-nav--mobile")}
-    >
-      {navItems.map(([label, href]) => (
-        <NavLink
-          key={href}
-          to={href}
-          end={href === "/"}
-          className={({ isActive }) =>
-            cn("nav-link", isActive && "nav-link--active")
-          }
-        >
-          {label}
-        </NavLink>
-      ))}
-    </nav>
-  );
+function NavigationLinks({ mobile = false }: { mobile?: boolean }) {
+  const location = useLocation();
+  return navigation.map(([label, href]) => {
+    const active =
+      href === "/"
+        ? location.pathname === "/"
+        : location.pathname.startsWith(href);
+    if (mobile) {
+      return (
+        <SheetClose asChild key={href}>
+          <Link
+            to={href}
+            className={`nav-link${active ? " nav-link--active" : ""}`}
+          >
+            {label === "Live" ? <Radio aria-hidden="true" /> : null}
+            {label}
+          </Link>
+        </SheetClose>
+      );
+    }
+    const link = (
+      <NavLink
+        to={href}
+        className={({ isActive }) =>
+          `nav-link${isActive ? " nav-link--active" : ""}`
+        }
+        end={href === "/"}
+      >
+        {label === "Live" ? <Radio aria-hidden="true" /> : null}
+        {label}
+      </NavLink>
+    );
+    return <span key={href}>{link}</span>;
+  });
 }
 
 export function PublicLayout() {
@@ -59,59 +71,67 @@ export function PublicLayout() {
     <div className="site-frame">
       <header className="site-header">
         <Brand />
-        <Navigation />
+        <nav className="primary-nav" aria-label="Primary navigation">
+          <NavigationLinks />
+        </nav>
         <Button asChild variant="outline" className="login-button">
           <Link to="/admin/login">
-            <LockKeyhole />
-            Admin Login
+            <LockKeyhole /> Admin Login
           </Link>
         </Button>
         <Sheet>
           <SheetTrigger asChild>
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
-              className="menu-button"
+              className="mobile-menu-trigger"
               aria-label="Open navigation"
             >
               <Menu />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="mobile-sheet">
-            <SheetHeader>
-              <SheetTitle>WORLD STAR</SheetTitle>
-              <SheetDescription>
-                Browse the official World Star records.
-              </SheetDescription>
-            </SheetHeader>
-            <Navigation mobile />
-            <Button asChild variant="outline">
-              <Link to="/admin/login">
-                <LockKeyhole />
-                Admin Login
-              </Link>
-            </Button>
+          <SheetContent className="mobile-navigation">
+            <Brand />
+            <nav aria-label="Mobile navigation">
+              <NavigationLinks mobile />
+            </nav>
+            <SheetClose asChild>
+              <Button asChild className="mobile-admin-link">
+                <Link to="/admin/login">
+                  <LockKeyhole /> Admin Login
+                </Link>
+              </Button>
+            </SheetClose>
           </SheetContent>
         </Sheet>
       </header>
+
       <Outlet />
+
       <footer className="site-footer">
         <div className="footer-brand">
-          <Brand />
-          <p>The official World Star community registry.</p>
+          <img src="/assets/wst-gold/wst-gold.png" alt="World Star" />
+          <p>
+            A competitive community built on loyalty, power, respect, and
+            records controlled by its administrator.
+          </p>
         </div>
-        <nav aria-label="Footer navigation">
-          {navItems.map(([label, href]) => (
-            <Link key={href} to={href}>
-              {label}
-            </Link>
-          ))}
+        <div>
+          <strong>Navigate</strong>
+          <Link to="/gangs">Gangs</Link>
+          <Link to="/tournaments">Tournaments</Link>
+          <Link to="/events">Events</Link>
+          <Link to="/live">Live</Link>
+        </div>
+        <div>
+          <strong>Information</strong>
+          <Link to="/rules">Rules</Link>
           <Link to="/about">About</Link>
-        </nav>
-        <div className="footer-security">
-          <ShieldCheck aria-hidden="true" />
-          <span>Published records are maintained by administrators.</span>
+          <Link to="/admin/login">Administrator</Link>
         </div>
+        <small>
+          © {new Date().getFullYear()} WORLD STAR. All rights reserved.
+        </small>
       </footer>
     </div>
   );

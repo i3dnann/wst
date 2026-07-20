@@ -15,6 +15,8 @@ const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const InformationPage = lazy(() => import("./pages/InformationPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
+const EventsPage = lazy(() => import("./pages/EventsPage"));
+const LivePage = lazy(() => import("./pages/LivePage"));
 
 export function App() {
   const location = useLocation();
@@ -49,6 +51,8 @@ export function App() {
                 element={<TournamentDetailPage />}
               />
               <Route path="rankings" element={<RankingsPage />} />
+              <Route path="events" element={<EventsPage />} />
+              <Route path="live" element={<LivePage />} />
               <Route
                 path="matches"
                 element={<DirectoryPage type="matches" />}

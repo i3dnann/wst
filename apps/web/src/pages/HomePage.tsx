@@ -1,179 +1,254 @@
+import { useQueries } from "@tanstack/react-query";
 import {
   ArrowRight,
-  Crosshair,
+  CalendarDays,
+  Crown,
+  Radio,
   Shield,
   Swords,
   Trophy,
-  UserRound,
-  Users,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 
-const summaryItems = [
-  [Users, "registeredGangs", "Registered gangs"],
-  [UserRound, "registeredPlayers", "Registered players"],
-  [Swords, "completedMatches", "Completed matches"],
-  [Trophy, "activeTournament", "Active tournament"],
-] as const;
+const formatDate = (value: string) =>
+  new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 
 export default function HomePage() {
-  const home = useQuery({
-    queryKey: ["home"],
-    queryFn: api.home,
-    retry: false,
+  const [home, tournaments, events, streams] = useQueries({
+    queries: [
+      { queryKey: ["home"], queryFn: api.home, retry: false },
+      { queryKey: ["tournaments"], queryFn: api.tournaments, retry: false },
+      { queryKey: ["events"], queryFn: api.events, retry: false },
+      { queryKey: ["live-streams"], queryFn: api.liveStreams, retry: false },
+    ],
   });
-  const data = home.data?.data;
+
+  const summary = home.data?.data.summary;
+  const leadingGangs = home.data?.data.rankings.slice(0, 5) ?? [];
+  const tournamentList = (tournaments.data?.data ?? []) as Array<{
+    id: string;
+    slug: string;
+    name: string;
+    startAt: string;
+    status: string;
+    maximumParticipants: number;
+  }>;
+  const featuredTournament = tournamentList[0];
+  const upcomingEvents = events.data?.data.slice(0, 3) ?? [];
+  const liveStreams =
+    streams.data?.data.filter((stream) => stream.status === "LIVE") ?? [];
+
+  const stats = [
+    [Trophy, "Tournaments", tournamentList.length],
+    [CalendarDays, "Active Events", upcomingEvents.length],
+    [Swords, "Completed Matches", summary?.completedMatches ?? 0],
+    [Crown, "Top Gangs", summary?.registeredGangs ?? 0],
+    [Radio, "Live Now", liveStreams.length],
+  ] as const;
 
   return (
-    <main>
-      <section className="wst-hero">
+    <main className="gold-home">
+      <section className="gold-hero">
         <img
-          className="wst-hero-media"
-          src="/assets/wst/world-star-banner.gif"
-          alt="World Star patrol vehicles in a dark forest"
+          className="gold-hero-image"
+          src="/assets/wst-gold/city-overlook.png"
+          alt="A World Star figure overlooking the city at night"
         />
-        <div className="wst-hero-vignette" aria-hidden="true" />
-        <div className="wst-tech-rail wst-tech-rail--left" aria-hidden="true" />
-        <div
-          className="wst-tech-rail wst-tech-rail--right"
-          aria-hidden="true"
-        />
-
-        <div className="wst-hero-copy">
+        <div className="gold-hero-shade" />
+        <div className="gold-hero-content">
           <img
-            className="wst-hero-mark"
-            src="/assets/wst/wst-round.png"
-            alt=""
+            className="gold-hero-mark"
+            src="/assets/wst-gold/wst-gold.png"
+            alt="World Star"
           />
           <h1>WORLD STAR</h1>
-          <p>Every name. Every crew. Every victory. Recorded.</p>
-          <div className="wst-hero-actions">
+          <p>Loyalty. Power. Respect.</p>
+          <div className="gold-hero-actions">
             <Button asChild size="lg">
               <Link to="/gangs">
-                Explore the Network <ArrowRight />
+                <Shield /> Explore the Families
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link to="/tournaments">
-                View Tournaments <ArrowRight />
+                <Trophy /> View Tournaments
               </Link>
             </Button>
           </div>
         </div>
-
-        <div className="wst-summary-rail">
-          {summaryItems.map(([Icon, key, label]) => (
-            <div key={key} className="wst-summary-item">
-              <Icon />
-              <div>
-                <strong>
-                  {data ? data.summary[key].toLocaleString() : "—"}
-                </strong>
-                <span>{label}</span>
-              </div>
-            </div>
-          ))}
-        </div>
       </section>
 
-      <section className="intelligence-section" id="network-intelligence">
-        <div className="section-title-row">
-          <div>
-            <Crosshair />
-            <h2>NETWORK INTELLIGENCE</h2>
-          </div>
-          <Link to="/rankings">
-            Full Rankings <ArrowRight />
-          </Link>
-        </div>
-
-        <div className="intelligence-grid">
-          <section className="intel-table" aria-labelledby="leading-gangs">
-            <h3 id="leading-gangs">Leading Gangs</h3>
-            <div className="intel-table-head">
-              <span>Rank</span>
-              <span>Gang</span>
-              <span>Members</span>
-              <span>W/L</span>
-              <span>Points</span>
+      <section className="gold-stat-rail" aria-label="World Star overview">
+        {stats.map(([Icon, label, value]) => (
+          <article key={label}>
+            <Icon />
+            <div>
+              <strong>{label}</strong>
+              <span>
+                {value > 0 ? value.toLocaleString() : "No data available"}
+              </span>
             </div>
-            {data?.rankings.length ? (
-              <ol className="intel-ranking-list">
-                {data.rankings.slice(0, 5).map((gang, index) => (
-                  <li key={gang.id}>
-                    <span>{String(index + 1).padStart(2, "0")}</span>
-                    <Link to={`/gangs/${gang.slug}`}>
-                      {gang.logoUrl ? (
-                        <img src={gang.logoUrl} alt="" />
-                      ) : (
-                        <Shield />
-                      )}
-                      <strong>{gang.name}</strong>
-                    </Link>
-                    <span>{gang.memberCount}</span>
-                    <span>
-                      {gang.wins}/{gang.losses}
-                    </span>
-                    <span>{gang.kills}</span>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <div className="wst-empty-state">
-                <Crosshair />
-                <p>No verified gang records yet.</p>
-              </div>
-            )}
-          </section>
+          </article>
+        ))}
+      </section>
 
-          <aside className="tournament-watch">
-            <h3>Tournament Watch</h3>
-            <img src="/assets/wst/wst-round.png" alt="World Star emblem" />
-            <strong>
-              {data?.summary.activeTournament
-                ? `${String(data.summary.activeTournament)} active`
-                : "No active tournament"}
-            </strong>
-            <Button asChild variant="outline">
-              <Link to="/tournaments">View Tournaments</Link>
-            </Button>
-          </aside>
+      <section className="gold-split-section">
+        <div className="gold-feature-panel">
+          <header className="gold-section-heading">
+            <div>
+              <span>Featured Tournament</span>
+              <h2>{featuredTournament?.name ?? "The next showdown awaits"}</h2>
+            </div>
+            <Trophy />
+          </header>
+          <div className="gold-feature-media">
+            <img
+              src="/assets/wst-gold/sealed-dossier.png"
+              alt="Sealed World Star dossier"
+            />
+          </div>
+          {featuredTournament ? (
+            <div className="gold-feature-copy">
+              <p>
+                {formatDate(featuredTournament.startAt)} ·{" "}
+                {featuredTournament.maximumParticipants} gangs
+              </p>
+              <Button asChild>
+                <Link to={`/tournaments/${featuredTournament.slug}`}>
+                  Open Tournament <ArrowRight />
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="gold-empty-copy">
+              <strong>No tournament featured</strong>
+              <p>The administrator has not published a tournament yet.</p>
+              <Button asChild variant="outline">
+                <Link to="/tournaments">View Tournaments</Link>
+              </Button>
+            </div>
+          )}
         </div>
 
-        <section className="recent-results">
-          <div>
-            <h3>Recent Results</h3>
-            <Link to="/matches">
-              All Matches <ArrowRight />
+        <div className="gold-events-panel">
+          <header className="gold-section-heading">
+            <div>
+              <span>Upcoming Events</span>
+              <h2>What happens next</h2>
+            </div>
+            <CalendarDays />
+          </header>
+          {upcomingEvents.length ? (
+            <ol className="gold-event-list">
+              {upcomingEvents.map((event) => (
+                <li key={event.id}>
+                  <time dateTime={event.startsAt}>
+                    {formatDate(event.startsAt)}
+                  </time>
+                  <strong>{event.title}</strong>
+                  <p>
+                    {event.description ?? "Details will be announced soon."}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <div className="gold-empty-copy tall">
+              <CalendarDays />
+              <strong>No upcoming events</strong>
+              <p>
+                New server events will appear here when the administrator
+                publishes them.
+              </p>
+            </div>
+          )}
+          <Button asChild variant="outline">
+            <Link to="/events">
+              View All Events <ArrowRight />
             </Link>
-          </div>
-          <div className="wst-empty-state wst-empty-state--compact">
-            <Swords />
-            <p>
-              {data?.recentMatches.length
-                ? `${String(data.recentMatches.length)} finalized records available.`
-                : "Finalized matches will appear here."}
-            </p>
-          </div>
-        </section>
+          </Button>
+        </div>
       </section>
 
-      <section className="rules-band">
-        <div>
-          <Shield />
+      <section className="gold-registry-section">
+        <header className="gold-section-heading">
           <div>
-            <h2>Rules of Engagement</h2>
-            <p>
-              Every published result, roster change, and ranking update follows
-              one accountable record.
-            </p>
+            <span>Leading Gangs</span>
+            <h2>The families building their legacy</h2>
           </div>
+          <Button asChild variant="outline">
+            <Link to="/gangs">
+              View All Gangs <ArrowRight />
+            </Link>
+          </Button>
+        </header>
+        <div className="gold-table" role="table" aria-label="Leading gangs">
+          <div className="gold-table-row gold-table-head" role="row">
+            <span>Rank</span>
+            <span>Gang</span>
+            <span>Members</span>
+            <span>Wins</span>
+            <span>Win rate</span>
+          </div>
+          {leadingGangs.length ? (
+            leadingGangs.map((gang, index) => (
+              <Link
+                to={`/gangs/${gang.slug}`}
+                className="gold-table-row"
+                role="row"
+                key={gang.id}
+              >
+                <strong>#{gang.currentRank ?? index + 1}</strong>
+                <span className="gold-gang-name">
+                  {gang.logoUrl ? (
+                    <img src={gang.logoUrl} alt="" />
+                  ) : (
+                    <Shield />
+                  )}
+                  <b>{gang.name}</b>
+                  <small>{gang.tag}</small>
+                </span>
+                <span>{gang.memberCount}</span>
+                <span>{gang.wins}</span>
+                <span>{gang.winRate}%</span>
+              </Link>
+            ))
+          ) : (
+            <div className="gold-empty-copy wide">
+              <Crown />
+              <strong>No gangs registered</strong>
+              <p>
+                Rankings will begin after the administrator publishes the first
+                families.
+              </p>
+            </div>
+          )}
         </div>
-        <Button asChild variant="outline">
-          <Link to="/rules">Read the Rules</Link>
+      </section>
+
+      <section className="gold-live-strip">
+        <div>
+          <Radio />
+          <span>Live Streamers</span>
+          <h2>
+            {liveStreams.length
+              ? `${String(liveStreams.length)} approved stream${liveStreams.length === 1 ? "" : "s"} live now`
+              : "No streams are live"}
+          </h2>
+          <p>
+            Tournament coverage appears only after approval from the
+            administrator.
+          </p>
+        </div>
+        <Button asChild>
+          <Link to="/live">
+            Open Live Page <ArrowRight />
+          </Link>
         </Button>
       </section>
     </main>

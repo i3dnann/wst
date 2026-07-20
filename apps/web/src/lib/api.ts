@@ -1,4 +1,10 @@
-import type { ApiEnvelope, GangListItem, HomeSummary } from "@mafia/shared";
+import type {
+  ApiEnvelope,
+  GangListItem,
+  HomeSummary,
+  PublicEvent,
+  PublicLiveStream,
+} from "@mafia/shared";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
@@ -109,6 +115,9 @@ export const api = {
   rankings: () =>
     apiRequest<ApiEnvelope<GangListItem[]>>("/api/v1/rankings/gangs"),
   matches: () => apiRequest<ApiEnvelope<unknown[]>>("/api/v1/matches"),
+  events: () => apiRequest<ApiEnvelope<PublicEvent[]>>("/api/v1/events"),
+  liveStreams: () =>
+    apiRequest<ApiEnvelope<PublicLiveStream[]>>("/api/v1/live-streams"),
   match: (id: string) =>
     apiRequest<ApiEnvelope<Record<string, unknown>>>(
       `/api/v1/matches/${encodeURIComponent(id)}`,
@@ -143,4 +152,81 @@ export const api = {
       method: "POST",
       body: JSON.stringify(input),
     }),
+  addTournamentParticipant: (
+    tournamentId: string,
+    input: { gangId: string; seed?: number },
+  ) =>
+    apiRequest<ApiEnvelope<Record<string, unknown>>>(
+      `/api/v1/admin/tournaments/${encodeURIComponent(tournamentId)}/participants`,
+      { method: "POST", body: JSON.stringify(input) },
+    ),
+  updateTournamentParticipant: (
+    tournamentId: string,
+    participantId: string,
+    seed: number,
+  ) =>
+    apiRequest<ApiEnvelope<Record<string, unknown>>>(
+      `/api/v1/admin/tournaments/${encodeURIComponent(tournamentId)}/participants/${encodeURIComponent(participantId)}`,
+      { method: "PATCH", body: JSON.stringify({ seed }) },
+    ),
+  removeTournamentParticipant: (tournamentId: string, participantId: string) =>
+    apiRequest<unknown>(
+      `/api/v1/admin/tournaments/${encodeURIComponent(tournamentId)}/participants/${encodeURIComponent(participantId)}`,
+      { method: "DELETE" },
+    ),
+  generateBracket: (tournamentId: string) =>
+    apiRequest<
+      ApiEnvelope<{
+        bracketVersion: number;
+        slotCount: number;
+        roundCount: number;
+      }>
+    >(
+      `/api/v1/admin/tournaments/${encodeURIComponent(tournamentId)}/bracket/generate`,
+      { method: "POST" },
+    ),
+  advanceMatch: (
+    matchId: string,
+    input: {
+      winnerGangId: string;
+      gangAScore: number;
+      gangBScore: number;
+      version: number;
+    },
+  ) =>
+    apiRequest<ApiEnvelope<Record<string, unknown>>>(
+      `/api/v1/admin/matches/${encodeURIComponent(matchId)}/advance`,
+      { method: "POST", body: JSON.stringify(input) },
+    ),
+  createEvent: (input: Record<string, unknown>) =>
+    apiRequest<ApiEnvelope<PublicEvent>>("/api/v1/admin/events", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  updateEvent: (id: string, input: Record<string, unknown>) =>
+    apiRequest<ApiEnvelope<PublicEvent>>(
+      `/api/v1/admin/events/${encodeURIComponent(id)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    ),
+  archiveEvent: (id: string) =>
+    apiRequest<unknown>(`/api/v1/admin/events/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
+  createLiveStream: (input: Record<string, unknown>) =>
+    apiRequest<ApiEnvelope<PublicLiveStream>>("/api/v1/admin/live-streams", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  updateLiveStream: (id: string, input: Record<string, unknown>) =>
+    apiRequest<ApiEnvelope<PublicLiveStream>>(
+      `/api/v1/admin/live-streams/${encodeURIComponent(id)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    ),
+  archiveLiveStream: (id: string) =>
+    apiRequest<unknown>(
+      `/api/v1/admin/live-streams/${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+      },
+    ),
 };

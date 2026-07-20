@@ -19,7 +19,7 @@ export default function LoginPage() {
   return (
     <main className="admin-login-page">
       <div className="admin-login-media" aria-hidden="true">
-        <img src="/assets/wst/wst-square.png" alt="" />
+        <img src="/assets/wst-gold/admin-office.png" alt="" />
       </div>
       <section className="admin-login-panel">
         <Link to="/" className="login-back">
@@ -27,7 +27,7 @@ export default function LoginPage() {
         </Link>
         <img
           className="admin-login-logo"
-          src="/assets/wst/wst-round.png"
+          src="/assets/wst-gold/wst-gold.png"
           alt="World Star"
         />
         <div>

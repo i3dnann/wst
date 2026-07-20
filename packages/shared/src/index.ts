@@ -21,6 +21,8 @@ export const permissions = {
   roleManage: "role.manage",
   auditRead: "audit.read",
   settingsManage: "settings.manage",
+  eventManage: "event.manage",
+  streamManage: "stream.manage",
 } as const;
 
 export type Permission = (typeof permissions)[keyof typeof permissions];
@@ -127,4 +129,31 @@ export interface BracketMatch {
   status: string;
   scheduledAt: string | null;
   nextMatchId: string | null;
+}
+
+export interface PublicEvent {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  imageUrl: string | null;
+  location: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  status: string;
+  featured: boolean;
+}
+
+export interface PublicLiveStream {
+  id: string;
+  slug: string;
+  streamerName: string;
+  platform: string;
+  channelUrl: string;
+  embedUrl: string | null;
+  thumbnailUrl: string | null;
+  status: string;
+  featured: boolean;
+  startsAt: string | null;
+  tournament: { id: string; slug: string; name: string } | null;
 }

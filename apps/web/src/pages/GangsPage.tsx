@@ -46,7 +46,11 @@ export default function GangsPage() {
             operating across the World Star community.
           </p>
         </div>
-        <img className="registry-seal" src="/assets/wst/wst-round.png" alt="" />
+        <img
+          className="registry-seal"
+          src="/assets/wst-gold/wst-gold.png"
+          alt=""
+        />
       </header>
       <section className="filter-rail" aria-label="Gang filters">
         <label className="search-control">
@@ -116,8 +120,8 @@ export default function GangsPage() {
             <article className="registry-dossier" key={gang.id}>
               {index === 0 ? (
                 <BorderBeam
-                  colorFrom="#8CD8FF"
-                  colorTo="#315F77"
+                  colorFrom="#E0B86F"
+                  colorTo="#72502B"
                   duration={10}
                   size={100}
                 />

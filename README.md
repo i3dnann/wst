@@ -1,6 +1,8 @@
 # World Star Registry
 
-Production-oriented community registry, tournament system, rankings platform, and private administrator command center.
+Production-oriented community registry, flexible tournament system, event calendar, approved live-stream hub, rankings platform, and private administrator command center.
+
+The visual system uses the supplied World Star imagery and main PNG mark in a cinematic black, walnut, antique-gold, and warm-amber design. Tournament brackets support administrator-managed entrant capacities from small custom fields through 16- and 32-gang competitions, including automatic byes and winner progression.
 
 ## Architecture
 
