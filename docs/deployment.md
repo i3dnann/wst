@@ -8,18 +8,20 @@ The Prisma datasource and migration history are MySQL/MariaDB-native. Use a new 
 
 ## Create the database with HeidiSQL
 
-Connect HeidiSQL to the local MySQL/MariaDB server as an administrator, open a query tab, and run:
+The easiest installation is to import `database/DATABASE_SCHEMA.sql` through **File > Load SQL file** in HeidiSQL. The file creates `worldstar_wst`, all 27 tables, indexes, and foreign keys, then returns the table count for verification. It intentionally contains no passwords or database users.
+
+If you prefer to create the database and dedicated user manually, connect HeidiSQL to the local MySQL/MariaDB server as an administrator, open a query tab, and run:
 
 ```sql
-CREATE DATABASE `worldstar`
+CREATE DATABASE `worldstar_wst`
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-CREATE USER 'worldstar'@'127.0.0.1'
+CREATE USER 'wst_app'@'127.0.0.1'
   IDENTIFIED BY 'REPLACE_WITH_A_STRONG_PASSWORD';
 
-GRANT ALL PRIVILEGES ON `worldstar`.*
-  TO 'worldstar'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON `worldstar_wst`.*
+  TO 'wst_app'@'127.0.0.1';
 
 FLUSH PRIVILEGES;
 ```
@@ -33,7 +35,7 @@ Copy `apps/api/.env.example` to `apps/api/.env` and set production values:
 ```env
 NODE_ENV=production
 PORT=4177
-DATABASE_URL=mysql://worldstar:URL_ENCODED_PASSWORD@127.0.0.1:3306/worldstar
+DATABASE_URL=mysql://wst_app:URL_ENCODED_PASSWORD@127.0.0.1:3306/worldstar_wst
 FRONTEND_URL=https://YOUR-SITE.netlify.app
 CORS_ALLOWED_ORIGINS=https://YOUR-SITE.netlify.app
 SESSION_SECRET=REPLACE_WITH_AT_LEAST_32_RANDOM_CHARACTERS
@@ -130,4 +132,4 @@ pnpm --filter @mafia/api build
 Restart-Service WorldStarApi
 ```
 
-Back up the `worldstar` database in HeidiSQL before every migration. Verify `/health/live`, `/health/ready`, administrator login, events, streams, and bracket changes after each release.
+Back up the `worldstar_wst` database in HeidiSQL before every migration. Verify `/health/live`, `/health/ready`, administrator login, events, streams, and bracket changes after each release.
