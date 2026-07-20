@@ -152,7 +152,12 @@ export interface PublicLiveStream {
   channelUrl: string;
   embedUrl: string | null;
   thumbnailUrl: string | null;
+  providerChannelId: string | null;
+  liveVideoId: string | null;
   status: string;
+  autoDetect: boolean;
+  lastCheckedAt: string | null;
+  lastStatusError: string | null;
   featured: boolean;
   startsAt: string | null;
   tournament: { id: string; slug: string; name: string } | null;

@@ -88,6 +88,32 @@ export interface AdminUser {
   permissions: string[];
 }
 
+export interface AdministratorRecord {
+  id: string;
+  email: string | null;
+  displayName: string;
+  status: string;
+  lastLoginAt: string | null;
+  createdAt: string;
+  roles?: Array<{ role: { name: string } }>;
+}
+
+export interface AuditRecord {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  createdAt: string;
+  actor: { id: string; displayName: string } | null;
+}
+
+export interface DiscordAuditSettings {
+  enabled: boolean;
+  configured: boolean;
+  maskedWebhookUrl: string | null;
+  categories: string[];
+}
+
 export const api = {
   home: () => apiRequest<ApiEnvelope<HomeData>>("/api/v1/public/home"),
   gangs: (query = "") =>
@@ -132,25 +158,81 @@ export const api = {
   adminMe: () => apiRequest<ApiEnvelope<AdminUser>>("/api/v1/auth/me"),
   adminLogout: () =>
     apiRequest<unknown>("/api/v1/auth/logout", { method: "POST" }),
+  adminGangs: () =>
+    apiRequest<ApiEnvelope<Array<Record<string, unknown>>>>(
+      "/api/v1/admin/gangs",
+    ),
+  adminPlayers: () =>
+    apiRequest<ApiEnvelope<Array<Record<string, unknown>>>>(
+      "/api/v1/admin/players",
+    ),
+  adminTournaments: () =>
+    apiRequest<ApiEnvelope<Array<Record<string, unknown>>>>(
+      "/api/v1/admin/tournaments",
+    ),
+  adminMatches: () =>
+    apiRequest<ApiEnvelope<Array<Record<string, unknown>>>>(
+      "/api/v1/admin/matches",
+    ),
+  adminEvents: () =>
+    apiRequest<ApiEnvelope<PublicEvent[]>>("/api/v1/admin/events"),
+  adminLiveStreams: () =>
+    apiRequest<ApiEnvelope<PublicLiveStream[]>>("/api/v1/admin/live-streams"),
   createGang: (input: Record<string, unknown>) =>
     apiRequest<ApiEnvelope<Record<string, unknown>>>("/api/v1/admin/gangs", {
       method: "POST",
       body: JSON.stringify(input),
+    }),
+  updateGang: (id: string, input: Record<string, unknown>) =>
+    apiRequest<ApiEnvelope<Record<string, unknown>>>(
+      `/api/v1/admin/gangs/${encodeURIComponent(id)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    ),
+  archiveGang: (id: string) =>
+    apiRequest<unknown>(`/api/v1/admin/gangs/${encodeURIComponent(id)}`, {
+      method: "DELETE",
     }),
   createPlayer: (input: Record<string, unknown>) =>
     apiRequest<ApiEnvelope<Record<string, unknown>>>("/api/v1/admin/players", {
       method: "POST",
       body: JSON.stringify(input),
     }),
+  updatePlayer: (id: string, input: Record<string, unknown>) =>
+    apiRequest<ApiEnvelope<Record<string, unknown>>>(
+      `/api/v1/admin/players/${encodeURIComponent(id)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    ),
+  archivePlayer: (id: string) =>
+    apiRequest<unknown>(`/api/v1/admin/players/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
   createTournament: (input: Record<string, unknown>) =>
     apiRequest<ApiEnvelope<Record<string, unknown>>>(
       "/api/v1/admin/tournaments",
       { method: "POST", body: JSON.stringify(input) },
     ),
+  updateTournament: (id: string, input: Record<string, unknown>) =>
+    apiRequest<ApiEnvelope<Record<string, unknown>>>(
+      `/api/v1/admin/tournaments/${encodeURIComponent(id)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    ),
+  archiveTournament: (id: string) =>
+    apiRequest<unknown>(`/api/v1/admin/tournaments/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
   createMatch: (input: Record<string, unknown>) =>
     apiRequest<ApiEnvelope<Record<string, unknown>>>("/api/v1/admin/matches", {
       method: "POST",
       body: JSON.stringify(input),
+    }),
+  updateMatch: (id: string, input: Record<string, unknown>) =>
+    apiRequest<ApiEnvelope<Record<string, unknown>>>(
+      `/api/v1/admin/matches/${encodeURIComponent(id)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    ),
+  deleteMatch: (id: string) =>
+    apiRequest<unknown>(`/api/v1/admin/matches/${encodeURIComponent(id)}`, {
+      method: "DELETE",
     }),
   addTournamentParticipant: (
     tournamentId: string,
@@ -163,11 +245,11 @@ export const api = {
   updateTournamentParticipant: (
     tournamentId: string,
     participantId: string,
-    seed: number,
+    input: { seed?: number; status?: string },
   ) =>
     apiRequest<ApiEnvelope<Record<string, unknown>>>(
       `/api/v1/admin/tournaments/${encodeURIComponent(tournamentId)}/participants/${encodeURIComponent(participantId)}`,
-      { method: "PATCH", body: JSON.stringify({ seed }) },
+      { method: "PATCH", body: JSON.stringify(input) },
     ),
   removeTournamentParticipant: (tournamentId: string, participantId: string) =>
     apiRequest<unknown>(
@@ -227,6 +309,54 @@ export const api = {
       `/api/v1/admin/live-streams/${encodeURIComponent(id)}`,
       {
         method: "DELETE",
+      },
+    ),
+  refreshLiveStream: (id: string) =>
+    apiRequest<ApiEnvelope<PublicLiveStream>>(
+      `/api/v1/admin/live-streams/${encodeURIComponent(id)}/refresh`,
+      { method: "POST" },
+    ),
+  refreshAllLiveStreams: () =>
+    apiRequest<ApiEnvelope<PublicLiveStream[]>>(
+      "/api/v1/admin/live-streams/refresh",
+      { method: "POST" },
+    ),
+  administrators: () =>
+    apiRequest<ApiEnvelope<AdministratorRecord[]>>(
+      "/api/v1/admin/administrators",
+    ),
+  createAdministrator: (input: Record<string, unknown>) =>
+    apiRequest<ApiEnvelope<AdministratorRecord>>(
+      "/api/v1/admin/administrators",
+      { method: "POST", body: JSON.stringify(input) },
+    ),
+  updateAdministrator: (id: string, input: Record<string, unknown>) =>
+    apiRequest<ApiEnvelope<AdministratorRecord>>(
+      `/api/v1/admin/administrators/${encodeURIComponent(id)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    ),
+  removeAdministrator: (id: string) =>
+    apiRequest<unknown>(
+      `/api/v1/admin/administrators/${encodeURIComponent(id)}`,
+      { method: "DELETE" },
+    ),
+  auditLogs: () =>
+    apiRequest<ApiEnvelope<AuditRecord[]>>("/api/v1/admin/audit-logs"),
+  discordAuditSettings: () =>
+    apiRequest<ApiEnvelope<DiscordAuditSettings>>(
+      "/api/v1/admin/discord-audit",
+    ),
+  updateDiscordAuditSettings: (input: Record<string, unknown>) =>
+    apiRequest<ApiEnvelope<DiscordAuditSettings>>(
+      "/api/v1/admin/discord-audit",
+      { method: "PUT", body: JSON.stringify(input) },
+    ),
+  testDiscordAuditWebhook: (webhookUrl?: string) =>
+    apiRequest<ApiEnvelope<{ delivered: boolean }>>(
+      "/api/v1/admin/discord-audit/test",
+      {
+        method: "POST",
+        body: JSON.stringify(webhookUrl ? { webhookUrl } : {}),
       },
     ),
 };

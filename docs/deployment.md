@@ -8,18 +8,20 @@ The Prisma datasource and migration history are MySQL/MariaDB-native. Use a new 
 
 ## Create the database with HeidiSQL
 
-Connect HeidiSQL to the local MySQL/MariaDB server as an administrator, open a query tab, and run:
+The easiest installation is to import `database/DATABASE_SCHEMA.sql` through **File > Load SQL file** in HeidiSQL. The file creates `worldstar_wst`, all 27 tables, indexes, and foreign keys, then returns the table count for verification. It intentionally contains no passwords or database users.
+
+If you prefer to create the database and dedicated user manually, connect HeidiSQL to the local MySQL/MariaDB server as an administrator, open a query tab, and run:
 
 ```sql
-CREATE DATABASE `worldstar`
+CREATE DATABASE `worldstar_wst`
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-CREATE USER 'worldstar'@'127.0.0.1'
+CREATE USER 'wst_app'@'127.0.0.1'
   IDENTIFIED BY 'REPLACE_WITH_A_STRONG_PASSWORD';
 
-GRANT ALL PRIVILEGES ON `worldstar`.*
-  TO 'worldstar'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON `worldstar_wst`.*
+  TO 'wst_app'@'127.0.0.1';
 
 FLUSH PRIVILEGES;
 ```
@@ -33,15 +35,33 @@ Copy `apps/api/.env.example` to `apps/api/.env` and set production values:
 ```env
 NODE_ENV=production
 PORT=4177
-DATABASE_URL=mysql://worldstar:URL_ENCODED_PASSWORD@127.0.0.1:3306/worldstar
+DATABASE_URL=mysql://wst_app:URL_ENCODED_PASSWORD@127.0.0.1:3306/worldstar_wst
 FRONTEND_URL=https://YOUR-SITE.netlify.app
 CORS_ALLOWED_ORIGINS=https://YOUR-SITE.netlify.app
 SESSION_SECRET=REPLACE_WITH_AT_LEAST_32_RANDOM_CHARACTERS
 ADMIN_EMAIL=admin@your-domain.example
 ADMIN_PASSWORD=REPLACE_WITH_A_STRONG_PASSWORD
+TWITCH_CLIENT_ID=
+TWITCH_CLIENT_SECRET=
+YOUTUBE_API_KEY=
+STREAM_STATUS_TTL_SECONDS=60
+YOUTUBE_STATUS_TTL_SECONDS=1800
 ```
 
 Percent-encode reserved characters in the database password before placing it in `DATABASE_URL`. Keep this file outside source control and restrict it to the Windows service account.
+
+## Live-stream detection and previews
+
+- Twitch detection uses a Twitch application client ID and secret. Create an application in the Twitch Developer Console and place its credentials in `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET`.
+- YouTube detection uses a Google Cloud API key with YouTube Data API v3 enabled. Place it in `YOUTUBE_API_KEY`, then enter the channel ID beginning with `UC` in the stream editor.
+- Kick previews use the official `player.kick.com/USERNAME` embed format. Kick status checks are best-effort because its public channel response is not a versioned API contract.
+- The public Live page requests fresh status every minute. Twitch and Kick are checked when the configured 60-second cache expires; YouTube defaults to a 30-minute cache to protect its API quota. Administrators can also use **Refresh Status** or **Check Now**.
+
+Twitch and YouTube channels report a clear configuration error in the admin panel until their credentials are installed. Manual status and embed URLs remain available when automatic detection is disabled.
+
+## Discord administrator logs
+
+Create an incoming webhook for a private Discord channel. In **Admin → Audit Log**, paste the webhook URL, select the event categories, enable logging, and use **Test Webhook**. The URL is stored in the protected database setting and is masked whenever it is returned to the browser. Audit records remain in MySQL even if Discord delivery fails.
 
 ## Install and build on Windows Server
 
@@ -106,17 +126,17 @@ Connect `i3dnann/wst`, deploy branch `main`, and use the repository root.
 - `VITE_API_BASE_URL=/backend`
 - `NODE_VERSION=22`
 
-For same-origin administrator cookies, add this rule before the existing SPA fallback in `netlify.toml`, replacing the placeholder with the real HTTPS API hostname:
+For same-origin administrator cookies, `netlify.toml` proxies `/backend/*` to the World Star API on the VPS:
 
 ```toml
 [[redirects]]
   from = "/backend/*"
-  to = "https://api.your-domain.example/:splat"
+  to = "http://31.57.97.59:4177/:splat"
   status = 200
   force = true
 ```
 
-The existing `/*` rule must remain last. Trigger a new Netlify deployment after changing Vite environment variables or redirect rules.
+The existing `/*` rule must remain last. Port `4177` must allow inbound TCP traffic in Windows Firewall. Trigger a new Netlify deployment after changing Vite environment variables or redirect rules.
 
 ## Updates
 
@@ -130,4 +150,4 @@ pnpm --filter @mafia/api build
 Restart-Service WorldStarApi
 ```
 
-Back up the `worldstar` database in HeidiSQL before every migration. Verify `/health/live`, `/health/ready`, administrator login, events, streams, and bracket changes after each release.
+Back up the `worldstar_wst` database in HeidiSQL before every migration. Verify `/health/live`, `/health/ready`, administrator login, events, streams, and bracket changes after each release.

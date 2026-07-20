@@ -3,6 +3,12 @@
   publish = "apps/web/dist"
 
 [[redirects]]
+  from = "/backend/*"
+  to = "http://31.57.97.59:4177/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
@@ -18,4 +24,3 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-
