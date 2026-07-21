@@ -5,7 +5,7 @@
 
 [[redirects]]
   from = "/backend/*"
-  to = "/.netlify/functions/backend?path=:splat"
+  to = "/.netlify/functions/backend/:splat"
   status = 200
   force = true
 

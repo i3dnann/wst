@@ -1,5 +1,7 @@
 interface NetlifyEvent {
   httpMethod: string;
+  path?: string;
+  rawUrl?: string;
   headers: Record<string, string | undefined>;
   body: string | null;
   isBase64Encoded: boolean;
@@ -21,6 +23,29 @@ const ignoredResponseHeaders = new Set([
   "transfer-encoding",
   "set-cookie",
 ]);
+
+function inferRequestedPath(event: NetlifyEvent) {
+  const queryPath = event.queryStringParameters?.path;
+  if (queryPath) return queryPath;
+
+  const candidatePaths = [event.rawUrl, event.path].flatMap((value) => {
+    if (!value) return [];
+    try {
+      return [new URL(value).pathname, value];
+    } catch {
+      return [value];
+    }
+  });
+
+  for (const path of candidatePaths) {
+    for (const prefix of ["/backend/", "/.netlify/functions/backend/"]) {
+      const index = path.indexOf(prefix);
+      if (index >= 0) return path.slice(index + prefix.length);
+    }
+  }
+
+  return "";
+}
 
 export async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
   const configuredTarget = process.env.API_PROXY_TARGET?.trim().replace(
@@ -59,7 +84,7 @@ export async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
       }),
     };
   }
-  const requestedPath = event.queryStringParameters?.path ?? "";
+  const requestedPath = inferRequestedPath(event);
   const destination = new URL(
     requestedPath.replace(/^\/+/, ""),
     `${target.toString().replace(/\/$/, "")}/`,
