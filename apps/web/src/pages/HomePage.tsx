@@ -10,6 +10,12 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { BlurFade } from "@/components/ui/blur-fade";
+import { MagicCard } from "@/components/ui/magic-card";
+import { Marquee } from "@/components/ui/marquee";
+import { NumberTicker } from "@/components/ui/number-ticker";
+import { Particles } from "@/components/ui/particles";
+import { ShineBorder } from "@/components/ui/shine-border";
 import { api } from "@/lib/api";
 import { usePublicWebsiteSettings } from "@/lib/website-settings";
 
@@ -57,6 +63,13 @@ export default function HomePage() {
   return (
     <main className="gold-home">
       <section className="gold-hero">
+        <Particles
+          className="gold-hero-particles"
+          color="#d5a354"
+          quantity={46}
+          staticity={80}
+          size={0.35}
+        />
         <img
           className="gold-hero-image"
           src={
@@ -66,7 +79,7 @@ export default function HomePage() {
           alt="A World Star figure overlooking the city at night"
         />
         <div className="gold-hero-shade" />
-        <div className="gold-hero-content">
+        <BlurFade className="gold-hero-content" delay={0.08} duration={0.8}>
           <img
             className="gold-hero-mark"
             src="/assets/wst-gold/wst-gold.png"
@@ -77,7 +90,7 @@ export default function HomePage() {
           <div className="gold-hero-actions">
             <Button asChild size="lg">
               <Link to="/gangs">
-                <Shield /> Explore the Families
+                <Shield /> Explore the Gangs
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
@@ -86,7 +99,7 @@ export default function HomePage() {
               </Link>
             </Button>
           </div>
-        </div>
+        </BlurFade>
       </section>
 
       <section className="gold-stat-rail" aria-label="World Star overview">
@@ -95,16 +108,24 @@ export default function HomePage() {
             <Icon />
             <div>
               <strong>{label}</strong>
-              <span>
-                {value > 0 ? value.toLocaleString() : "No data available"}
-              </span>
+              <span>{value > 0 ? <NumberTicker value={value} /> : "Awaiting records"}</span>
             </div>
           </article>
         ))}
       </section>
 
       <section className="gold-split-section">
-        <div className="gold-feature-panel">
+        <MagicCard
+          className="gold-feature-panel"
+          gradientColor="#7a5124"
+          gradientFrom="#efc97c"
+          gradientTo="#65411e"
+          gradientOpacity={0.18}
+        >
+          <ShineBorder
+            shineColor={["#5f3b17", "#e5bd70", "#5f3b17"]}
+            duration={18}
+          />
           <header className="gold-section-heading">
             <div>
               <span>Featured Tournament</span>
@@ -139,7 +160,7 @@ export default function HomePage() {
               </Button>
             </div>
           )}
-        </div>
+        </MagicCard>
 
         <div className="gold-events-panel">
           <header className="gold-section-heading">
@@ -256,6 +277,16 @@ export default function HomePage() {
             Open Live Page <ArrowRight />
           </Link>
         </Button>
+        <Marquee className="gold-live-marquee" pauseOnHover repeat={3}>
+          {(liveStreams.length
+            ? liveStreams.map((stream) => stream.streamerName)
+            : ["Registry secured", "Events monitored", "Rankings verified"]
+          ).map((label) => (
+            <span key={label}>
+              <Radio aria-hidden="true" /> {label}
+            </span>
+          ))}
+        </Marquee>
       </section>
     </main>
   );

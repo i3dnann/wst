@@ -41,6 +41,81 @@ export const permissions = {
 
 export type Permission = (typeof permissions)[keyof typeof permissions];
 
+export const recordStatuses = [
+  "ACTIVE",
+  "INACTIVE",
+  "SUSPENDED",
+  "ARCHIVED",
+] as const;
+export const recruitmentStatuses = ["OPEN", "CLOSED", "INVITE_ONLY"] as const;
+export const tournamentStatuses = [
+  "DRAFT",
+  "REGISTRATION_OPEN",
+  "REGISTRATION_CLOSED",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED",
+  "ARCHIVED",
+] as const;
+export const tournamentFormats = [
+  "SINGLE_ELIMINATION",
+  "DOUBLE_ELIMINATION",
+  "ROUND_ROBIN",
+  "GROUP_KNOCKOUT",
+  "CUSTOM",
+] as const;
+export const participantStatuses = [
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+  "WITHDRAWN",
+  "ELIMINATED",
+  "CHAMPION",
+] as const;
+export const matchStatuses = [
+  "SCHEDULED",
+  "CHECK_IN_OPEN",
+  "READY",
+  "LIVE",
+  "AWAITING_RESULT",
+  "DISPUTED",
+  "COMPLETED",
+  "CANCELLED",
+  "FORFEIT",
+] as const;
+export const eventStatuses = [
+  "DRAFT",
+  "SCHEDULED",
+  "LIVE",
+  "COMPLETED",
+  "CANCELLED",
+  "ARCHIVED",
+] as const;
+export const streamStatuses = ["SCHEDULED", "LIVE", "OFFLINE", "ARCHIVED"] as const;
+export const streamPlatforms = ["TWITCH", "YOUTUBE", "KICK", "OTHER"] as const;
+export const mediaStatuses = [
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+  "ARCHIVED",
+  "DELETED",
+] as const;
+export const seasonStatuses = ["DRAFT", "ACTIVE", "CLOSED", "ARCHIVED"] as const;
+export const rankingEntityTypes = ["GANG", "PLAYER"] as const;
+
+export type RecordStatus = (typeof recordStatuses)[number];
+export type RecruitmentStatus = (typeof recruitmentStatuses)[number];
+export type TournamentStatus = (typeof tournamentStatuses)[number];
+export type TournamentFormat = (typeof tournamentFormats)[number];
+export type ParticipantStatus = (typeof participantStatuses)[number];
+export type MatchStatus = (typeof matchStatuses)[number];
+export type EventStatus = (typeof eventStatuses)[number];
+export type StreamStatus = (typeof streamStatuses)[number];
+export type StreamPlatform = (typeof streamPlatforms)[number];
+export type MediaStatus = (typeof mediaStatuses)[number];
+export type SeasonStatus = (typeof seasonStatuses)[number];
+export type RankingEntityType = (typeof rankingEntityTypes)[number];
+
 export const idSchema = z.string().min(20).max(40);
 
 export const paginationSchema = z.object({
@@ -50,8 +125,8 @@ export const paginationSchema = z.object({
 
 export const gangListQuerySchema = paginationSchema.extend({
   search: z.string().trim().max(80).optional(),
-  status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED", "ARCHIVED"]).optional(),
-  recruitment: z.enum(["OPEN", "CLOSED", "INVITE_ONLY"]).optional(),
+  status: z.enum(recordStatuses).optional(),
+  recruitment: z.enum(recruitmentStatuses).optional(),
   sort: z
     .enum(["rank", "wins", "kills", "winRate", "name", "newest"])
     .default("rank"),

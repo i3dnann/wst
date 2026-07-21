@@ -20,9 +20,15 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import type { PublicLiveStream } from "@mafia/shared";
+import {
+  eventStatuses as sharedEventStatuses,
+  matchStatuses as sharedMatchStatuses,
+  recordStatuses as sharedRecordStatuses,
+  tournamentStatuses as sharedTournamentStatuses,
+  type PublicLiveStream,
+} from "@mafia/shared";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/data/StatusState";
 import { api, type AuditRecord } from "@/lib/api";
@@ -62,6 +68,51 @@ type RecordKind = "gang" | "player" | "tournament" | "match" | "event";
 type AdminRecord = Record<string, unknown> & { id: string };
 type FormValues = Record<string, string | boolean>;
 
+const adminRouteAliases: Record<string, AdminSection> = {
+  gangs: "gang",
+  players: "player",
+  tournaments: "tournament",
+  brackets: "bracket",
+  matches: "match",
+  events: "event",
+  "live-streams": "stream",
+  administrators: "administrator",
+  "audit-log": "audit",
+};
+
+const adminSectionRoutes: Record<AdminSection, string> = {
+  overview: "overview",
+  gang: "gangs",
+  "gang-organization": "gang-organization",
+  player: "players",
+  tournament: "tournaments",
+  participant: "participant",
+  bracket: "brackets",
+  match: "matches",
+  result: "result",
+  event: "events",
+  stream: "live-streams",
+  ranking: "ranking",
+  season: "season",
+  media: "media",
+  administrator: "administrators",
+  roles: "roles",
+  audit: "audit-log",
+  discord: "discord",
+  settings: "settings",
+  health: "health",
+};
+
+function adminSectionFromPath(pathname: string): AdminSection | null {
+  const slug = pathname.replace(/^\/admin\/?/, "").split("/")[0] || "overview";
+  const alias = adminRouteAliases[slug];
+  if (alias) return alias;
+  const matched = Object.entries(adminSectionRoutes).find(
+    ([, route]) => route === slug,
+  );
+  return (matched?.[0] as AdminSection | undefined) ?? null;
+}
+
 const navigation = [
   [LayoutDashboard, "Overview", "overview", "audit.read"],
   [Shield, "Gangs", "gang", "gang.read"],
@@ -98,33 +149,10 @@ const kindLabels: Record<RecordKind, { singular: string; plural: string }> = {
   event: { singular: "Event", plural: "Events" },
 };
 
-const recordStatuses = ["ACTIVE", "INACTIVE", "SUSPENDED", "ARCHIVED"];
-const tournamentStatuses = [
-  "DRAFT",
-  "REGISTRATION_OPEN",
-  "REGISTRATION_CLOSED",
-  "IN_PROGRESS",
-  "COMPLETED",
-  "CANCELLED",
-  "ARCHIVED",
-];
-const matchStatuses = [
-  "SCHEDULED",
-  "CHECK_IN_OPEN",
-  "READY",
-  "LIVE",
-  "AWAITING_RESULT",
-  "CANCELLED",
-  "FORFEIT",
-];
-const eventStatuses = [
-  "DRAFT",
-  "SCHEDULED",
-  "LIVE",
-  "COMPLETED",
-  "CANCELLED",
-  "ARCHIVED",
-];
+const recordStatuses: string[] = [...sharedRecordStatuses];
+const tournamentStatuses: string[] = [...sharedTournamentStatuses];
+const matchStatuses: string[] = [...sharedMatchStatuses];
+const eventStatuses: string[] = [...sharedEventStatuses];
 
 function valueOf(record: AdminRecord, key: string): string {
   const value = record[key];
@@ -2339,7 +2367,8 @@ function Overview() {
 
 export default function AdminCommandCenterPage() {
   const navigate = useNavigate();
-  const [section, setSection] = useState<AdminSection>("overview");
+  const location = useLocation();
+  const requestedSection = adminSectionFromPath(location.pathname);
   const me = useQuery({
     queryKey: ["admin-me"],
     queryFn: api.adminMe,
@@ -2351,15 +2380,19 @@ export default function AdminCommandCenterPage() {
   });
   if (me.isPending) return <PageSkeleton />;
   if (me.isError) return <Navigate to="/admin/login" replace />;
+  if (location.pathname === "/admin" || location.pathname === "/admin/") {
+    return <Navigate to="/admin/overview" replace />;
+  }
   const visibleNavigation = navigation.filter((item) =>
     me.data.data.permissions.includes(item[3]),
   );
-  const effectiveSection = visibleNavigation.some((item) => item[2] === section)
-    ? section
-    : (visibleNavigation[0]?.[2] ?? "overview");
+  const authorizedSection =
+    requestedSection &&
+    visibleNavigation.some((item) => item[2] === requestedSection);
+  const effectiveSection = authorizedSection ? requestedSection : null;
   const title =
     navigation.find((item) => item[2] === effectiveSection)?.[1] ??
-    "Command Center";
+    "Unknown admin section";
   return (
     <div className="control-shell gold-control-shell command-center-v2">
       <aside className="control-sidebar">
@@ -2372,14 +2405,13 @@ export default function AdminCommandCenterPage() {
         </div>
         <nav aria-label="Administrator navigation">
           {visibleNavigation.map(([Icon, label, value]) => (
-            <button
+            <Link
               key={value}
-              type="button"
               className={effectiveSection === value ? "active" : ""}
-              onClick={() => setSection(value)}
+              to={`/admin/${adminSectionRoutes[value]}`}
             >
               <Icon /> {label}
-            </button>
+            </Link>
           ))}
         </nav>
         <button
@@ -2403,6 +2435,18 @@ export default function AdminCommandCenterPage() {
             </span>
           </div>
         </header>
+        {!effectiveSection ? (
+          <section className="admin-empty-state">
+            <h2>Admin section unavailable</h2>
+            <p>
+              This command-center route does not exist, or your administrator
+              account does not have permission to open it.
+            </p>
+            <Button asChild>
+              <Link to="/admin/overview">Return to overview</Link>
+            </Button>
+          </section>
+        ) : null}
         {effectiveSection === "overview" ? <Overview /> : null}
         {effectiveSection === "gang" ||
         effectiveSection === "player" ||

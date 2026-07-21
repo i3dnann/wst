@@ -728,7 +728,7 @@ export function adminRoutes(app: FastifyInstance): void {
   app.patch<{ Params: { id: string } }>(
     "/api/v1/admin/gangs/:id",
     async (request) => {
-      const auth = requirePermission(request, "gang.archive");
+      const auth = requirePermission(request, "gang.update.any");
       const input = gangInputSchema.partial().parse(request.body);
       const gang = await prisma.gang.update({
         where: { id: request.params.id },
@@ -742,7 +742,7 @@ export function adminRoutes(app: FastifyInstance): void {
   app.delete<{ Params: { id: string } }>(
     "/api/v1/admin/gangs/:id",
     async (request, reply) => {
-      const auth = requirePermission(request, "gang.update.any");
+      const auth = requirePermission(request, "gang.archive");
       const gang = await prisma.gang.update({
         where: { id: request.params.id },
         data: { status: "ARCHIVED", archivedAt: new Date() },

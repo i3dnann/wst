@@ -62,6 +62,25 @@ describe("API session reliability", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
+  it("lets the browser set multipart headers for FormData requests", async () => {
+    const form = new FormData();
+    form.append("file", new Blob(["image-bytes"], { type: "image/png" }));
+    const fetchMock = vi.fn(
+      (_input: string | URL | Request, init?: RequestInit) => {
+        const headers = new Headers(init?.headers);
+        expect(headers.has("content-type")).toBe(false);
+        return Promise.resolve(Response.json({ data: { uploaded: true } }));
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await apiRequest("/api/v1/admin/media/upload", {
+      method: "POST",
+      body: form,
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   it("preserves the backend error code, request ID, and details", async () => {
     vi.stubGlobal(
       "fetch",

@@ -1,7 +1,8 @@
 import { useEffect, type CSSProperties } from "react";
-import { LockKeyhole, Menu, Radio } from "lucide-react";
+import { ChevronDown, LockKeyhole, Menu, Radio } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { ScrollProgress } from "@/components/ui/scroll-progress";
 import {
   Sheet,
   SheetClose,
@@ -13,12 +14,18 @@ import { usePublicWebsiteSettings } from "@/lib/website-settings";
 const navigation = [
   ["Home", "/"],
   ["Gangs", "/gangs"],
+  ["Players", "/players"],
   ["Tournaments", "/tournaments"],
-  ["Events", "/events"],
-  ["Rankings", "/rankings"],
   ["Matches", "/matches"],
+  ["Rankings", "/rankings"],
+  ["Events", "/events"],
   ["Live", "/live"],
+  ["Rules", "/rules"],
+  ["About", "/about"],
 ] as const;
+
+const primaryNavigation = navigation.slice(0, 8);
+const moreNavigation = navigation.slice(8);
 
 function Brand({
   logoUrl,
@@ -74,6 +81,74 @@ function NavigationLinks({ mobile = false }: { mobile?: boolean }) {
   });
 }
 
+function DesktopNavigation() {
+  return (
+    <>
+      {primaryNavigation.map(([label, href]) => (
+        <NavigationItem key={href} label={label} href={href} />
+      ))}
+      <details className="nav-more">
+        <summary className="nav-link">
+          More <ChevronDown aria-hidden="true" />
+        </summary>
+        <div className="nav-more-menu">
+          {moreNavigation.map(([label, href]) => (
+            <NavigationItem key={href} label={label} href={href} />
+          ))}
+        </div>
+      </details>
+    </>
+  );
+}
+
+function NavigationItem({ label, href }: { label: string; href: string }) {
+  return (
+    <span>
+      <NavLink
+        to={href}
+        className={({ isActive }) =>
+          `nav-link${isActive ? " nav-link--active" : ""}`
+        }
+        end={href === "/"}
+      >
+        {label === "Live" ? <Radio aria-hidden="true" /> : null}
+        {label}
+      </NavLink>
+    </span>
+  );
+}
+
+function MaintenancePage({
+  logoUrl,
+  shortName,
+}: {
+  logoUrl: string | undefined;
+  shortName: string;
+}) {
+  return (
+    <main className="maintenance-page" aria-labelledby="maintenance-title">
+      <img
+        className="maintenance-page__image"
+        src="/assets/wst-gold/maintenance-mafia.png"
+        alt="A suited mafia figure seated in a dark private lounge"
+      />
+      <div className="maintenance-page__shade" aria-hidden="true" />
+      <section className="maintenance-page__content">
+        <img src={logoUrl || "/assets/wst-gold/wst-gold.png"} alt="" />
+        <p>{shortName}</p>
+        <h1 id="maintenance-title">Maintenance in progress</h1>
+        <span>
+          The registry is being tuned behind closed doors. Public pages will
+          return when the work is complete.
+        </span>
+        <Button asChild className="maintenance-page__login">
+          <Link to="/admin/login">Administrator login</Link>
+        </Button>
+      </section>
+    </main>
+  );
+}
+
 export function PublicLayout() {
   const website = usePublicWebsiteSettings();
   const settings = website.data;
@@ -95,21 +170,16 @@ export function PublicLayout() {
   }, [settings]);
   return (
     <div className="site-frame" style={brandStyle}>
+      <ScrollProgress className="site-scroll-progress" />
       {settings?.homepage.announcement ? (
         <div className="site-announcement">
           {settings.homepage.announcement}
         </div>
       ) : null}
-      {settings?.general.maintenanceMode ? (
-        <div className="site-announcement site-announcement--warning">
-          Maintenance mode is enabled. Public information may be temporarily
-          unavailable.
-        </div>
-      ) : null}
       <header className="site-header">
         <Brand logoUrl={logoUrl} name={shortName} />
         <nav className="primary-nav" aria-label="Primary navigation">
-          <NavigationLinks />
+          <DesktopNavigation />
         </nav>
         <Button asChild variant="outline" className="login-button">
           <Link to="/admin/login">
@@ -143,7 +213,11 @@ export function PublicLayout() {
         </Sheet>
       </header>
 
-      <Outlet />
+      {settings?.general.maintenanceMode ? (
+        <MaintenancePage logoUrl={logoUrl} shortName={shortName} />
+      ) : (
+        <Outlet />
+      )}
 
       <footer className="site-footer">
         <div className="footer-brand">

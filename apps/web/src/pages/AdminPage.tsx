@@ -457,6 +457,29 @@ export function BracketManager() {
     (detail.data?.data.rounds as BracketRoundAdmin[] | undefined) ?? [];
   const [gangId, setGangId] = useState("");
   const [seed, setSeed] = useState("1");
+  const nextAvailableSeed = useMemo(() => {
+    const used = new Set(
+      (tournament?.participants ?? [])
+        .map((participant) => participant.seed)
+        .filter((value): value is number => typeof value === "number"),
+    );
+    const capacity = tournament?.maximumParticipants ?? 256;
+    for (let value = 1; value <= capacity; value += 1) {
+      if (!used.has(value)) return value;
+    }
+    return capacity;
+  }, [tournament?.maximumParticipants, tournament?.participants]);
+  useEffect(() => {
+    const current = Number(seed);
+    const used = new Set(
+      (tournament?.participants ?? [])
+        .map((participant) => participant.seed)
+        .filter((value): value is number => typeof value === "number"),
+    );
+    if (!Number.isInteger(current) || current < 1 || used.has(current)) {
+      setSeed(String(nextAvailableSeed));
+    }
+  }, [nextAvailableSeed, seed, tournament?.participants]);
   const refresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({
@@ -470,11 +493,21 @@ export function BracketManager() {
     ]);
   };
   const add = useMutation({
-    mutationFn: () =>
-      api.addTournamentParticipant(selectedId, { gangId, seed: Number(seed) }),
+    mutationFn: () => {
+      const requestedSeed = Number(seed);
+      const normalizedSeed =
+        Number.isInteger(requestedSeed) && requestedSeed > 0
+          ? requestedSeed
+          : nextAvailableSeed;
+      return api.addTournamentParticipant(selectedId, {
+        gangId,
+        seed: normalizedSeed,
+      });
+    },
     onSuccess: () => {
       toast.success("Gang added to bracket.");
       setGangId("");
+      setSeed(String(nextAvailableSeed + 1));
       void refresh();
     },
     onError: (error) => toast.error(error.message),
@@ -621,7 +654,7 @@ export function BracketManager() {
             <Button
               type="submit"
               size="sm"
-              disabled={!selectedId || add.isPending}
+              disabled={!selectedId || !gangId || add.isPending}
             >
               <Plus /> Add
             </Button>
@@ -636,12 +669,14 @@ export function BracketManager() {
                     type="number"
                     min="1"
                     defaultValue={participant.seed ?? ""}
-                    onBlur={(event) =>
+                    onBlur={(event) => {
+                      const nextSeed = Number(event.target.value);
+                      if (!Number.isInteger(nextSeed) || nextSeed < 1) return;
                       reseed.mutate({
                         participantId: participant.id,
-                        nextSeed: Number(event.target.value),
-                      })
-                    }
+                        nextSeed,
+                      });
+                    }}
                   />
                   <div>
                     {participant.gang.logoUrl ? (

@@ -49,8 +49,8 @@ export default function TournamentsPage() {
         <div>
           <h1>Tournament Ledger</h1>
           <p>
-            Football-style elimination brackets, entrants, schedules, results,
-            and champions—managed entirely by the administrator.
+            Every bracket is a proving ground: crews enter, rivalries are
+            settled, and only one name leaves with the crown.
           </p>
         </div>
         <Trophy className="page-heading-icon" />

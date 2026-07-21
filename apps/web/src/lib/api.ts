@@ -31,8 +31,10 @@ export async function apiRequest<T>(
   retryAfterRefresh = true,
 ): Promise<T> {
   const headers = new Headers(init?.headers);
+  const isFormData =
+    typeof FormData !== "undefined" && init?.body instanceof FormData;
 
-  if (!headers.has("content-type")) {
+  if (!headers.has("content-type") && !isFormData) {
     headers.set("content-type", "application/json");
   }
   if (init?.method && !["GET", "HEAD"].includes(init.method.toUpperCase())) {
