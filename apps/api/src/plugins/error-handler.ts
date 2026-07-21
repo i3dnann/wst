@@ -3,6 +3,11 @@ import type { FastifyInstance } from "fastify";
 import { z, ZodError } from "zod";
 import { HttpError } from "../lib/http-error.js";
 
+type StatusError = Error & {
+  statusCode?: number;
+  code?: string;
+};
+
 export function registerErrorHandler(app: FastifyInstance): void {
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof HttpError) {
@@ -59,6 +64,23 @@ export function registerErrorHandler(app: FastifyInstance): void {
           },
         });
       }
+    }
+    const statusError = error as StatusError;
+    if (
+      typeof statusError.statusCode === "number" &&
+      statusError.statusCode >= 400 &&
+      statusError.statusCode < 600
+    ) {
+      return reply.code(statusError.statusCode).send({
+        error: {
+          code:
+            statusError.statusCode === 429
+              ? "RATE_LIMITED"
+              : (statusError.code ?? "REQUEST_FAILED"),
+          message: statusError.message || "The request could not be completed.",
+          requestId: request.id,
+        },
+      });
     }
     request.log.error({ err: error, requestId: request.id }, "request failed");
     return reply.code(500).send({
