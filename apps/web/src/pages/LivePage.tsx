@@ -1,10 +1,19 @@
 import { useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
-import { ArrowUpRight, CalendarDays, Play, Radio } from "lucide-react";
+import {
+  ArrowUpRight,
+  CalendarDays,
+  Eye,
+  Play,
+  Radio,
+  Tv2,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import type { PublicLiveStream } from "@mafia/shared";
+
+const viewerNumberFormatter = new Intl.NumberFormat();
 
 function safeEmbedUrl(stream: PublicLiveStream | undefined): string | null {
   if (!stream) return null;
@@ -55,6 +64,16 @@ export default function LivePage() {
     ],
   });
   const list = useMemo(() => streams.data?.data ?? [], [streams.data?.data]);
+  const liveCount =
+    streams.data?.meta.liveCount ??
+    list.filter((stream) => stream.status === "LIVE").length;
+  const totalViewers =
+    streams.data?.meta.totalViewers ??
+    list.reduce(
+      (total, stream) =>
+        total + (stream.status === "LIVE" ? stream.viewerCount : 0),
+      0,
+    );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = useMemo(
     () =>
@@ -72,6 +91,23 @@ export default function LivePage() {
         <h1>LIVE FROM WORLD STAR</h1>
         <p>Watch approved streamers covering official tournaments.</p>
       </header>
+      <section className="live-metrics" aria-label="Live stream totals">
+        <article>
+          <Eye aria-hidden="true" />
+          <span>Total live viewers</span>
+          <strong>{viewerNumberFormatter.format(totalViewers)}</strong>
+        </article>
+        <article>
+          <Radio aria-hidden="true" />
+          <span>Live now</span>
+          <strong>{liveCount}</strong>
+        </article>
+        <article>
+          <Tv2 aria-hidden="true" />
+          <span>Approved channels</span>
+          <strong>{list.length}</strong>
+        </article>
+      </section>
       <section className="live-layout">
         <div className="live-stage">
           <div className="live-player">
@@ -114,13 +150,12 @@ export default function LivePage() {
               </span>
               <h2>{selected?.streamerName ?? "World Star Live"}</h2>
               <p>
-                {selected?.tournament?.name ??
+                {selected?.streamTitle ??
+                  selected?.tournament?.name ??
                   "Approved tournament coverage will appear here."}
               </p>
-              {selected?.lastStatusError ? (
-                <small className="stream-check-error">
-                  Status check: {selected.lastStatusError}
-                </small>
+              {selected?.categoryName ? (
+                <small className="live-category">{selected.categoryName}</small>
               ) : null}
             </div>
             {selected ? (
@@ -149,8 +184,14 @@ export default function LivePage() {
                 />
                 <strong>{stream.streamerName}</strong>
                 <small>
-                  {stream.platform} · {stream.status}
+                  {stream.platform} / {stream.status}
                 </small>
+                <span className="stream-viewers">
+                  <Eye aria-hidden="true" />
+                  {stream.status === "LIVE"
+                    ? viewerNumberFormatter.format(stream.viewerCount)
+                    : "—"}
+                </span>
               </button>
             ))
           ) : (

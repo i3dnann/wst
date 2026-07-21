@@ -468,6 +468,10 @@ model LiveStream {
   thumbnailUrl      String?        @db.Text
   providerChannelId String?        @db.VarChar(255)
   liveVideoId       String?        @db.VarChar(255)
+  viewerCount       Int            @default(0)
+  streamTitle       String?        @db.VarChar(500)
+  categoryName      String?        @db.VarChar(255)
+  liveStartedAt     DateTime?
   status            StreamStatus   @default(OFFLINE)
   autoDetect        Boolean        @default(true)
   lastCheckedAt     DateTime?

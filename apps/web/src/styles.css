@@ -8688,6 +8688,141 @@ textarea:focus,
   color: #ef4058 !important;
 }
 
+/* Live provider dashboard */
+.live-metrics {
+  width: min(1440px, calc(100% - 28px));
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 auto 18px;
+}
+
+.live-metrics article {
+  min-height: 108px;
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  grid-template-rows: auto auto;
+  align-content: center;
+  gap: 5px 14px;
+  padding: 22px 26px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 9px;
+  background: #0c0c0f;
+}
+
+.live-metrics svg {
+  grid-row: 1 / 3;
+  align-self: center;
+  width: 25px;
+  color: #ef4058;
+}
+
+.live-metrics span {
+  color: #777985;
+  font: 800 10px/1 var(--ui);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.live-metrics strong {
+  color: #fff;
+  font: 700 31px/1 var(--display);
+  letter-spacing: 0.03em;
+}
+
+.live-page .live-stage,
+.live-page .stream-rail {
+  border-radius: 10px;
+  box-shadow: none !important;
+}
+
+.live-category {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 5px 8px;
+  border: 1px solid rgb(239 64 88 / 0.28);
+  border-radius: 999px;
+  background: rgb(197 31 56 / 0.1);
+  color: #ef6b80;
+  font: 750 9px/1 var(--ui);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.stream-quick-add-hint {
+  margin: -4px 0 2px;
+  padding: 13px 15px;
+  border: 1px solid rgb(239 64 88 / 0.22);
+  border-radius: 6px;
+  background: rgb(197 31 56 / 0.08);
+  color: #9fa0a9;
+  font: 500 12px/1.55 var(--ui);
+}
+
+.stream-quick-add-hint strong {
+  color: #f4f4f6;
+}
+
+.live-page .stream-rail > button {
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 72px;
+  border-color: rgb(255 255 255 / 0.1);
+  border-radius: 6px;
+  background: #09090c;
+}
+
+.live-page .stream-rail > button.selected {
+  border-color: rgb(239 64 88 / 0.7);
+  background: rgb(197 31 56 / 0.11);
+}
+
+.live-page .stream-rail > button strong,
+.live-page .stream-rail > button small {
+  grid-column: 2;
+}
+
+.live-page .stream-rail > button strong {
+  overflow: hidden;
+  color: #fff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stream-viewers {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #f4f4f6;
+  font: 750 12px/1 var(--ui);
+}
+
+.stream-viewers svg {
+  width: 15px;
+  color: #ef4058;
+}
+
+@media (max-width: 760px) {
+  .live-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .live-metrics article {
+    min-height: 92px;
+    padding: 18px;
+  }
+
+  .live-metrics article:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .live-page .stream-rail {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Gang registry and dossier — 2026 visual system */
 .gang-registry-v3,
 .gang-profile-v3 {
@@ -9352,10 +9487,9 @@ textarea:focus,
 .gang-profile-v3__roster-head,
 .gang-profile-v3__member {
   display: grid;
-  grid-template-columns: minmax(220px, 1.5fr) minmax(110px, 0.8fr) minmax(
-      130px,
-      0.8fr
-    ) 92px;
+  grid-template-columns:
+    minmax(220px, 1.5fr) minmax(110px, 0.8fr) minmax(130px, 0.8fr)
+    92px;
   gap: 16px;
   align-items: center;
 }

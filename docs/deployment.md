@@ -67,6 +67,8 @@ RATE_LIMIT_MAX=100
 RATE_LIMIT_WINDOW=1 minute
 TWITCH_CLIENT_ID=
 TWITCH_CLIENT_SECRET=
+KICK_CLIENT_ID=
+KICK_CLIENT_SECRET=
 YOUTUBE_API_KEY=
 STREAM_STATUS_TTL_SECONDS=60
 YOUTUBE_STATUS_TTL_SECONDS=1800
@@ -181,7 +183,8 @@ https://wstgang.netlify.app/backend/health/ready
 
 - Twitch needs an application client ID and secret.
 - YouTube needs a Google Cloud API key with YouTube Data API v3 enabled and a channel ID beginning with `UC`.
-- Kick detection is best-effort; provider failures are shown in System Health and do not crash the public Live page.
+- Kick uses an app access token. Set `KICK_CLIENT_ID` and `KICK_CLIENT_SECRET` from the Kick Developer Portal only in `apps/api/.env`; never put the secret in Netlify or a `VITE_` variable.
+- The API refreshes approved Kick channels at the configured stream TTL, stores their live title, category, start time, and viewer count, and exposes only that public metadata to the Live page.
 - Configure the Discord audit webhook in **Admin > Discord**. Normal API responses only return a masked state. Failed deliveries are written to the database audit log.
 
 ## 11. Rollback

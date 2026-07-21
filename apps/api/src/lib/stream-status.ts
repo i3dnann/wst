@@ -7,6 +7,10 @@ interface DetectionResult {
   embedUrl?: string | undefined;
   thumbnailUrl?: string | undefined;
   liveVideoId?: string | undefined;
+  viewerCount?: number | undefined;
+  streamTitle?: string | undefined;
+  categoryName?: string | undefined;
+  liveStartedAt?: Date | null | undefined;
 }
 
 interface TwitchToken {
@@ -15,6 +19,7 @@ interface TwitchToken {
 }
 
 let twitchToken: TwitchToken | null = null;
+let kickToken: TwitchToken | null = null;
 let refreshPromise: Promise<void> | null = null;
 
 export function channelIdentifier(stream: LiveStream): string {
@@ -61,13 +66,50 @@ async function getTwitchToken(): Promise<string> {
   return twitchToken.value;
 }
 
+async function getKickToken(): Promise<string> {
+  if (!env.KICK_CLIENT_ID || !env.KICK_CLIENT_SECRET)
+    throw new Error("Kick credentials are not configured.");
+  if (kickToken && kickToken.expiresAt > Date.now() + 60_000)
+    return kickToken.value;
+  const body = new URLSearchParams({
+    client_id: env.KICK_CLIENT_ID,
+    client_secret: env.KICK_CLIENT_SECRET,
+    grant_type: "client_credentials",
+  });
+  const token = await readJson<{ access_token: string; expires_in: number }>(
+    "https://id.kick.com/oauth/token",
+    {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body,
+    },
+  );
+  kickToken = {
+    value: token.access_token,
+    expiresAt: Date.now() + token.expires_in * 1_000,
+  };
+  return kickToken.value;
+}
+
+function providerDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.valueOf()) ? null : parsed;
+}
+
 async function detectTwitch(stream: LiveStream): Promise<DetectionResult> {
   const login = channelIdentifier(stream).toLowerCase();
   if (!login) throw new Error("Add the Twitch channel username.");
   const token = await getTwitchToken();
   const query = new URLSearchParams({ user_login: login });
   const result = await readJson<{
-    data: Array<{ thumbnail_url?: string }>;
+    data: Array<{
+      thumbnail_url?: string;
+      viewer_count?: number;
+      title?: string;
+      game_name?: string;
+      started_at?: string;
+    }>;
   }>(`https://api.twitch.tv/helix/streams?${query.toString()}`, {
     headers: {
       authorization: `Bearer ${token}`,
@@ -81,6 +123,10 @@ async function detectTwitch(stream: LiveStream): Promise<DetectionResult> {
     thumbnailUrl: active?.thumbnail_url
       ?.replace("{width}", "1280")
       .replace("{height}", "720"),
+    viewerCount: active?.viewer_count ?? 0,
+    streamTitle: active?.title,
+    categoryName: active?.game_name,
+    liveStartedAt: providerDate(active?.started_at),
   };
 }
 
@@ -118,16 +164,40 @@ async function detectYouTube(stream: LiveStream): Promise<DetectionResult> {
   };
 }
 
-async function detectKick(stream: LiveStream): Promise<DetectionResult> {
+export async function detectKick(stream: LiveStream): Promise<DetectionResult> {
   const slug = channelIdentifier(stream).toLowerCase();
   if (!slug) throw new Error("Add the Kick channel username.");
+  const token = await getKickToken();
+  const query = new URLSearchParams();
+  query.append("slug", slug);
   const result = await readJson<{
-    livestream?: { thumbnail?: { url?: string } } | null;
-  }>(`https://kick.com/api/v2/channels/${encodeURIComponent(slug)}`);
+    data: Array<{
+      slug: string;
+      stream_title?: string;
+      category?: { name?: string } | null;
+      stream?: {
+        is_live?: boolean;
+        thumbnail?: string;
+        viewer_count?: number;
+        start_time?: string;
+      } | null;
+    }>;
+  }>(`https://api.kick.com/public/v1/channels?${query.toString()}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  const channel = result.data.find(
+    (candidate) => candidate.slug.toLowerCase() === slug,
+  );
+  if (!channel) throw new Error(`Kick channel "${slug}" was not found.`);
+  const live = channel.stream?.is_live === true;
   return {
-    live: Boolean(result.livestream),
+    live,
     embedUrl: `https://player.kick.com/${encodeURIComponent(slug)}`,
-    thumbnailUrl: result.livestream?.thumbnail?.url,
+    thumbnailUrl: channel.stream?.thumbnail,
+    viewerCount: live ? Math.max(0, channel.stream?.viewer_count ?? 0) : 0,
+    streamTitle: channel.stream_title,
+    categoryName: channel.category?.name,
+    liveStartedAt: live ? providerDate(channel.stream?.start_time) : null,
   };
 }
 
@@ -161,6 +231,13 @@ export async function refreshStreamStatus(
         embedUrl: result.embedUrl ?? stream.embedUrl,
         thumbnailUrl: result.thumbnailUrl ?? stream.thumbnailUrl,
         liveVideoId: result.liveVideoId ?? null,
+        viewerCount: result.viewerCount ?? stream.viewerCount,
+        streamTitle: result.streamTitle ?? stream.streamTitle,
+        categoryName: result.categoryName ?? stream.categoryName,
+        liveStartedAt:
+          result.liveStartedAt === undefined
+            ? stream.liveStartedAt
+            : result.liveStartedAt,
         lastCheckedAt: new Date(),
         lastStatusError: null,
       },

@@ -26,6 +26,8 @@ For a one-file database setup, import `database/DATABASE_SCHEMA.sql` in HeidiSQL
 
 The administrator login is `/admin/login`. Passwords are stored as salted scrypt hashes; access sessions are short-lived, refresh tokens rotate, and every privileged change is permission-checked and audited.
 
+Kick stream status and viewer totals use the official Kick Developer API. Keep `KICK_CLIENT_ID` and `KICK_CLIENT_SECRET` in the API `.env` only. Add approved Kick channel URLs in **Admin > Streams**; the public Live page embeds each channel and aggregates current viewers automatically.
+
 ## Verification
 
 ```bash

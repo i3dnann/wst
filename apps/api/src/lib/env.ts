@@ -31,6 +31,8 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW: z.string().default("1 minute"),
   TWITCH_CLIENT_ID: optionalString,
   TWITCH_CLIENT_SECRET: optionalString,
+  KICK_CLIENT_ID: optionalString,
+  KICK_CLIENT_SECRET: optionalString,
   YOUTUBE_API_KEY: optionalString,
   STREAM_STATUS_TTL_SECONDS: z.coerce
     .number()

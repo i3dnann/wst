@@ -299,6 +299,23 @@ function slugify(value: string): string {
     .slice(0, 80);
 }
 
+function kickChannelName(value: string): string {
+  const input = value.trim();
+  if (!input) return "";
+  try {
+    const url = new URL(
+      input.includes("://") ? input : `https://kick.com/${input}`,
+    );
+    if (url.hostname !== "kick.com" && url.hostname !== "www.kick.com")
+      return "";
+    return (url.pathname.split("/").filter(Boolean)[0] ?? "")
+      .replace(/^@/, "")
+      .toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
 function toIso(value: string): string | undefined {
   return value ? new Date(value).toISOString() : undefined;
 }
@@ -1564,7 +1581,7 @@ function StreamManager() {
   const selected =
     rows.find((item) => item.id === selectedId) ?? rows[0] ?? null;
   const [values, setValues] = useState<FormValues>({
-    platform: "TWITCH",
+    platform: "KICK",
     status: "OFFLINE",
     autoDetect: true,
     featured: false,
@@ -1588,26 +1605,49 @@ function StreamManager() {
       tournamentId: selected.tournament?.id ?? "",
     });
   }, [selected, isNew]);
-  const payload = () => ({
-    streamerName: String(values.streamerName ?? ""),
-    slug:
-      optional(String(values.slug ?? "")) ??
-      slugify(String(values.streamerName ?? "")),
-    platform: String(values.platform),
-    channelUrl: String(values.channelUrl ?? ""),
-    embedUrl: optional(String(values.embedUrl ?? "")),
-    thumbnailUrl: optional(String(values.thumbnailUrl ?? "")),
-    providerChannelId: optional(String(values.providerChannelId ?? "")),
-    status: String(values.status),
-    autoDetect: Boolean(values.autoDetect),
-    featured: Boolean(values.featured),
-    tournamentId: optional(String(values.tournamentId ?? "")),
-  });
+  const payload = () => {
+    const streamerName = String(values.streamerName ?? "").trim();
+    const kickName = kickChannelName(streamerName);
+    if (isNew) {
+      return {
+        streamerName: streamerName.replace(/^@/, ""),
+        slug: slugify(kickName),
+        platform: "KICK",
+        channelUrl: `https://kick.com/${kickName}`,
+        embedUrl: `https://player.kick.com/${kickName}`,
+        providerChannelId: kickName,
+        status: "OFFLINE",
+        autoDetect: true,
+        featured: false,
+      };
+    }
+    return {
+      streamerName,
+      slug: optional(String(values.slug ?? "")) ?? slugify(streamerName),
+      platform: String(values.platform),
+      channelUrl: String(values.channelUrl ?? ""),
+      embedUrl: optional(String(values.embedUrl ?? "")),
+      thumbnailUrl: optional(String(values.thumbnailUrl ?? "")),
+      providerChannelId: optional(String(values.providerChannelId ?? "")),
+      status: String(values.status),
+      autoDetect: Boolean(values.autoDetect),
+      featured: Boolean(values.featured),
+      tournamentId: optional(String(values.tournamentId ?? "")),
+    };
+  };
   const save = useMutation({
-    mutationFn: () =>
-      isNew || !selected
-        ? api.createLiveStream(payload())
-        : api.updateLiveStream(selected.id, payload()),
+    mutationFn: async () => {
+      if (isNew || !selected) {
+        const result = await api.createLiveStream(payload());
+        try {
+          await api.refreshLiveStream(result.data.id);
+        } catch {
+          // The record is already saved. Scheduled monitoring can retry Kick.
+        }
+        return result;
+      }
+      return api.updateLiveStream(selected.id, payload());
+    },
     onSuccess: (result) => {
       toast.success("Stream saved and monitoring enabled.");
       setIsNew(false);
@@ -1659,7 +1699,7 @@ function StreamManager() {
             onClick={() => {
               setIsNew(true);
               setValues({
-                platform: "TWITCH",
+                platform: "KICK",
                 status: "OFFLINE",
                 autoDetect: true,
                 featured: false,
@@ -1773,100 +1813,119 @@ function StreamManager() {
             {isNew ? "Add Stream" : "Edit Stream Configuration"}
           </h3>
           <Field
-            label="Streamer name"
+            label={isNew ? "Kick streamer name" : "Streamer name"}
             name="streamerName"
             values={values}
             setValue={setValue}
             required
+            full={isNew}
           />
-          <Field
-            label="URL slug (auto if blank)"
-            name="slug"
-            values={values}
-            setValue={setValue}
-          />
-          <SelectField
-            label="Platform"
-            name="platform"
-            values={values}
-            setValue={setValue}
-            options={["TWITCH", "YOUTUBE", "KICK", "OTHER"].map((value) => ({
-              value,
-              label: value,
-            }))}
-          />
-          <Field
-            label="Provider channel ID / username"
-            name="providerChannelId"
-            values={values}
-            setValue={setValue}
-          />
-          <Field
-            label="Channel URL"
-            name="channelUrl"
-            values={values}
-            setValue={setValue}
-            type="url"
-            required
-            full
-          />
-          <Field
-            label="Manual embed URL (optional)"
-            name="embedUrl"
-            values={values}
-            setValue={setValue}
-            type="url"
-            full
-          />
-          <Field
-            label="Thumbnail URL"
-            name="thumbnailUrl"
-            values={values}
-            setValue={setValue}
-            type="url"
-            full
-          />
-          <SelectField
-            label="Tournament"
-            name="tournamentId"
-            values={values}
-            setValue={setValue}
-            options={[
-              { value: "", label: "Independent" },
-              ...tournamentRows.map((item) => ({
-                value: item.id,
-                label: valueOf(item, "name"),
-              })),
-            ]}
-          />
-          <SelectField
-            label="Manual status"
-            name="status"
-            values={values}
-            setValue={setValue}
-            options={["OFFLINE", "SCHEDULED", "LIVE"].map((value) => ({
-              value,
-              label: value,
-            }))}
-          />
-          <ToggleField
-            label="Automatic live/offline detection"
-            name="autoDetect"
-            values={values}
-            setValue={setValue}
-          />
-          <ToggleField
-            label="Featured stream"
-            name="featured"
-            values={values}
-            setValue={setValue}
-          />
+          {isNew ? (
+            <p className="stream-quick-add-hint full-width">
+              Enter only the Kick name, for example <strong>absi</strong>. The
+              channel link, player, and automatic viewer tracking are created
+              for you.
+            </p>
+          ) : (
+            <>
+              <Field
+                label="URL slug (auto if blank)"
+                name="slug"
+                values={values}
+                setValue={setValue}
+              />
+              <SelectField
+                label="Platform"
+                name="platform"
+                values={values}
+                setValue={setValue}
+                options={["TWITCH", "YOUTUBE", "KICK", "OTHER"].map(
+                  (value) => ({
+                    value,
+                    label: value,
+                  }),
+                )}
+              />
+              <Field
+                label="Provider channel ID / username"
+                name="providerChannelId"
+                values={values}
+                setValue={setValue}
+              />
+              <Field
+                label="Channel URL"
+                name="channelUrl"
+                values={values}
+                setValue={setValue}
+                type="url"
+                required
+                full
+              />
+              <Field
+                label="Manual embed URL (optional)"
+                name="embedUrl"
+                values={values}
+                setValue={setValue}
+                type="url"
+                full
+              />
+              <Field
+                label="Thumbnail URL"
+                name="thumbnailUrl"
+                values={values}
+                setValue={setValue}
+                type="url"
+                full
+              />
+              <SelectField
+                label="Tournament"
+                name="tournamentId"
+                values={values}
+                setValue={setValue}
+                options={[
+                  { value: "", label: "Independent" },
+                  ...tournamentRows.map((item) => ({
+                    value: item.id,
+                    label: valueOf(item, "name"),
+                  })),
+                ]}
+              />
+              <SelectField
+                label="Manual status"
+                name="status"
+                values={values}
+                setValue={setValue}
+                options={["OFFLINE", "SCHEDULED", "LIVE"].map((value) => ({
+                  value,
+                  label: value,
+                }))}
+              />
+              <ToggleField
+                label="Automatic live/offline detection"
+                name="autoDetect"
+                values={values}
+                setValue={setValue}
+              />
+              <ToggleField
+                label="Featured stream"
+                name="featured"
+                values={values}
+                setValue={setValue}
+              />
+            </>
+          )}
           {save.isError ? (
             <p className="form-error full-width">{save.error.message}</p>
           ) : null}
           <div className="admin-drawer-actions full-width">
-            <Button type="submit" disabled={save.isPending}>
-              Save Stream
+            <Button
+              type="submit"
+              disabled={
+                save.isPending ||
+                (isNew && !kickChannelName(String(values.streamerName ?? "")))
+              }
+            >
+              {isNew ? "Add Kick Streamer" : "Save Stream"}
             </Button>
             {selected && !isNew ? (
               <>

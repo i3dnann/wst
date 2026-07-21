@@ -253,6 +253,8 @@ export interface ApiEnvelope<T> {
     page?: number;
     pageSize?: number;
     total?: number;
+    liveCount?: number;
+    totalViewers?: number;
   };
 }
 
@@ -335,6 +337,10 @@ export interface PublicLiveStream {
   thumbnailUrl: string | null;
   providerChannelId: string | null;
   liveVideoId: string | null;
+  viewerCount: number;
+  streamTitle: string | null;
+  categoryName: string | null;
+  liveStartedAt: string | null;
   status: string;
   autoDetect: boolean;
   lastCheckedAt: string | null;

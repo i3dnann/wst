@@ -332,13 +332,31 @@ export function publicRoutes(app: FastifyInstance): void {
     await refreshStaleStreams();
     const streams = await prisma.liveStream.findMany({
       where: { status: { not: "ARCHIVED" } },
-      orderBy: [{ status: "asc" }, { featured: "desc" }, { updatedAt: "desc" }],
+      orderBy: [
+        { featured: "desc" },
+        { viewerCount: "desc" },
+        { updatedAt: "desc" },
+      ],
       include: {
         tournament: { select: { id: true, slug: true, name: true } },
       },
       take: 100,
     });
-    return envelope(request, streams);
+    streams.sort(
+      (left, right) =>
+        Number(right.status === "LIVE") - Number(left.status === "LIVE") ||
+        right.viewerCount - left.viewerCount ||
+        Number(right.featured) - Number(left.featured),
+    );
+    const liveStreams = streams.filter((stream) => stream.status === "LIVE");
+    return envelope(request, streams, {
+      total: streams.length,
+      liveCount: liveStreams.length,
+      totalViewers: liveStreams.reduce(
+        (total, stream) => total + stream.viewerCount,
+        0,
+      ),
+    });
   });
 
   app.get<{ Params: { id: string } }>(

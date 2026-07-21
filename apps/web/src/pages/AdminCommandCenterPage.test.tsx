@@ -18,6 +18,12 @@ vi.mock("@/lib/api", () => ({
     adminTournaments: vi.fn(),
     publicSeasons: vi.fn(),
     createGang: vi.fn(),
+    adminLiveStreams: vi.fn(),
+    createLiveStream: vi.fn(),
+    updateLiveStream: vi.fn(),
+    archiveLiveStream: vi.fn(),
+    refreshLiveStream: vi.fn(),
+    refreshAllLiveStreams: vi.fn(),
     adminLogout: vi.fn(),
   },
 }));
@@ -25,6 +31,9 @@ vi.mock("@/lib/api", () => ({
 const adminMe = vi.mocked(api.adminMe);
 const adminGangs = vi.mocked(api.adminGangs);
 const createGang = vi.mocked(api.createGang);
+const adminLiveStreams = vi.mocked(api.adminLiveStreams);
+const createLiveStream = vi.mocked(api.createLiveStream);
+const refreshLiveStream = vi.mocked(api.refreshLiveStream);
 
 function renderGangs(permissions: string[]) {
   adminMe.mockResolvedValue({
@@ -46,6 +55,36 @@ function renderGangs(permissions: string[]) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={["/admin/gangs"]}>
+        <AdminCommandCenterPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+function renderStreams() {
+  adminMe.mockResolvedValue({
+    data: {
+      id: "admin-user-identifier-001",
+      email: "admin@example.com",
+      displayName: "Administrator",
+      permissions: ["stream.manage"],
+    },
+    meta: { requestId: "test", timestamp: new Date().toISOString() },
+  });
+  adminLiveStreams.mockResolvedValue({
+    data: [],
+    meta: { requestId: "test", timestamp: new Date().toISOString() },
+  });
+  vi.mocked(api.adminTournaments).mockResolvedValue({
+    data: [],
+    meta: { requestId: "test", timestamp: new Date().toISOString() },
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={["/admin/live-streams"]}>
         <AdminCommandCenterPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -104,5 +143,63 @@ describe("AdminCommandCenterPage record actions", () => {
     expect(
       screen.queryByRole("button", { name: "Add Gang" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("creates a Kick stream from only the channel name", async () => {
+    createLiveStream.mockResolvedValue({
+      data: {
+        id: "stream-identifier-000001",
+        slug: "absi",
+        streamerName: "Absi",
+        platform: "KICK",
+        channelUrl: "https://kick.com/absi",
+        embedUrl: "https://player.kick.com/absi",
+        thumbnailUrl: null,
+        providerChannelId: "absi",
+        liveVideoId: null,
+        viewerCount: 0,
+        streamTitle: null,
+        categoryName: null,
+        liveStartedAt: null,
+        status: "OFFLINE",
+        autoDetect: true,
+        lastCheckedAt: null,
+        lastStatusError: null,
+        featured: false,
+        startsAt: null,
+        tournament: null,
+      },
+      meta: { requestId: "test", timestamp: new Date().toISOString() },
+    });
+    refreshLiveStream.mockResolvedValue({
+      data: {} as never,
+      meta: { requestId: "test", timestamp: new Date().toISOString() },
+    });
+    renderStreams();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Add Stream" }));
+    fireEvent.change(screen.getByLabelText("Kick streamer name"), {
+      target: { value: "Absi" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add Kick Streamer" }));
+
+    await waitFor(() =>
+      expect(createLiveStream).toHaveBeenCalledWith({
+        streamerName: "Absi",
+        slug: "absi",
+        platform: "KICK",
+        channelUrl: "https://kick.com/absi",
+        embedUrl: "https://player.kick.com/absi",
+        providerChannelId: "absi",
+        status: "OFFLINE",
+        autoDetect: true,
+        featured: false,
+      }),
+    );
+    await waitFor(() =>
+      expect(refreshLiveStream).toHaveBeenCalledWith(
+        "stream-identifier-000001",
+      ),
+    );
   });
 });
