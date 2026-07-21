@@ -1,10 +1,20 @@
-import { Search, X } from "lucide-react";
+import {
+  ArrowRight,
+  Award,
+  Crosshair,
+  Search,
+  Shield,
+  ShieldCheck,
+  Swords,
+  TrendingUp,
+  Trophy,
+  Users,
+  X,
+} from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BorderBeam } from "@/components/ui/border-beam";
 import {
   EmptyState,
   ErrorState,
@@ -37,8 +47,8 @@ export default function GangsPage() {
   };
 
   return (
-    <main className="page-shell registry-page">
-      <header className="page-heading">
+    <main className="page-shell gang-registry-v3">
+      <header className="gang-registry-v3__hero">
         <div>
           <h1>Gang Registry</h1>
           <p>
@@ -46,10 +56,11 @@ export default function GangsPage() {
             Star community.
           </p>
         </div>
-        <img className="registry-seal" src="/assets/wst/wst-logo.png" alt="" />
+        <img src="/assets/wst/wst-logo.png" alt="" />
       </header>
-      <section className="filter-rail" aria-label="Gang filters">
-        <label className="search-control">
+
+      <section className="gang-registry-v3__filters" aria-label="Gang filters">
+        <label className="gang-registry-v3__search">
           <Search aria-hidden="true" />
           <span className="sr-only">Search gangs</span>
           <input
@@ -94,13 +105,18 @@ export default function GangsPage() {
           </select>
         </label>
         <Button variant="ghost" onClick={reset}>
-          <X data-icon="inline-start" />
-          Reset
+          <X data-icon="inline-start" /> Reset
         </Button>
       </section>
-      <div className="results-toolbar">
-        <strong>{gangs.data?.meta.total ?? 0} results</strong>
+
+      <div className="gang-registry-v3__results">
+        <strong>
+          {gangs.data?.meta.total ?? 0}{" "}
+          {gangs.data?.meta.total === 1 ? "result" : "results"}
+        </strong>
+        <span>Approved public records</span>
       </div>
+
       {gangs.isPending ? (
         <PageSkeleton />
       ) : gangs.isError ? (
@@ -111,56 +127,78 @@ export default function GangsPage() {
           message="Try adjusting the search or filters. No unapproved gangs are exposed."
         />
       ) : (
-        <section className="registry-list">
-          {gangs.data.data.map((gang, index) => (
-            <article className="registry-dossier" key={gang.id}>
-              {index === 0 ? (
-                <BorderBeam
-                  colorFrom="#9f1d2f"
-                  colorTo="#ef4058"
-                  duration={10}
-                  size={100}
-                />
-              ) : null}
-              <div className="registry-rank">
-                {gang.currentRank ? `#${String(gang.currentRank)}` : "—"}
-              </div>
-              <div className="gang-crest gang-crest--large">
-                {gang.logoUrl ? (
-                  <img src={gang.logoUrl} alt={`${gang.name} logo`} />
-                ) : (
-                  gang.tag.slice(0, 1)
-                )}
-              </div>
-              <div className="registry-identity">
-                <h2>{gang.name}</h2>
-                <span>[{gang.tag}]</span>
-                <div>
-                  <Badge variant="secondary">{gang.status}</Badge>
-                  {gang.verified ? <Badge>Verified</Badge> : null}
-                </div>
-              </div>
-              <dl>
-                {[
-                  ["Members", gang.memberCount],
-                  ["Matches", gang.matchesPlayed],
-                  ["Wins", gang.wins],
-                  ["Losses", gang.losses],
-                  ["Kills", gang.kills],
-                  ["Win rate", `${String(gang.winRate)}%`],
-                  ["Trophies", gang.trophies],
-                ].map(([label, value]) => (
-                  <div key={label}>
-                    <dt>{label}</dt>
-                    <dd>{value}</dd>
+        <section className="gang-registry-v3__list">
+          {gangs.data.data.map((gang) => {
+            const stats = [
+              [Users, "Members", gang.memberCount],
+              [Swords, "Matches", gang.matchesPlayed],
+              [Trophy, "Wins", gang.wins],
+              [Shield, "Losses", gang.losses],
+              [Crosshair, "Kills", gang.kills],
+              [TrendingUp, "Win rate", `${String(gang.winRate)}%`],
+              [Award, "Trophies", gang.trophies],
+            ] as const;
+            return (
+              <article className="gang-registry-card" key={gang.id}>
+                <div className="gang-registry-card__media">
+                  {gang.bannerUrl ? (
+                    <img
+                      className="gang-registry-card__banner"
+                      src={gang.bannerUrl}
+                      alt=""
+                    />
+                  ) : null}
+                  <div className="gang-registry-card__fade" />
+                  <div className="gang-registry-card__identity">
+                    <div className="gang-registry-card__crest">
+                      {gang.logoUrl ? (
+                        <img src={gang.logoUrl} alt={`${gang.name} logo`} />
+                      ) : (
+                        <span>{gang.tag.slice(0, 1)}</span>
+                      )}
+                    </div>
+                    <div>
+                      <Link to={`/gangs/${gang.slug}`}>
+                        <h2>{gang.name}</h2>
+                        <ArrowRight aria-hidden="true" />
+                      </Link>
+                      <strong>[{gang.tag}]</strong>
+                      <p>{gang.motto ?? "No motto published."}</p>
+                      <div className="gang-registry-card__badges">
+                        <span>{gang.status}</span>
+                        {gang.verified ? (
+                          <span>
+                            <ShieldCheck aria-hidden="true" /> Verified
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </dl>
-              <Button asChild variant="outline">
-                <Link to={`/gangs/${gang.slug}`}>View dossier</Link>
-              </Button>
-            </article>
-          ))}
+                  <span className="gang-registry-card__rank">
+                    {gang.currentRank
+                      ? `Rank #${String(gang.currentRank)}`
+                      : "Unranked"}
+                  </span>
+                </div>
+                <div className="gang-registry-card__footer">
+                  <dl>
+                    {stats.map(([Icon, label, value]) => (
+                      <div key={label}>
+                        <Icon aria-hidden="true" />
+                        <dt>{label}</dt>
+                        <dd>{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <Button asChild variant="outline">
+                    <Link to={`/gangs/${gang.slug}`}>
+                      View Gang <ArrowRight aria-hidden="true" />
+                    </Link>
+                  </Button>
+                </div>
+              </article>
+            );
+          })}
         </section>
       )}
     </main>
