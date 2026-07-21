@@ -1420,6 +1420,9 @@ function RecordsManager({
       {editorOpen ? (
         <div
           className="admin-drawer-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${selected ? "Edit" : "Add"} ${labels.singular}`}
           onMouseDown={() => setEditorOpen(false)}
         >
           <aside

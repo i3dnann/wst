@@ -69,6 +69,9 @@ describe("AdminCommandCenterPage record actions", () => {
     ]);
 
     fireEvent.click(await screen.findByRole("button", { name: "Add Gang" }));
+    expect(
+      screen.getByRole("dialog", { name: "Add Gang" }),
+    ).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Gang name"), {
       target: { value: "Crimson Kings" },
     });

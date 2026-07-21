@@ -9481,6 +9481,19 @@ textarea:focus,
   min-height: 54px !important;
 }
 
+/* Admin record editors are direct card children. Keep them in the viewport
+   instead of allowing generic card child positioning to move them below it. */
+.admin-dataset > .admin-drawer-backdrop,
+.admin-dataset > .admin-confirm-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1000 !important;
+}
+
+.admin-dataset > .admin-drawer-backdrop > .admin-edit-drawer {
+  position: absolute !important;
+}
+
 @media (max-width: 900px) {
   .site-footer {
     grid-template-columns: minmax(240px, 1.3fr) repeat(2, minmax(120px, 0.7fr)) !important;
