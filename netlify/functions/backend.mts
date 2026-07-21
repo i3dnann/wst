@@ -47,6 +47,22 @@ function inferRequestedPath(event: NetlifyEvent) {
   return "";
 }
 
+function extractSetCookieHeaders(headers: Headers) {
+  const cookieHeaders = headers as Headers & {
+    getSetCookie?: () => string[];
+  };
+  const cookies = cookieHeaders.getSetCookie?.() ?? [];
+  if (cookies.length) return cookies;
+
+  const combinedCookieHeader = headers.get("set-cookie");
+  if (!combinedCookieHeader) return [];
+
+  return combinedCookieHeader
+    .split(/,(?=\s*wst_(?:access|refresh|csrf)=)/)
+    .map((cookie) => cookie.trim())
+    .filter(Boolean);
+}
+
 export async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
   const configuredTarget = process.env.API_PROXY_TARGET?.trim().replace(
     /\/$/,
@@ -118,10 +134,7 @@ export async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
       if (!ignoredResponseHeaders.has(name.toLowerCase()))
         responseHeaders[name] = value;
     });
-    const cookieHeaders = response.headers as Headers & {
-      getSetCookie?: () => string[];
-    };
-    const cookies = cookieHeaders.getSetCookie?.() ?? [];
+    const cookies = extractSetCookieHeaders(response.headers);
     const responseBody = Buffer.from(await response.arrayBuffer());
     return {
       statusCode: response.status,
