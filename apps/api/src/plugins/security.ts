@@ -5,14 +5,16 @@ import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import type { FastifyInstance } from "fastify";
 import { jwtVerify } from "jose";
-import type { Permission } from "@mafia/shared";
+import { permissions, type Permission } from "@mafia/shared";
+import { z } from "zod";
 import { env } from "../lib/env.js";
 
-interface AccessClaims {
-  sub: string;
-  permissions: Permission[];
-  gangScopes: string[];
-}
+const accessClaimsSchema = z.object({
+  sub: z.string().min(20).max(40),
+  permissions: z.array(z.string()).max(200),
+  gangScopes: z.array(z.string().min(20).max(40)).max(500),
+});
+const permissionKeys = new Set<string>(Object.values(permissions));
 
 export async function registerSecurity(app: FastifyInstance): Promise<void> {
   await app.register(cookie, { secret: env.SESSION_SECRET, hook: "onRequest" });
@@ -22,7 +24,7 @@ export async function registerSecurity(app: FastifyInstance): Promise<void> {
       else callback(new Error("Origin is not allowed"), false);
     },
     credentials: true,
-    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   });
   await app.register(rateLimit, {
     max: env.RATE_LIMIT_MAX,
@@ -51,10 +53,16 @@ export async function registerSecurity(app: FastifyInstance): Promise<void> {
             audience: "wst-web",
           },
         );
-        const claims = verified.payload as unknown as AccessClaims;
+        const claims = accessClaimsSchema.parse(verified.payload);
+        const granted = claims.permissions.filter(
+          (permission): permission is Permission =>
+            permissionKeys.has(permission),
+        );
+        if (granted.length !== claims.permissions.length)
+          throw new Error("JWT contains an unknown permission.");
         request.auth = {
           userId: claims.sub,
-          permissions: new Set(claims.permissions),
+          permissions: new Set(granted),
           gangScopes: new Set(claims.gangScopes),
         };
       } catch {

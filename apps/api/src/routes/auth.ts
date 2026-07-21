@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import { adminLoginSchema } from "@mafia/shared";
 import { SignJWT } from "jose";
 import { envelope } from "../lib/envelope.js";
+import { recordAudit } from "../lib/audit.js";
 import { env } from "../lib/env.js";
 import { HttpError } from "../lib/http-error.js";
 import { verifyPassword } from "../lib/password.js";
@@ -17,8 +18,18 @@ const cookieOptions = {
 };
 
 async function createAccessToken(userId: string): Promise<string> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { status: true },
+  });
+  if (!user || user.status !== "ACTIVE")
+    throw new HttpError(
+      401,
+      "SESSION_INVALID",
+      "The administrator account is unavailable.",
+    );
   const userRoles = await prisma.userRole.findMany({
-    where: { userId },
+    where: { userId, role: { status: "ACTIVE" } },
     include: {
       role: { include: { permissions: { include: { permission: true } } } },
     },
@@ -113,6 +124,13 @@ export function authRoutes(app: FastifyInstance): void {
       const refreshToken = await issueRefreshToken(user.id);
       const csrf = crypto.randomBytes(24).toString("base64url");
       setSessionCookies(reply, accessToken, refreshToken, csrf);
+      await recordAudit({
+        actorUserId: user.id,
+        action: "auth.login",
+        entityType: "User",
+        entityId: user.id,
+        afterData: { lastLoginAt: new Date() },
+      });
       return envelope(request, {
         id: user.id,
         email: user.email,
@@ -164,20 +182,33 @@ export function authRoutes(app: FastifyInstance): void {
           "Refresh session is invalid or expired.",
         );
       const replacement = crypto.randomBytes(48).toString("base64url");
-      await prisma.$transaction([
-        prisma.refreshToken.update({
-          where: { id: stored.id },
-          data: { revokedAt: new Date() },
-        }),
-        prisma.refreshToken.create({
-          data: {
-            userId: stored.userId,
-            tokenHash: hashToken(replacement),
-            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            metadata: { rotatedFrom: stored.id },
-          },
-        }),
-      ]);
+      await prisma.$transaction(
+        async (tx) => {
+          const revoked = await tx.refreshToken.updateMany({
+            where: {
+              id: stored.id,
+              revokedAt: null,
+              expiresAt: { gt: new Date() },
+            },
+            data: { revokedAt: new Date() },
+          });
+          if (revoked.count !== 1)
+            throw new HttpError(
+              401,
+              "REFRESH_REUSED",
+              "This refresh session was already rotated. Sign in again.",
+            );
+          await tx.refreshToken.create({
+            data: {
+              userId: stored.userId,
+              tokenHash: hashToken(replacement),
+              expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              metadata: { rotatedFrom: stored.id },
+            },
+          });
+        },
+        { isolationLevel: "Serializable" },
+      );
       const accessToken = await createAccessToken(stored.userId);
       const csrf = crypto.randomBytes(24).toString("base64url");
       setSessionCookies(reply, accessToken, replacement, csrf);
@@ -186,6 +217,7 @@ export function authRoutes(app: FastifyInstance): void {
   );
 
   app.post("/api/v1/auth/logout", async (request, reply) => {
+    const actorUserId = request.auth?.userId;
     const refresh = request.cookies.wst_refresh;
     if (refresh)
       await prisma.refreshToken.updateMany({
@@ -195,6 +227,13 @@ export function authRoutes(app: FastifyInstance): void {
     reply.clearCookie("wst_access", { path: "/" });
     reply.clearCookie("wst_refresh", { path: "/" });
     reply.clearCookie("wst_csrf", { path: "/" });
+    if (actorUserId)
+      await recordAudit({
+        actorUserId,
+        action: "auth.logout",
+        entityType: "User",
+        entityId: actorUserId,
+      });
     return reply.code(204).send();
   });
 }

@@ -41,17 +41,35 @@ export function generateOpeningRound(
     );
   }
 
-  const sorted = [...participants].sort((a, b) => a.seed - b.seed);
-  const size = nextPowerOfTwo(sorted.length);
-  const slots: Array<SeededParticipant | null> = [
-    ...sorted,
-    ...Array<null>(size - sorted.length).fill(null),
-  ];
+  const invalidSeed = participants.some(
+    (participant) =>
+      !Number.isInteger(participant.seed) ||
+      participant.seed < 1 ||
+      participant.seed > participants.length,
+  );
+  if (invalidSeed) {
+    throw new HttpError(
+      422,
+      "INVALID_SEED",
+      `Seeds must use every number from 1 through ${String(participants.length)}.`,
+    );
+  }
+
+  const size = nextPowerOfTwo(participants.length);
+  let seedOrder = [1, 2];
+  while (seedOrder.length < size) {
+    const nextSize = seedOrder.length * 2;
+    seedOrder = seedOrder.flatMap((seed) => [seed, nextSize + 1 - seed]);
+  }
+  const bySeed = new Map(
+    participants.map((participant) => [participant.seed, participant]),
+  );
+  const slots = seedOrder.map((seed) => bySeed.get(seed) ?? null);
   const matches: GeneratedMatch[] = [];
 
   for (let index = 0; index < size / 2; index += 1) {
-    const a = slots[index] ?? null;
-    const b = slots[size - 1 - index] ?? null;
+    const a = slots[index * 2] ?? null;
+    const b = slots[index * 2 + 1] ?? null;
     matches.push({
       position: index + 1,
       participantAId: a?.id ?? null,

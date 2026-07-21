@@ -5,6 +5,7 @@ import { prisma } from "./lib/prisma.js";
 import { registerErrorHandler } from "./plugins/error-handler.js";
 import { registerSecurity } from "./plugins/security.js";
 import { adminRoutes } from "./routes/admin.js";
+import { adminExtendedRoutes } from "./routes/admin-extended.js";
 import { authRoutes } from "./routes/auth.js";
 import { healthRoutes } from "./routes/health.js";
 import { mediaRoutes } from "./routes/media.js";
@@ -25,6 +26,7 @@ healthRoutes(app);
 publicRoutes(app);
 authRoutes(app);
 adminRoutes(app);
+adminExtendedRoutes(app);
 mediaRoutes(app);
 
 const close = async (signal: string) => {

@@ -11,6 +11,7 @@ import {
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { usePublicWebsiteSettings } from "@/lib/website-settings";
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat(undefined, {
@@ -19,6 +20,7 @@ const formatDate = (value: string) =>
   }).format(new Date(value));
 
 export default function HomePage() {
+  const website = usePublicWebsiteSettings();
   const [home, tournaments, events, streams] = useQueries({
     queries: [
       { queryKey: ["home"], queryFn: api.home, retry: false },
@@ -42,6 +44,7 @@ export default function HomePage() {
   const upcomingEvents = events.data?.data.slice(0, 3) ?? [];
   const liveStreams =
     streams.data?.data.filter((stream) => stream.status === "LIVE") ?? [];
+  const settings = website.data;
 
   const stats = [
     [Trophy, "Tournaments", tournamentList.length],
@@ -56,7 +59,10 @@ export default function HomePage() {
       <section className="gold-hero">
         <img
           className="gold-hero-image"
-          src="/assets/wst-gold/city-overlook.png"
+          src={
+            settings?.homepage.heroMediaUrl ||
+            "/assets/wst-gold/city-overlook.png"
+          }
           alt="A World Star figure overlooking the city at night"
         />
         <div className="gold-hero-shade" />
@@ -66,8 +72,8 @@ export default function HomePage() {
             src="/assets/wst-gold/wst-gold.png"
             alt="World Star"
           />
-          <h1>WORLD STAR</h1>
-          <p>Loyalty. Power. Respect.</p>
+          <h1>{settings?.homepage.heroTitle || "WORLD STAR"}</h1>
+          <p>{settings?.homepage.heroSubtitle || "Loyalty. Power. Respect."}</p>
           <div className="gold-hero-actions">
             <Button asChild size="lg">
               <Link to="/gangs">

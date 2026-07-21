@@ -25,37 +25,69 @@ import { toast } from "sonner";
 import type { PublicLiveStream } from "@mafia/shared";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/data/StatusState";
-import { api } from "@/lib/api";
+import { api, type AuditRecord } from "@/lib/api";
 import { BracketManager } from "./AdminPage";
+import {
+  GangOrganizationManager,
+  MediaManager,
+  ResultsDisputesManager,
+  RolesPermissionsManager,
+  SeasonsManager,
+  SystemHealthManager,
+  WebsiteSettingsManager,
+} from "./AdminExtendedSections";
 
 type AdminSection =
   | "overview"
   | "gang"
+  | "gang-organization"
   | "player"
   | "tournament"
+  | "participant"
   | "bracket"
   | "match"
+  | "result"
   | "event"
   | "stream"
+  | "ranking"
+  | "season"
+  | "media"
   | "administrator"
+  | "roles"
   | "audit"
-  | "settings";
+  | "discord"
+  | "settings"
+  | "health";
 type RecordKind = "gang" | "player" | "tournament" | "match" | "event";
 type AdminRecord = Record<string, unknown> & { id: string };
 type FormValues = Record<string, string | boolean>;
 
 const navigation = [
-  [LayoutDashboard, "Overview", "overview"],
-  [Shield, "Gangs", "gang"],
-  [Users, "Players", "player"],
-  [Trophy, "Tournaments", "tournament"],
-  [Gavel, "Brackets", "bracket"],
-  [Swords, "Matches", "match"],
-  [CalendarDays, "Events", "event"],
-  [Radio, "Live Streams", "stream"],
-  [UserCog, "Administrators", "administrator"],
-  [FileClock, "Audit Log", "audit"],
-  [Settings, "Settings", "settings"],
+  [LayoutDashboard, "Overview", "overview", "audit.read"],
+  [Shield, "Gangs", "gang", "gang.read"],
+  [
+    Users,
+    "Gang Roles & Members",
+    "gang-organization",
+    "gang.roster.manage.any",
+  ],
+  [Users, "Players", "player", "player.read"],
+  [Trophy, "Tournaments", "tournament", "tournament.read"],
+  [Gavel, "Participants", "participant", "tournament.bracket.manage"],
+  [Gavel, "Bracket Manager", "bracket", "tournament.bracket.manage"],
+  [Swords, "Matches", "match", "match.update"],
+  [Swords, "Results & Disputes", "result", "match.finalize"],
+  [CalendarDays, "Events", "event", "event.manage"],
+  [Radio, "Live Streams", "stream", "stream.manage"],
+  [Trophy, "Rankings", "ranking", "ranking.configure"],
+  [CalendarDays, "Seasons", "season", "season.manage"],
+  [Settings, "Media", "media", "media.moderate"],
+  [UserCog, "Administrators", "administrator", "user.manage"],
+  [UserCog, "Roles & Permissions", "roles", "role.manage"],
+  [Settings, "Website Settings", "settings", "settings.manage"],
+  [Radio, "Discord Integration", "discord", "audit.configure"],
+  [FileClock, "Audit History", "audit", "audit.read"],
+  [RefreshCw, "System Health", "health", "system.health.read"],
 ] as const;
 
 const kindLabels: Record<RecordKind, { singular: string; plural: string }> = {
@@ -78,11 +110,10 @@ const tournamentStatuses = [
 ];
 const matchStatuses = [
   "SCHEDULED",
-  "CHECK_IN",
+  "CHECK_IN_OPEN",
+  "READY",
   "LIVE",
   "AWAITING_RESULT",
-  "DISPUTED",
-  "COMPLETED",
   "CANCELLED",
   "FORFEIT",
 ];
@@ -169,7 +200,7 @@ function SelectField({
   name: string;
   values: FormValues;
   setValue: (name: string, value: string | boolean) => void;
-  options: Array<{ value: string; label: string }>;
+  options: Array<{ value: string; label: string; disabled?: boolean }>;
 }) {
   return (
     <label>
@@ -179,7 +210,11 @@ function SelectField({
         onChange={(event) => setValue(name, event.target.value)}
       >
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option
+            key={option.value}
+            value={option.value}
+            disabled={option.disabled}
+          >
             {option.label}
           </option>
         ))}
@@ -216,6 +251,8 @@ function blankValues(kind: RecordKind): FormValues {
     return {
       status: "ACTIVE",
       recruitmentStatus: "CLOSED",
+      primaryColor: "#b88a44",
+      secondaryColor: "#2f241a",
       verified: false,
       featured: false,
     };
@@ -225,6 +262,8 @@ function blankValues(kind: RecordKind): FormValues {
       status: "DRAFT",
       format: "SINGLE_ELIMINATION",
       maximumParticipants: "16",
+      publicVisible: true,
+      featured: false,
     };
   if (kind === "match") return { status: "SCHEDULED", bestOf: "1" };
   return { status: "SCHEDULED", featured: false };
@@ -238,9 +277,13 @@ function valuesFromRecord(kind: RecordKind, record: AdminRecord): FormValues {
       tag: valueOf(record, "tag"),
       motto: valueOf(record, "motto"),
       description: valueOf(record, "description"),
+      history: valueOf(record, "history"),
       logoUrl: valueOf(record, "logoUrl"),
       bannerUrl: valueOf(record, "bannerUrl"),
       territory: valueOf(record, "territory"),
+      primaryColor: valueOf(record, "primaryColor") || "#b88a44",
+      secondaryColor: valueOf(record, "secondaryColor") || "#2f241a",
+      foundedAt: dateTimeInput(record.foundedAt).slice(0, 10),
       status: valueOf(record, "status"),
       recruitmentStatus: valueOf(record, "recruitmentStatus"),
       verified: Boolean(record.verified),
@@ -252,6 +295,7 @@ function valuesFromRecord(kind: RecordKind, record: AdminRecord): FormValues {
       slug: valueOf(record, "slug"),
       biography: valueOf(record, "biography"),
       avatarUrl: valueOf(record, "avatarUrl"),
+      externalFivemId: valueOf(record, "externalFivemId"),
       status: valueOf(record, "status"),
     };
   if (kind === "tournament")
@@ -259,13 +303,19 @@ function valuesFromRecord(kind: RecordKind, record: AdminRecord): FormValues {
       name: valueOf(record, "name"),
       slug: valueOf(record, "slug"),
       description: valueOf(record, "description"),
+      bannerUrl: valueOf(record, "bannerUrl"),
       format: valueOf(record, "format"),
       status: valueOf(record, "status"),
       startAt: dateTimeInput(record.startAt),
       endAt: dateTimeInput(record.endAt),
+      registrationOpenAt: dateTimeInput(record.registrationOpenAt),
+      registrationCloseAt: dateTimeInput(record.registrationCloseAt),
+      seasonId: valueOf(record, "seasonId"),
       maximumParticipants: valueOf(record, "maximumParticipants"),
       rules: valueOf(record, "rules"),
       prizeDescription: valueOf(record, "prizeDescription"),
+      featured: Boolean(record.featured),
+      publicVisible: record.publicVisible !== false,
     };
   if (kind === "match") {
     const tournament = record.tournament as { id?: string } | null;
@@ -306,9 +356,13 @@ function payloadFor(kind: RecordKind, values: FormValues) {
       tag: String(values.tag ?? ""),
       motto: optional(String(values.motto ?? "")),
       description: optional(String(values.description ?? "")),
+      history: optional(String(values.history ?? "")),
       logoUrl: optional(String(values.logoUrl ?? "")),
       bannerUrl: optional(String(values.bannerUrl ?? "")),
       territory: optional(String(values.territory ?? "")),
+      primaryColor: optional(String(values.primaryColor ?? "")),
+      secondaryColor: optional(String(values.secondaryColor ?? "")),
+      foundedAt: toIso(String(values.foundedAt ?? "")),
       status: String(values.status),
       recruitmentStatus: String(values.recruitmentStatus),
       verified: Boolean(values.verified),
@@ -320,6 +374,7 @@ function payloadFor(kind: RecordKind, values: FormValues) {
       slug: String(values.slug ?? ""),
       biography: optional(String(values.biography ?? "")),
       avatarUrl: optional(String(values.avatarUrl ?? "")),
+      externalFivemId: optional(String(values.externalFivemId ?? "")),
       status: String(values.status),
     };
   if (kind === "tournament")
@@ -327,13 +382,19 @@ function payloadFor(kind: RecordKind, values: FormValues) {
       name: String(values.name ?? ""),
       slug: String(values.slug ?? ""),
       description: optional(String(values.description ?? "")),
+      bannerUrl: optional(String(values.bannerUrl ?? "")),
       format: String(values.format),
       status: String(values.status),
       startAt: toIso(String(values.startAt ?? "")),
       endAt: toIso(String(values.endAt ?? "")),
+      registrationOpenAt: toIso(String(values.registrationOpenAt ?? "")),
+      registrationCloseAt: toIso(String(values.registrationCloseAt ?? "")),
+      seasonId: optional(String(values.seasonId ?? "")),
       maximumParticipants: Number(values.maximumParticipants),
       rules: optional(String(values.rules ?? "")),
       prizeDescription: optional(String(values.prizeDescription ?? "")),
+      featured: Boolean(values.featured),
+      publicVisible: Boolean(values.publicVisible),
     };
   if (kind === "match")
     return {
@@ -342,7 +403,9 @@ function payloadFor(kind: RecordKind, values: FormValues) {
       gangBId: optional(String(values.gangBId ?? "")),
       bestOf: Number(values.bestOf),
       scheduledAt: toIso(String(values.scheduledAt ?? "")),
-      status: String(values.status),
+      status: matchStatuses.includes(String(values.status))
+        ? String(values.status)
+        : undefined,
     };
   return {
     title: String(values.title ?? ""),
@@ -486,12 +549,14 @@ function RecordEditorFields({
   setValue,
   gangs,
   tournaments,
+  seasons,
 }: {
   kind: RecordKind;
   values: FormValues;
   setValue: (name: string, value: string | boolean) => void;
   gangs: AdminRecord[];
   tournaments: AdminRecord[];
+  seasons: AdminRecord[];
 }) {
   if (kind === "gang")
     return (
@@ -555,12 +620,40 @@ function RecordEditorFields({
             onChange={(event) => setValue("description", event.target.value)}
           />
         </label>
+        <label className="full-width">
+          Gang history
+          <textarea
+            value={String(values.history ?? "")}
+            onChange={(event) => setValue("history", event.target.value)}
+          />
+        </label>
         <Field
           label="Territory"
           name="territory"
           values={values}
           setValue={setValue}
           full
+        />
+        <Field
+          label="Founded"
+          name="foundedAt"
+          values={values}
+          setValue={setValue}
+          type="date"
+        />
+        <Field
+          label="Primary color"
+          name="primaryColor"
+          values={values}
+          setValue={setValue}
+          type="color"
+        />
+        <Field
+          label="Secondary color"
+          name="secondaryColor"
+          values={values}
+          setValue={setValue}
+          type="color"
         />
         <SelectField
           label="Status"
@@ -620,6 +713,13 @@ function RecordEditorFields({
           type="url"
           full
         />
+        <Field
+          label="External FiveM identifier"
+          name="externalFivemId"
+          values={values}
+          setValue={setValue}
+          full
+        />
         {values.avatarUrl ? (
           <img
             className="admin-profile-preview"
@@ -669,6 +769,27 @@ function RecordEditorFields({
           type="number"
           required
         />
+        <Field
+          label="Banner URL"
+          name="bannerUrl"
+          values={values}
+          setValue={setValue}
+          type="url"
+          full
+        />
+        <SelectField
+          label="Season"
+          name="seasonId"
+          values={values}
+          setValue={setValue}
+          options={[
+            { value: "", label: "No season" },
+            ...seasons.map((season) => ({
+              value: season.id,
+              label: valueOf(season, "name"),
+            })),
+          ]}
+        />
         <SelectField
           label="Format"
           name="format"
@@ -707,6 +828,20 @@ function RecordEditorFields({
           setValue={setValue}
           type="datetime-local"
         />
+        <Field
+          label="Registration opens"
+          name="registrationOpenAt"
+          values={values}
+          setValue={setValue}
+          type="datetime-local"
+        />
+        <Field
+          label="Registration closes"
+          name="registrationCloseAt"
+          values={values}
+          setValue={setValue}
+          type="datetime-local"
+        />
         <label className="full-width">
           Description
           <textarea
@@ -727,6 +862,18 @@ function RecordEditorFields({
           values={values}
           setValue={setValue}
           full
+        />
+        <ToggleField
+          label="Featured tournament"
+          name="featured"
+          values={values}
+          setValue={setValue}
+        />
+        <ToggleField
+          label="Visible on public website"
+          name="publicVisible"
+          values={values}
+          setValue={setValue}
         />
       </>
     );
@@ -751,10 +898,21 @@ function RecordEditorFields({
           name="status"
           values={values}
           setValue={setValue}
-          options={matchStatuses.map((value) => ({
-            value,
-            label: value.replaceAll("_", " "),
-          }))}
+          options={[
+            ...(values.status && !matchStatuses.includes(String(values.status))
+              ? [
+                  {
+                    value: String(values.status),
+                    label: `${String(values.status).replaceAll("_", " ")} (manage in Results)`,
+                    disabled: true,
+                  },
+                ]
+              : []),
+            ...matchStatuses.map((value) => ({
+              value,
+              label: value.replaceAll("_", " "),
+            })),
+          ]}
         />
         <SelectField
           label="Gang A"
@@ -797,52 +955,11 @@ function RecordEditorFields({
           setValue={setValue}
           type="datetime-local"
         />
-        {values.version !== undefined ? (
-          <>
-            <Field
-              label="Gang A score"
-              name="gangAScore"
-              values={values}
-              setValue={setValue}
-              type="number"
-              required
-            />
-            <Field
-              label="Gang B score"
-              name="gangBScore"
-              values={values}
-              setValue={setValue}
-              type="number"
-              required
-            />
-            <SelectField
-              label="Winner and next-stage qualifier"
-              name="winnerGangId"
-              values={values}
-              setValue={setValue}
-              options={[
-                { value: "", label: "No winner selected" },
-                ...gangs
-                  .filter((item) =>
-                    [values.gangAId, values.gangBId].includes(item.id),
-                  )
-                  .map((item) => ({
-                    value: item.id,
-                    label: valueOf(item, "name"),
-                  })),
-              ]}
-            />
-            <p className="admin-form-note full-width">
-              Selecting a winner completes this match, marks the loser as
-              eliminated, and places the winner in the next bracket stage.
-            </p>
-          </>
-        ) : (
-          <p className="admin-form-note full-width">
-            Create the match first, then edit it to record scores and advance a
-            winner.
-          </p>
-        )}
+        <p className="admin-form-note full-width">
+          Scores, player statistics, winners, disputes, and corrections are
+          managed in Results &amp; Disputes so bracket progression remains
+          transactional.
+        </p>
       </>
     );
   return (
@@ -954,10 +1071,17 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
     enabled: kind === "match",
     retry: false,
   });
+  const seasons = useQuery({
+    queryKey: ["public-seasons"],
+    queryFn: api.publicSeasons,
+    enabled: kind === "tournament",
+    retry: false,
+  });
   const rows = useMemo(() => records.data ?? [], [records.data]);
   const gangRows = (gangs.data?.data ?? []) as unknown as AdminRecord[];
   const tournamentRows = (tournaments.data?.data ??
     []) as unknown as AdminRecord[];
+  const seasonRows = (seasons.data?.data ?? []) as AdminRecord[];
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return term
@@ -974,15 +1098,7 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
         if (kind === "tournament")
           return api.updateTournament(selected.id, payload);
         if (kind === "match") {
-          const updated = await api.updateMatch(selected.id, payload);
-          const winnerGangId = optional(String(values.winnerGangId ?? ""));
-          if (!winnerGangId) return updated;
-          return api.advanceMatch(selected.id, {
-            winnerGangId,
-            gangAScore: Number(values.gangAScore ?? 0),
-            gangBScore: Number(values.gangBScore ?? 0),
-            version: Number(values.version ?? selected.version ?? 0),
-          });
+          return api.updateMatch(selected.id, payload);
         }
         return api.updateEvent(selected.id, payload);
       }
@@ -1003,6 +1119,17 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
   });
   const remove = useMutation({
     mutationFn: async (record: AdminRecord) => {
+      if (record.status === "ARCHIVED" && kind !== "match") {
+        const resource =
+          kind === "gang"
+            ? "gangs"
+            : kind === "player"
+              ? "players"
+              : kind === "tournament"
+                ? "tournaments"
+                : "events";
+        return api.restoreRecord(resource, record.id);
+      }
       if (kind === "gang") return api.archiveGang(record.id);
       if (kind === "player") return api.archivePlayer(record.id);
       if (kind === "tournament") return api.archiveTournament(record.id);
@@ -1010,7 +1137,7 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
       return api.archiveEvent(record.id);
     },
     onSuccess: () => {
-      toast.success(`${labels.singular} removed from the public website.`);
+      toast.success(`${labels.singular} visibility updated.`);
       setConfirming(null);
       setEditorOpen(false);
       void queryClient.invalidateQueries();
@@ -1141,6 +1268,7 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
                 setValue={setValue}
                 gangs={gangRows}
                 tournaments={tournamentRows}
+                seasons={seasonRows}
               />
               {save.isError ? (
                 <p className="form-error full-width">{save.error.message}</p>
@@ -1552,11 +1680,23 @@ function StreamManager() {
   );
 }
 
-function AdministratorManager({ currentUserId }: { currentUserId: string }) {
+function AdministratorManager({
+  currentUserId,
+  canManageRoles,
+}: {
+  currentUserId: string;
+  canManageRoles: boolean;
+}) {
   const queryClient = useQueryClient();
   const administrators = useQuery({
     queryKey: ["administrators"],
     queryFn: api.administrators,
+    retry: false,
+  });
+  const roles = useQuery({
+    queryKey: ["admin-roles"],
+    queryFn: api.roles,
+    enabled: canManageRoles,
     retry: false,
   });
   const [values, setValues] = useState<FormValues>({ status: "ACTIVE" });
@@ -1566,19 +1706,28 @@ function AdministratorManager({ currentUserId }: { currentUserId: string }) {
   const setValue = (name: string, value: string | boolean) =>
     setValues((current) => ({ ...current, [name]: value }));
   const save = useMutation({
-    mutationFn: () =>
-      selected
-        ? api.updateAdministrator(selected.id, {
-            email: values.email,
-            displayName: values.displayName,
-            password: optional(String(values.password ?? "")),
-            status: values.status,
-          })
-        : api.createAdministrator({
-            email: values.email,
-            displayName: values.displayName,
-            password: values.password,
-          }),
+    mutationFn: async () => {
+      if (selected) {
+        const updated = await api.updateAdministrator(selected.id, {
+          email: values.email,
+          displayName: values.displayName,
+          password: optional(String(values.password ?? "")),
+          status: values.status,
+        });
+        if (canManageRoles && values.roleId) {
+          await api.updateAdministratorRoles(selected.id, [
+            String(values.roleId),
+          ]);
+        }
+        return updated;
+      }
+      return api.createAdministrator({
+        email: values.email,
+        displayName: values.displayName,
+        password: values.password,
+        roleIds: [String(values.roleId)],
+      });
+    },
     onSuccess: () => {
       toast.success(
         selected ? "Administrator updated." : "Administrator added.",
@@ -1604,6 +1753,7 @@ function AdministratorManager({ currentUserId }: { currentUserId: string }) {
       displayName: item.displayName,
       status: item.status,
       password: "",
+      roleId: item.roles?.[0]?.role.id ?? "",
     });
   };
   return (
@@ -1618,6 +1768,7 @@ function AdministratorManager({ currentUserId }: { currentUserId: string }) {
             setSelectedId(null);
             setValues({ status: "ACTIVE" });
           }}
+          disabled={!canManageRoles}
         >
           <Plus /> Add Administrator
         </Button>
@@ -1719,10 +1870,33 @@ function AdministratorManager({ currentUserId }: { currentUserId: string }) {
               options={recordStatuses.map((value) => ({ value, label: value }))}
             />
           ) : null}
+          {canManageRoles ? (
+            <SelectField
+              label="Administrator role"
+              name="roleId"
+              values={values}
+              setValue={setValue}
+              options={[
+                { value: "", label: "Select role" },
+                ...((roles.data?.data.roles ?? []) as AdminRecord[])
+                  .filter((role) => role.status === "ACTIVE")
+                  .map((role) => ({
+                    value: role.id,
+                    label: valueOf(role, "name"),
+                  })),
+              ]}
+            />
+          ) : null}
           {save.isError ? (
             <p className="form-error full-width">{save.error.message}</p>
           ) : null}
-          <Button type="submit" disabled={save.isPending}>
+          <Button
+            type="submit"
+            disabled={
+              save.isPending ||
+              (!selected && (!canManageRoles || !values.roleId))
+            }
+          >
             {selected ? "Save Administrator" : "Create Administrator"}
           </Button>
         </form>
@@ -1731,16 +1905,30 @@ function AdministratorManager({ currentUserId }: { currentUserId: string }) {
   );
 }
 
-function AuditManager() {
+function AuditManager({ integration = false }: { integration?: boolean }) {
   const queryClient = useQueryClient();
+  const [filters, setFilters] = useState({
+    action: "",
+    entityType: "",
+    entityId: "",
+    from: "",
+    to: "",
+  });
+  const [selectedLog, setSelectedLog] = useState<AuditRecord | null>(null);
+  const auditQuery = new URLSearchParams(
+    Object.entries(filters).filter((entry): entry is [string, string] =>
+      Boolean(entry[1]),
+    ),
+  ).toString();
   const logs = useQuery({
-    queryKey: ["audit-logs"],
-    queryFn: api.auditLogs,
+    queryKey: ["audit-logs", auditQuery],
+    queryFn: () => api.auditLogs(auditQuery),
     retry: false,
   });
   const settings = useQuery({
     queryKey: ["discord-audit"],
     queryFn: api.discordAuditSettings,
+    enabled: integration,
     retry: false,
   });
   const [enabled, setEnabled] = useState(false);
@@ -1788,100 +1976,258 @@ function AuditManager() {
           <p>See exactly who created, changed, or removed every record.</p>
         </div>
       </header>
-      <div className="audit-admin-grid">
-        <div className="admin-table-scroll">
-          <table className="admin-data-table">
-            <thead>
-              <tr>
-                <th>Administrator</th>
-                <th>Action</th>
-                <th>Record</th>
-                <th>Record ID</th>
-                <th>Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(logs.data?.data ?? []).map((log) => (
-                <tr key={log.id}>
-                  <td>
-                    <strong>{log.actor?.displayName ?? "System"}</strong>
-                  </td>
-                  <td>{log.action.replaceAll(".", " ")}</td>
-                  <td>{log.entityType}</td>
-                  <td>
-                    <code>{log.entityId ?? "—"}</code>
-                  </td>
-                  <td>{new Date(log.createdAt).toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <form
-          className="discord-settings-panel"
-          onSubmit={(event) => {
-            event.preventDefault();
-            save.mutate();
-          }}
-        >
-          <header>
-            <Radio />
-            <div>
-              <h3>Discord Webhook Logs</h3>
-              <p>Send administrator activity to a private Discord channel.</p>
-            </div>
-          </header>
-          <ToggleField
-            label="Enable Discord audit logs"
-            name="enabled"
-            values={{ enabled }}
-            setValue={(_, value) => setEnabled(Boolean(value))}
-          />
-          <label>
-            Webhook URL
-            <input
-              type="password"
-              value={webhookUrl}
-              onChange={(event) => setWebhookUrl(event.target.value)}
-              placeholder={
-                settings.data?.data.maskedWebhookUrl ??
-                "https://discord.com/api/webhooks/…"
-              }
-            />
-          </label>
-          <fieldset>
-            <legend>Event categories</legend>
-            {["create", "update", "archive", "admin", "security"].map(
-              (category) => (
-                <label key={category}>
-                  <input
-                    type="checkbox"
-                    checked={categories.includes(category)}
-                    onChange={() => toggleCategory(category)}
-                  />{" "}
-                  {category}
-                </label>
-              ),
-            )}
-          </fieldset>
-          {save.isError ? (
-            <p className="form-error">{save.error.message}</p>
-          ) : null}
-          {test.isError ? (
-            <p className="form-error">{test.error.message}</p>
-          ) : null}
-          <div>
-            <Button type="submit">Save Settings</Button>
+      <div
+        className={
+          integration
+            ? "audit-admin-grid"
+            : "audit-admin-grid audit-admin-grid--logs-only"
+        }
+      >
+        <div>
+          <form
+            className="admin-table-toolbar audit-filter-toolbar"
+            onSubmit={(event) => event.preventDefault()}
+          >
+            <label>
+              Action
+              <input
+                value={filters.action}
+                onChange={(event) =>
+                  setFilters((value) => ({
+                    ...value,
+                    action: event.target.value,
+                  }))
+                }
+                placeholder="match.finalize"
+              />
+            </label>
+            <label>
+              Record type
+              <input
+                value={filters.entityType}
+                onChange={(event) =>
+                  setFilters((value) => ({
+                    ...value,
+                    entityType: event.target.value,
+                  }))
+                }
+                placeholder="Match"
+              />
+            </label>
+            <label>
+              Record ID
+              <input
+                value={filters.entityId}
+                onChange={(event) =>
+                  setFilters((value) => ({
+                    ...value,
+                    entityId: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label>
+              From
+              <input
+                type="datetime-local"
+                value={filters.from}
+                onChange={(event) =>
+                  setFilters((value) => ({
+                    ...value,
+                    from: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label>
+              To
+              <input
+                type="datetime-local"
+                value={filters.to}
+                onChange={(event) =>
+                  setFilters((value) => ({ ...value, to: event.target.value }))
+                }
+              />
+            </label>
             <Button
               type="button"
               variant="outline"
-              onClick={() => test.mutate()}
+              onClick={() =>
+                setFilters({
+                  action: "",
+                  entityType: "",
+                  entityId: "",
+                  from: "",
+                  to: "",
+                })
+              }
             >
-              Test Webhook
+              Clear
             </Button>
+          </form>
+          <div className="admin-table-scroll">
+            <table className="admin-data-table">
+              <thead>
+                <tr>
+                  <th>Administrator</th>
+                  <th>Action</th>
+                  <th>Record</th>
+                  <th>Record ID</th>
+                  <th>Time</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(logs.data?.data ?? []).map((log) => (
+                  <tr key={log.id}>
+                    <td>
+                      <strong>{log.actor?.displayName ?? "System"}</strong>
+                    </td>
+                    <td>{log.action.replaceAll(".", " ")}</td>
+                    <td>{log.entityType}</td>
+                    <td>
+                      <code>{log.entityId ?? "—"}</code>
+                    </td>
+                    <td>{new Date(log.createdAt).toLocaleString()}</td>
+                    <td>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedLog(log)}
+                      >
+                        View
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </form>
+        </div>
+        {integration ? (
+          <form
+            className="discord-settings-panel"
+            onSubmit={(event) => {
+              event.preventDefault();
+              save.mutate();
+            }}
+          >
+            <header>
+              <Radio />
+              <div>
+                <h3>Discord Webhook Logs</h3>
+                <p>Send administrator activity to a private Discord channel.</p>
+              </div>
+            </header>
+            <ToggleField
+              label="Enable Discord audit logs"
+              name="enabled"
+              values={{ enabled }}
+              setValue={(_, value) => setEnabled(Boolean(value))}
+            />
+            <label>
+              Webhook URL
+              <input
+                type="password"
+                value={webhookUrl}
+                onChange={(event) => setWebhookUrl(event.target.value)}
+                placeholder={
+                  settings.data?.data.maskedWebhookUrl ??
+                  "https://discord.com/api/webhooks/…"
+                }
+              />
+            </label>
+            <fieldset>
+              <legend>Event categories</legend>
+              {["create", "update", "archive", "admin", "security"].map(
+                (category) => (
+                  <label key={category}>
+                    <input
+                      type="checkbox"
+                      checked={categories.includes(category)}
+                      onChange={() => toggleCategory(category)}
+                    />{" "}
+                    {category}
+                  </label>
+                ),
+              )}
+            </fieldset>
+            {save.isError ? (
+              <p className="form-error">{save.error.message}</p>
+            ) : null}
+            {test.isError ? (
+              <p className="form-error">{test.error.message}</p>
+            ) : null}
+            <div>
+              <Button type="submit">Save Settings</Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => test.mutate()}
+              >
+                Test Webhook
+              </Button>
+            </div>
+          </form>
+        ) : null}
       </div>
+      {selectedLog ? (
+        <div
+          className="admin-drawer-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="audit-details-title"
+          onMouseDown={() => setSelectedLog(null)}
+        >
+          <aside
+            className="admin-edit-drawer audit-details-drawer"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <h2 id="audit-details-title">
+                  {selectedLog.action.replaceAll(".", " ")}
+                </h2>
+                <p>
+                  {selectedLog.entityType} ·{" "}
+                  {new Date(selectedLog.createdAt).toLocaleString()}
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close audit details"
+                onClick={() => setSelectedLog(null)}
+              >
+                <X />
+              </button>
+            </header>
+            {selectedLog.reason ? (
+              <section>
+                <h3>Reason</h3>
+                <p>{selectedLog.reason}</p>
+              </section>
+            ) : null}
+            <section>
+              <h3>Before</h3>
+              <pre>
+                {selectedLog.beforeData === null ||
+                selectedLog.beforeData === undefined
+                  ? "No previous state recorded."
+                  : JSON.stringify(selectedLog.beforeData, null, 2)}
+              </pre>
+            </section>
+            <section>
+              <h3>After</h3>
+              <pre>
+                {selectedLog.afterData === null ||
+                selectedLog.afterData === undefined
+                  ? "No resulting state recorded."
+                  : JSON.stringify(selectedLog.afterData, null, 2)}
+              </pre>
+            </section>
+          </aside>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -1930,19 +2276,61 @@ function Overview() {
             ))}
           </ol>
         </section>
-        <aside className="admin-art-panel">
-          <img
-            src="/assets/wst-gold/admin-office.png"
-            alt="World Star administration office"
-          />
-          <div>
+        <aside className="admin-attention-panel">
+          <header>
             <Shield />
-            <strong>Complete control</strong>
-            <p>
-              Every change is permission-checked and written to the audit
-              history.
-            </p>
-          </div>
+            <div>
+              <strong>Operational attention</strong>
+              <p>Live database checks requiring administrator review.</p>
+            </div>
+          </header>
+          <article>
+            <span>Approved entrants without seeds</span>
+            <strong>
+              {overview.data?.data.attention.unseededParticipants ?? "—"}
+            </strong>
+          </article>
+          <section>
+            <h3>Next scheduled matches</h3>
+            {overview.data?.data.attention.nextMatches.length ? (
+              <ol>
+                {overview.data.data.attention.nextMatches.map((match) => (
+                  <li key={match.id}>
+                    <strong>
+                      {match.gangA?.name ?? "TBD"} vs{" "}
+                      {match.gangB?.name ?? "TBD"}
+                    </strong>
+                    <span>{match.tournament?.name ?? "Independent match"}</span>
+                    <time>
+                      {match.scheduledAt
+                        ? new Date(match.scheduledAt).toLocaleString()
+                        : "Not scheduled"}
+                    </time>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p>No upcoming matches.</p>
+            )}
+          </section>
+          <section>
+            <h3>Stream detection errors</h3>
+            {overview.data?.data.attention.streamsWithErrors.length ? (
+              <ol>
+                {overview.data.data.attention.streamsWithErrors.map(
+                  (stream) => (
+                    <li key={stream.id}>
+                      <strong>{stream.streamerName}</strong>
+                      <span>{stream.platform}</span>
+                      <p>{stream.lastStatusError}</p>
+                    </li>
+                  ),
+                )}
+              </ol>
+            ) : (
+              <p>No stream-provider errors.</p>
+            )}
+          </section>
         </aside>
       </div>
     </>
@@ -1963,8 +2351,15 @@ export default function AdminCommandCenterPage() {
   });
   if (me.isPending) return <PageSkeleton />;
   if (me.isError) return <Navigate to="/admin/login" replace />;
+  const visibleNavigation = navigation.filter((item) =>
+    me.data.data.permissions.includes(item[3]),
+  );
+  const effectiveSection = visibleNavigation.some((item) => item[2] === section)
+    ? section
+    : (visibleNavigation[0]?.[2] ?? "overview");
   const title =
-    navigation.find((item) => item[2] === section)?.[1] ?? "Command Center";
+    navigation.find((item) => item[2] === effectiveSection)?.[1] ??
+    "Command Center";
   return (
     <div className="control-shell gold-control-shell command-center-v2">
       <aside className="control-sidebar">
@@ -1976,11 +2371,11 @@ export default function AdminCommandCenterPage() {
           </span>
         </div>
         <nav aria-label="Administrator navigation">
-          {navigation.map(([Icon, label, value]) => (
+          {visibleNavigation.map(([Icon, label, value]) => (
             <button
               key={value}
               type="button"
-              className={section === value ? "active" : ""}
+              className={effectiveSection === value ? "active" : ""}
               onClick={() => setSection(value)}
             >
               <Icon /> {label}
@@ -2008,22 +2403,38 @@ export default function AdminCommandCenterPage() {
             </span>
           </div>
         </header>
-        {section === "overview" ? <Overview /> : null}
-        {section === "gang" ||
-        section === "player" ||
-        section === "tournament" ||
-        section === "match" ||
-        section === "event" ? (
-          <RecordsManager kind={section} />
+        {effectiveSection === "overview" ? <Overview /> : null}
+        {effectiveSection === "gang" ||
+        effectiveSection === "player" ||
+        effectiveSection === "tournament" ||
+        effectiveSection === "match" ||
+        effectiveSection === "event" ? (
+          <RecordsManager kind={effectiveSection} />
         ) : null}
-        {section === "bracket" ? <BracketManager /> : null}
-        {section === "stream" ? <StreamManager /> : null}
-        {section === "administrator" ? (
-          <AdministratorManager currentUserId={me.data.data.id} />
+        {effectiveSection === "gang-organization" ? (
+          <GangOrganizationManager />
         ) : null}
-        {section === "audit" || section === "settings" ? (
-          <AuditManager />
+        {effectiveSection === "bracket" ||
+        effectiveSection === "participant" ? (
+          <BracketManager />
         ) : null}
+        {effectiveSection === "result" ? <ResultsDisputesManager /> : null}
+        {effectiveSection === "stream" ? <StreamManager /> : null}
+        {effectiveSection === "ranking" || effectiveSection === "season" ? (
+          <SeasonsManager />
+        ) : null}
+        {effectiveSection === "media" ? <MediaManager /> : null}
+        {effectiveSection === "administrator" ? (
+          <AdministratorManager
+            currentUserId={me.data.data.id}
+            canManageRoles={me.data.data.permissions.includes("role.manage")}
+          />
+        ) : null}
+        {effectiveSection === "roles" ? <RolesPermissionsManager /> : null}
+        {effectiveSection === "settings" ? <WebsiteSettingsManager /> : null}
+        {effectiveSection === "discord" ? <AuditManager integration /> : null}
+        {effectiveSection === "audit" ? <AuditManager /> : null}
+        {effectiveSection === "health" ? <SystemHealthManager /> : null}
       </main>
     </div>
   );

@@ -55,6 +55,67 @@ describe("bracket generation", () => {
     ).toBe(6);
   });
 
+  it.each([2, 3, 4, 5, 8, 16, 32])(
+    "creates the correct opening round for %i participants",
+    (participantCount) => {
+      const participants = Array.from(
+        { length: participantCount },
+        (_, index) => ({
+          id: `gang-${String(index + 1)}`,
+          seed: index + 1,
+        }),
+      );
+      const matches = generateOpeningRound(participants);
+      expect(matches).toHaveLength(nextPowerOfTwo(participantCount) / 2);
+      expect(matches.filter((match) => match.byeWinnerId)).toHaveLength(
+        nextPowerOfTwo(participantCount) - participantCount,
+      );
+      expect(
+        matches
+          .flatMap((match) => [match.participantAId, match.participantBId])
+          .filter(Boolean),
+      ).toHaveLength(participantCount);
+    },
+  );
+
+  it("places standard seeds on opposite opening paths", () => {
+    const matches = generateOpeningRound(
+      Array.from({ length: 8 }, (_, index) => ({
+        id: `gang-${String(index + 1)}`,
+        seed: index + 1,
+      })),
+    );
+    expect(
+      matches.map((match) => [match.participantAId, match.participantBId]),
+    ).toEqual([
+      ["gang-1", "gang-8"],
+      ["gang-4", "gang-5"],
+      ["gang-2", "gang-7"],
+      ["gang-3", "gang-6"],
+    ]);
+  });
+
+  it("rejects duplicate participants, duplicate seeds, and missing seed numbers", () => {
+    expect(() =>
+      generateOpeningRound([
+        { id: "gang-a", seed: 1 },
+        { id: "gang-a", seed: 2 },
+      ]),
+    ).toThrowError("Participants and seeds must be unique");
+    expect(() =>
+      generateOpeningRound([
+        { id: "gang-a", seed: 1 },
+        { id: "gang-b", seed: 1 },
+      ]),
+    ).toThrowError("Participants and seeds must be unique");
+    expect(() =>
+      generateOpeningRound([
+        { id: "gang-a", seed: 1 },
+        { id: "gang-b", seed: 3 },
+      ]),
+    ).toThrowError("Seeds must use every number from 1 through 2");
+  });
+
   it("prevents advancing a non-participant", () => {
     expect(() => {
       assertValidWinner("a", "b", "c");

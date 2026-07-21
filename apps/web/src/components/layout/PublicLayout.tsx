@@ -1,3 +1,4 @@
+import { useEffect, type CSSProperties } from "react";
 import { LockKeyhole, Menu, Radio } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { usePublicWebsiteSettings } from "@/lib/website-settings";
 
 const navigation = [
   ["Home", "/"],
@@ -18,12 +20,18 @@ const navigation = [
   ["Live", "/live"],
 ] as const;
 
-function Brand() {
+function Brand({
+  logoUrl,
+  name = "WORLD STAR",
+}: {
+  logoUrl?: string | undefined;
+  name?: string;
+}) {
   return (
     <Link to="/" className="wst-brand" aria-label="World Star home">
-      <img src="/assets/wst-gold/wst-gold.png" alt="" />
+      <img src={logoUrl || "/assets/wst-gold/wst-gold.png"} alt="" />
       <span>
-        WORLD STAR
+        {name}
         <small>Loyalty · Power · Respect</small>
       </span>
     </Link>
@@ -67,10 +75,39 @@ function NavigationLinks({ mobile = false }: { mobile?: boolean }) {
 }
 
 export function PublicLayout() {
+  const website = usePublicWebsiteSettings();
+  const settings = website.data;
+  const brandStyle = settings
+    ? ({
+        "--primary": settings.branding.primaryColor,
+        "--secondary": settings.branding.secondaryColor,
+        "--cyan-strong": settings.branding.accentColor,
+      } as CSSProperties)
+    : undefined;
+  const logoUrl = settings?.general.logoUrl || undefined;
+  const shortName = settings?.general.shortName || "WORLD STAR";
+  useEffect(() => {
+    if (!settings) return;
+    document.title = settings.general.websiteName;
+    const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (favicon && settings.general.faviconUrl)
+      favicon.href = settings.general.faviconUrl;
+  }, [settings]);
   return (
-    <div className="site-frame">
+    <div className="site-frame" style={brandStyle}>
+      {settings?.homepage.announcement ? (
+        <div className="site-announcement">
+          {settings.homepage.announcement}
+        </div>
+      ) : null}
+      {settings?.general.maintenanceMode ? (
+        <div className="site-announcement site-announcement--warning">
+          Maintenance mode is enabled. Public information may be temporarily
+          unavailable.
+        </div>
+      ) : null}
       <header className="site-header">
-        <Brand />
+        <Brand logoUrl={logoUrl} name={shortName} />
         <nav className="primary-nav" aria-label="Primary navigation">
           <NavigationLinks />
         </nav>
@@ -91,7 +128,7 @@ export function PublicLayout() {
             </Button>
           </SheetTrigger>
           <SheetContent className="mobile-navigation">
-            <Brand />
+            <Brand logoUrl={logoUrl} name={shortName} />
             <nav aria-label="Mobile navigation">
               <NavigationLinks mobile />
             </nav>
@@ -110,10 +147,13 @@ export function PublicLayout() {
 
       <footer className="site-footer">
         <div className="footer-brand">
-          <img src="/assets/wst-gold/wst-gold.png" alt="World Star" />
+          <img
+            src={logoUrl || "/assets/wst-gold/wst-gold.png"}
+            alt={shortName}
+          />
           <p>
-            A competitive community built on loyalty, power, respect, and
-            records controlled by its administrator.
+            {settings?.general.description ||
+              "A competitive community built on loyalty, power, respect, and records controlled by its administrator."}
           </p>
         </div>
         <div>
@@ -129,8 +169,20 @@ export function PublicLayout() {
           <Link to="/about">About</Link>
           <Link to="/admin/login">Administrator</Link>
         </div>
+        {settings && Object.values(settings.social).some(Boolean) ? (
+          <div>
+            <strong>Social</strong>
+            {Object.entries(settings.social)
+              .filter((entry): entry is [string, string] => Boolean(entry[1]))
+              .map(([name, url]) => (
+                <a key={name} href={url} target="_blank" rel="noreferrer">
+                  {name.charAt(0).toUpperCase() + name.slice(1)}
+                </a>
+              ))}
+          </div>
+        ) : null}
         <small>
-          © {new Date().getFullYear()} WORLD STAR. All rights reserved.
+          © {new Date().getFullYear()} {shortName}. All rights reserved.
         </small>
       </footer>
     </div>

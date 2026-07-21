@@ -1,153 +1,213 @@
-# Deployment guide
+# Production deployment: Netlify + Windows VPS
 
-This deployment targets a Netlify frontend and a Windows VPS running the API on private port `4177`. MySQL or MariaDB is the database engine; HeidiSQL is the graphical client used to manage it.
+This deployment keeps the React frontend on Netlify and runs the Fastify API on a Windows VPS at `127.0.0.1:4177`. MySQL/MariaDB remains local to the VPS and HeidiSQL is the administration client. IIS (or another HTTPS reverse proxy) exposes a dedicated API hostname; database port `3306` and API port `4177` must not be public.
 
-## Compatibility note
+## 1. Required software
 
-The Prisma datasource and migration history are MySQL/MariaDB-native. Use a new empty database for the first deployment. PostgreSQL migration files from earlier revisions are intentionally not compatible with this baseline; existing PostgreSQL data must be exported and transformed before importing it into MySQL/MariaDB.
+Install Git, Node.js 22 LTS or newer, pnpm 10.14, MySQL 8+/MariaDB, HeidiSQL, PM2, IIS URL Rewrite, and IIS Application Request Routing.
 
-## Create the database with HeidiSQL
+```powershell
+corepack enable
+corepack prepare pnpm@10.14.0 --activate
+npm.cmd install --global pm2
+```
 
-The easiest installation is to import `database/DATABASE_SCHEMA.sql` through **File > Load SQL file** in HeidiSQL. The file creates `worldstar_wst`, all 27 tables, indexes, and foreign keys, then returns the table count for verification. It intentionally contains no passwords or database users.
+## 2. Clone or update the repository
 
-If you prefer to create the database and dedicated user manually, connect HeidiSQL to the local MySQL/MariaDB server as an administrator, open a query tab, and run:
+For a first installation:
+
+```powershell
+git clone --branch main https://github.com/i3dnann/wst.git C:\Sites\worldstar
+Set-Location C:\Sites\worldstar
+pnpm install --frozen-lockfile
+```
+
+For an existing installation:
+
+```powershell
+Set-Location C:\Sites\worldstar
+git status --short
+git pull --ff-only origin main
+pnpm install --frozen-lockfile
+```
+
+Do not pull over uncommitted VPS edits. Save or remove those edits first.
+
+## 3. Database setup with HeidiSQL
+
+For a new, empty installation, load `database/DATABASE_SCHEMA.sql` in HeidiSQL and run the complete file. It creates `worldstar_wst`, all application tables, indexes, foreign keys, and matching Prisma migration-history rows.
+
+For an existing installation, do **not** import the full snapshot again. Back up the database, then run `prisma:migrate:deploy` as shown below.
+
+Keep MySQL/MariaDB bound to `127.0.0.1:3306`. If the local grant tables are healthy, use a dedicated account:
 
 ```sql
-CREATE DATABASE `worldstar_wst`
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-CREATE USER 'wst_app'@'127.0.0.1'
-  IDENTIFIED BY 'REPLACE_WITH_A_STRONG_PASSWORD';
-
-GRANT ALL PRIVILEGES ON `worldstar_wst`.*
-  TO 'wst_app'@'127.0.0.1';
-
+CREATE USER 'wst_app'@'127.0.0.1' IDENTIFIED BY 'REPLACE_WITH_A_STRONG_PASSWORD';
+GRANT ALL PRIVILEGES ON `worldstar_wst`.* TO 'wst_app'@'127.0.0.1';
 FLUSH PRIVILEGES;
 ```
 
-Keep MySQL/MariaDB on `127.0.0.1:3306`. Do not expose port `3306` through Windows Firewall.
+Percent-encode reserved characters in the password when it is placed in `DATABASE_URL`.
 
-## API environment
+## 4. VPS environment
 
-Copy `apps/api/.env.example` to `apps/api/.env` and set production values:
+Copy `apps/api/.env.example` to `apps/api/.env`. Use production values and never commit this file:
 
 ```env
 NODE_ENV=production
 PORT=4177
 DATABASE_URL=mysql://wst_app:URL_ENCODED_PASSWORD@127.0.0.1:3306/worldstar_wst
-FRONTEND_URL=https://YOUR-SITE.netlify.app
-CORS_ALLOWED_ORIGINS=https://YOUR-SITE.netlify.app
+FRONTEND_URL=https://wstgang.netlify.app
+CORS_ALLOWED_ORIGINS=https://wstgang.netlify.app
 SESSION_SECRET=REPLACE_WITH_AT_LEAST_32_RANDOM_CHARACTERS
-ADMIN_EMAIL=admin@your-domain.example
-ADMIN_PASSWORD=REPLACE_WITH_A_STRONG_PASSWORD
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=REPLACE_WITH_A_12_CHARACTER_OR_LONGER_PASSWORD
+LOG_LEVEL=info
+RATE_LIMIT_MAX=100
+RATE_LIMIT_WINDOW=1 minute
 TWITCH_CLIENT_ID=
 TWITCH_CLIENT_SECRET=
 YOUTUBE_API_KEY=
 STREAM_STATUS_TTL_SECONDS=60
 YOUTUBE_STATUS_TTL_SECONDS=1800
+S3_ENDPOINT=
+S3_REGION=auto
+S3_BUCKET=
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
+S3_PUBLIC_BASE_URL=
 ```
 
-Percent-encode reserved characters in the database password before placing it in `DATABASE_URL`. Keep this file outside source control and restrict it to the Windows service account.
+Use an HTTPS S3-compatible public base URL. Media upload is intentionally unavailable until every S3 value is configured. Twitch and YouTube automatic detection are also unavailable until their provider credentials are present; manual stream status remains supported.
 
-## Live-stream detection and previews
+## 5. Back up before every migration
 
-- Twitch detection uses a Twitch application client ID and secret. Create an application in the Twitch Developer Console and place its credentials in `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET`.
-- YouTube detection uses a Google Cloud API key with YouTube Data API v3 enabled. Place it in `YOUTUBE_API_KEY`, then enter the channel ID beginning with `UC` in the stream editor.
-- Kick previews use the official `player.kick.com/USERNAME` embed format. Kick status checks are best-effort because its public channel response is not a versioned API contract.
-- The public Live page requests fresh status every minute. Twitch and Kick are checked when the configured 60-second cache expires; YouTube defaults to a 30-minute cache to protect its API quota. Administrators can also use **Refresh Status** or **Check Now**.
-
-Twitch and YouTube channels report a clear configuration error in the admin panel until their credentials are installed. Manual status and embed URLs remain available when automatic detection is disabled.
-
-## Discord administrator logs
-
-Create an incoming webhook for a private Discord channel. In **Admin → Audit Log**, paste the webhook URL, select the event categories, enable logging, and use **Test Webhook**. The URL is stored in the protected database setting and is masked whenever it is returned to the browser. Audit records remain in MySQL even if Discord delivery fails.
-
-## Install and build on Windows Server
-
-Install Git, Node.js 22 LTS, MySQL 8+ or MariaDB, HeidiSQL, and NSSM. Then run Administrator PowerShell:
+With XAMPP MySQL, run:
 
 ```powershell
-corepack enable
-corepack prepare pnpm@10.14.0 --activate
-git clone --branch main https://github.com/i3dnann/wst.git C:\Sites\worldstar
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+New-Item -ItemType Directory -Path C:\Backups\worldstar -Force
+& 'C:\xampp\mysql\bin\mysqldump.exe' --host=127.0.0.1 --user=wst_app --password --single-transaction --routines --triggers worldstar_wst | Out-File -FilePath "C:\Backups\worldstar\worldstar-$stamp.sql" -Encoding utf8
+```
+
+The command prompts for the password instead of placing it in PowerShell history. Confirm that the resulting SQL file is non-empty before deploying.
+
+## 6. Generate, migrate, seed, verify, and build
+
+```powershell
 Set-Location C:\Sites\worldstar
-pnpm install --frozen-lockfile
 pnpm --filter @mafia/api prisma:generate
 pnpm --filter @mafia/api prisma:migrate:deploy
 pnpm --filter @mafia/api prisma:seed
-pnpm --filter @mafia/api build
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+pnpm prisma:validate
 ```
 
-The seed is idempotent. It creates permissions, the super-administrator role, and the administrator supplied by `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
+The seed is idempotent. It synchronizes permission keys, protects the Super Administrator role, and creates or updates the administrator identified by `ADMIN_EMAIL`.
 
-Test locally before creating the service:
+## 7. Start or restart the API with PM2
 
-```powershell
-Set-Location C:\Sites\worldstar\apps\api
-node dist\server.js
-```
-
-From another PowerShell window:
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:4177/health/live
-Invoke-RestMethod http://127.0.0.1:4177/health/ready
-```
-
-## Windows service with NSSM
-
-```powershell
-New-Item -ItemType Directory -Path C:\Sites\worldstar\logs -Force
-nssm install WorldStarApi "C:\Program Files\nodejs\node.exe"
-nssm set WorldStarApi AppDirectory "C:\Sites\worldstar\apps\api"
-nssm set WorldStarApi AppParameters "dist\server.js"
-nssm set WorldStarApi AppStdout "C:\Sites\worldstar\logs\api-output.log"
-nssm set WorldStarApi AppStderr "C:\Sites\worldstar\logs\api-error.log"
-nssm set WorldStarApi Start SERVICE_AUTO_START
-nssm start WorldStarApi
-```
-
-Check the service with `Get-Service WorldStarApi`. Do not create a public firewall rule for port `4177`.
-
-## IIS reverse proxy and HTTPS
-
-Port `80` can remain owned by IIS. Create a new IIS site with the host-name binding `api.your-domain.example` and physical path `C:\Sites\worldstar\deploy\iis`. Install IIS URL Rewrite and Application Request Routing, enable ARR proxying at the server level, and use the included `deploy/iis/web.config`. It forwards requests to `http://127.0.0.1:4177`.
-
-Add an HTTPS binding and a valid certificate for the API hostname. Only ports `80` and `443` should be public.
-
-## Frontend on Netlify
-
-Connect `i3dnann/wst`, deploy branch `main`, and use the repository root.
-
-- Build command: `pnpm --filter @mafia/web build`
-- Publish directory: `apps/web/dist`
-- `VITE_APP_NAME=World Star`
-- `VITE_API_BASE_URL=/backend`
-- `NODE_VERSION=22`
-
-For same-origin administrator cookies, `netlify.toml` proxies `/backend/*` to the World Star API on the VPS:
-
-```toml
-[[redirects]]
-  from = "/backend/*"
-  to = "http://31.57.97.59:4177/:splat"
-  status = 200
-  force = true
-```
-
-The existing `/*` rule must remain last. Port `4177` must allow inbound TCP traffic in Windows Firewall. Trigger a new Netlify deployment after changing Vite environment variables or redirect rules.
-
-## Updates
+First start:
 
 ```powershell
 Set-Location C:\Sites\worldstar
-git pull origin main
-pnpm install --frozen-lockfile
-pnpm --filter @mafia/api prisma:generate
-pnpm --filter @mafia/api prisma:migrate:deploy
-pnpm --filter @mafia/api build
-Restart-Service WorldStarApi
+pm2.cmd start .\apps\api\ecosystem.config.cjs --env production
+pm2.cmd save
+pm2.cmd status
 ```
 
-Back up the `worldstar_wst` database in HeidiSQL before every migration. Verify `/health/live`, `/health/ready`, administrator login, events, streams, and bracket changes after each release.
+After an update:
+
+```powershell
+Set-Location C:\Sites\worldstar
+pm2.cmd reload worldstar-api --update-env
+pm2.cmd save
+pm2.cmd status
+```
+
+Check the API locally:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:4177/health/live | ConvertTo-Json -Depth 5
+Invoke-RestMethod http://127.0.0.1:4177/health/ready | ConvertTo-Json -Depth 5
+pm2.cmd logs worldstar-api --lines 100 --nostream
+```
+
+If an older Windows PowerShell cannot establish TLS, the local HTTP health commands still work. Use a current browser or PowerShell 7 for public HTTPS checks.
+
+## 8. IIS HTTPS reverse proxy
+
+Create an IIS site for `api.your-domain.example`, add a valid HTTPS certificate, enable ARR proxying, and apply `deploy/iis/web.config`. It forwards traffic to `http://127.0.0.1:4177`.
+
+Only `443` (and optionally `80` for certificate redirects) should be public. Keep `4177` blocked in Windows Firewall. Verify:
+
+```powershell
+Invoke-RestMethod https://api.your-domain.example/health/live | ConvertTo-Json
+```
+
+Do not configure the Netlify function with a plain public-IP HTTP URL. The proxy rejects non-HTTPS production targets.
+
+## 9. Netlify configuration
+
+Connect `i3dnann/wst`, choose branch `main`, and keep the repository root as the base directory. `netlify.toml` already defines:
+
+- Build command: `pnpm --filter @mafia/web build`
+- Publish directory: `apps/web/dist`
+- Functions directory: `netlify/functions`
+- SPA fallback and immutable asset caching
+
+Set these Netlify environment variables in the UI:
+
+| Variable            | Scope     | Value                             |
+| ------------------- | --------- | --------------------------------- |
+| `NODE_VERSION`      | Builds    | `22`                              |
+| `VITE_APP_NAME`     | Builds    | `World Star`                      |
+| `VITE_API_BASE_URL` | Builds    | `/backend`                        |
+| `API_PROXY_TARGET`  | Functions | `https://api.your-domain.example` |
+
+`API_PROXY_TARGET` is read at function runtime. After changing it, trigger a new production deploy. The browser calls the same-origin `/backend` path, so secure HttpOnly session cookies stay on the Netlify site and are never stored in local storage.
+
+Verify through the deployed frontend:
+
+```text
+https://wstgang.netlify.app/backend/health/live
+https://wstgang.netlify.app/backend/health/ready
+```
+
+## 10. Stream and Discord integrations
+
+- Twitch needs an application client ID and secret.
+- YouTube needs a Google Cloud API key with YouTube Data API v3 enabled and a channel ID beginning with `UC`.
+- Kick detection is best-effort; provider failures are shown in System Health and do not crash the public Live page.
+- Configure the Discord audit webhook in **Admin > Discord**. Normal API responses only return a masked state. Failed deliveries are written to the database audit log.
+
+## 11. Rollback
+
+Application rollback and database rollback are separate operations. Record the deployed commit before updating:
+
+```powershell
+Set-Location C:\Sites\worldstar
+git rev-parse HEAD
+```
+
+If the release must be rolled back and no new migration was applied, check out the previous known-good commit, reinstall, rebuild, and reload PM2:
+
+```powershell
+git checkout PREVIOUS_COMMIT_SHA
+pnpm install --frozen-lockfile
+pnpm --filter @mafia/api prisma:generate
+pnpm --filter @mafia/api build
+pm2.cmd reload worldstar-api --update-env
+```
+
+If a migration was applied, stop the API and restore the pre-deployment HeidiSQL/mysqldump backup before starting the old application. Prisma migrations are forward-only; do not manually delete a migration-history row or partially reverse columns in production.
+
+After recovery, return the VPS checkout to `main` before the next normal update:
+
+```powershell
+git switch main
+git pull --ff-only origin main
+```

@@ -1,2 +1,2 @@
-/backend/*  http://31.57.97.59:4177/:splat  200!
+/backend/*  /.netlify/functions/backend?path=:splat  200!
 /*            /index.html                       200

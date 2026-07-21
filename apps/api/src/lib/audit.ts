@@ -150,5 +150,26 @@ export async function recordAudit(input: {
   const audit = await prisma.auditLog.create({
     data,
   });
-  void dispatchAuditWebhook(audit.id).catch(() => undefined);
+  void dispatchAuditWebhook(audit.id).catch(async (error: unknown) => {
+    try {
+      await prisma.auditLog.create({
+        data: {
+          actorUserId: null,
+          action: "integration.discord.delivery-failed",
+          entityType: "AuditLog",
+          entityId: audit.id,
+          afterData: asJson({
+            message:
+              error instanceof Error
+                ? error.message
+                : "Discord delivery failed.",
+          }),
+        },
+      });
+    } catch {
+      process.emitWarning(
+        "Discord audit delivery failed and its failure could not be persisted.",
+      );
+    }
+  });
 }

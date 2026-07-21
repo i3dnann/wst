@@ -29,17 +29,36 @@ export function registerErrorHandler(app: FastifyInstance): void {
         },
       });
     }
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
-      return reply.code(409).send({
-        error: {
-          code: "CONFLICT",
-          message: "A record with these unique values already exists.",
-          requestId: request.id,
-        },
-      });
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      const mapped =
+        error.code === "P2002"
+          ? {
+              status: 409,
+              code: "CONFLICT",
+              message: "A record with these unique values already exists.",
+            }
+          : error.code === "P2025"
+            ? {
+                status: 404,
+                code: "NOT_FOUND",
+                message: "The requested record was not found.",
+              }
+            : error.code === "P2003"
+              ? {
+                  status: 409,
+                  code: "DEPENDENCY_CONFLICT",
+                  message: "This operation is blocked by a related record.",
+                }
+              : null;
+      if (mapped) {
+        return reply.code(mapped.status).send({
+          error: {
+            code: mapped.code,
+            message: mapped.message,
+            requestId: request.id,
+          },
+        });
+      }
     }
     request.log.error({ err: error, requestId: request.id }, "request failed");
     return reply.code(500).send({

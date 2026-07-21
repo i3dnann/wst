@@ -1,6 +1,15 @@
 import type { LiveStream } from "@prisma/client";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { channelIdentifier } from "./stream-status.js";
+
+vi.hoisted(() => {
+  process.env.NODE_ENV = "test";
+  process.env.DATABASE_URL = "mysql://test:test@127.0.0.1:3306/worldstar_test";
+  process.env.FRONTEND_URL = "http://localhost:5173";
+  process.env.CORS_ALLOWED_ORIGINS = "http://localhost:5173";
+  process.env.SESSION_SECRET =
+    "test-session-secret-that-is-at-least-thirty-two-characters";
+});
 
 function stream(
   platform: LiveStream["platform"],
@@ -27,6 +36,7 @@ function stream(
     createdByUserId: "user-id",
     createdAt: new Date(),
     updatedAt: new Date(),
+    archivedAt: null,
   };
 }
 

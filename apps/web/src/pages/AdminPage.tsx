@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useMutation,
   useQueries,
@@ -413,9 +413,22 @@ function MatchAdvanceEditor({
 
 export function BracketManager() {
   const queryClient = useQueryClient();
+  const bracketCanvasRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
+  const [view, setView] = useState<"canvas" | "list">("canvas");
+  const [resetOpen, setResetOpen] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<
+    TournamentDetail["participants"][number] | null
+  >(null);
+  const [confirmationName, setConfirmationName] = useState("");
+  const [placement, setPlacement] = useState<"SEEDED" | "RANDOM">("SEEDED");
   const [tournaments, gangs] = useQueries({
     queries: [
-      { queryKey: ["tournaments"], queryFn: api.tournaments, retry: false },
+      {
+        queryKey: ["admin-records", "tournament"],
+        queryFn: api.adminTournaments,
+        retry: false,
+      },
       {
         queryKey: ["gangs", "admin"],
         queryFn: () => api.gangs("pageSize=100&sort=name"),
@@ -424,7 +437,7 @@ export function BracketManager() {
     ],
   });
   const tournamentList = useMemo(
-    () => (tournaments.data?.data ?? []) as TournamentSummary[],
+    () => (tournaments.data?.data ?? []) as unknown as TournamentSummary[],
     [tournaments.data?.data],
   );
   const [selectedId, setSelectedId] = useState("");
@@ -432,33 +445,28 @@ export function BracketManager() {
     if (!selectedId && tournamentList[0]) setSelectedId(tournamentList[0].id);
   }, [selectedId, tournamentList]);
   const selected = tournamentList.find((item) => item.id === selectedId);
-  const [detail, bracket] = useQueries({
-    queries: [
-      {
-        queryKey: ["tournament", selected?.slug],
-        queryFn: () => api.tournament(selected?.slug ?? ""),
-        enabled: Boolean(selected),
-        retry: false,
-      },
-      {
-        queryKey: ["bracket", selected?.slug],
-        queryFn: () => api.bracket(selected?.slug ?? ""),
-        enabled: Boolean(selected),
-        retry: false,
-      },
-    ],
+  const detail = useQuery({
+    queryKey: ["admin-tournament", selectedId],
+    queryFn: () => api.adminTournament(selectedId),
+    enabled: Boolean(selectedId),
+    retry: false,
   });
   const tournament = detail.data?.data as unknown as
     TournamentDetail | undefined;
-  const rounds = (bracket.data?.data.rounds ?? []) as BracketRoundAdmin[];
+  const rounds =
+    (detail.data?.data.rounds as BracketRoundAdmin[] | undefined) ?? [];
   const [gangId, setGangId] = useState("");
   const [seed, setSeed] = useState("1");
   const refresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({
-        queryKey: ["tournament", selected?.slug],
+        queryKey: ["admin-tournament", selectedId],
       }),
-      queryClient.invalidateQueries({ queryKey: ["bracket", selected?.slug] }),
+      queryClient.invalidateQueries({
+        queryKey: ["admin-records", "tournament"],
+      }),
+      queryClient.invalidateQueries({ queryKey: ["tournaments"] }),
+      queryClient.invalidateQueries({ queryKey: ["bracket"] }),
     ]);
   };
   const add = useMutation({
@@ -476,6 +484,7 @@ export function BracketManager() {
       api.removeTournamentParticipant(selectedId, participantId),
     onSuccess: () => {
       toast.success("Gang removed.");
+      setRemoveTarget(null);
       void refresh();
     },
     onError: (error) => toast.error(error.message),
@@ -513,9 +522,15 @@ export function BracketManager() {
     onError: (error) => toast.error(error.message),
   });
   const generate = useMutation({
-    mutationFn: () => api.generateBracket(selectedId),
+    mutationFn: (input: {
+      confirmReset?: boolean;
+      confirmationName?: string;
+      placement?: "SEEDED" | "RANDOM";
+    }) => api.generateBracket(selectedId, input),
     onSuccess: (result) => {
       toast.success(`${String(result.data.slotCount)}-slot bracket generated.`);
+      setResetOpen(false);
+      setConfirmationName("");
       void refresh();
     },
     onError: (error) => toast.error(error.message),
@@ -526,6 +541,9 @@ export function BracketManager() {
     );
     return (gangs.data?.data ?? []).filter((gang) => !used.has(gang.id));
   }, [gangs.data, tournament?.participants]);
+  const completedMatches = rounds
+    .flatMap((round) => round.matches)
+    .filter((match) => match.status === "COMPLETED").length;
   return (
     <section className="bracket-admin-workspace">
       <header className="admin-manager-header">
@@ -560,7 +578,9 @@ export function BracketManager() {
         </div>
         <Button
           disabled={!selectedId || generate.isPending}
-          onClick={() => generate.mutate()}
+          onClick={() =>
+            rounds.length ? setResetOpen(true) : generate.mutate({ placement })
+          }
         >
           <RefreshCw />{" "}
           {rounds.length ? "Regenerate Bracket" : "Generate Bracket"}
@@ -643,18 +663,23 @@ export function BracketManager() {
                       })
                     }
                   >
-                    {["APPROVED", "ELIMINATED", "CHAMPION", "WITHDRAWN"].map(
-                      (status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ),
-                    )}
+                    {[
+                      "PENDING",
+                      "APPROVED",
+                      "REJECTED",
+                      "WITHDRAWN",
+                      "ELIMINATED",
+                      "CHAMPION",
+                    ].map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
                   </select>
                   <button
                     type="button"
                     aria-label={`Remove ${participant.gang.name}`}
-                    onClick={() => remove.mutate(participant.id)}
+                    onClick={() => setRemoveTarget(participant)}
                   >
                     <Trash2 />
                   </button>
@@ -665,22 +690,64 @@ export function BracketManager() {
         <section className="admin-bracket-preview">
           <header>
             <h3>Generated Progression</h3>
-            <span>{rounds.length} rounds</span>
+            <div className="bracket-view-controls">
+              <button
+                type="button"
+                onClick={() => setView(view === "canvas" ? "list" : "canvas")}
+              >
+                {view === "canvas" ? "List view" : "Canvas view"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoom((value) => Math.max(0.6, value - 0.1))}
+              >
+                −
+              </button>
+              <span>{Math.round(zoom * 100)}%</span>
+              <button
+                type="button"
+                onClick={() => setZoom((value) => Math.min(1.6, value + 0.1))}
+              >
+                +
+              </button>
+              <button type="button" onClick={() => setZoom(1)}>
+                Fit
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  void bracketCanvasRef.current?.requestFullscreen()
+                }
+              >
+                Fullscreen
+              </button>
+            </div>
           </header>
           {rounds.length ? (
-            <div className="admin-bracket-scroll">
-              {rounds.map((round) => (
-                <section key={round.id}>
-                  <h4>{round.name}</h4>
-                  {round.matches.map((match) => (
-                    <MatchAdvanceEditor
-                      match={match}
-                      tournamentSlug={selected?.slug ?? ""}
-                      key={match.id}
-                    />
-                  ))}
-                </section>
-              ))}
+            <div
+              className={`admin-bracket-scroll admin-bracket-scroll--${view}`}
+              ref={bracketCanvasRef}
+            >
+              <div
+                className="admin-bracket-scale"
+                style={{
+                  transform: `scale(${String(zoom)})`,
+                  transformOrigin: "top left",
+                }}
+              >
+                {rounds.map((round) => (
+                  <section key={round.id}>
+                    <h4>{round.name}</h4>
+                    {round.matches.map((match) => (
+                      <MatchAdvanceEditor
+                        match={match}
+                        tournamentSlug={selected?.slug ?? ""}
+                        key={match.id}
+                      />
+                    ))}
+                  </section>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="gold-empty-copy compact">
@@ -691,6 +758,114 @@ export function BracketManager() {
           )}
         </section>
       </div>
+      {resetOpen ? (
+        <div
+          className="admin-confirm-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reset-bracket-title"
+        >
+          <form
+            className="admin-confirm-dialog"
+            onSubmit={(event) => {
+              event.preventDefault();
+              generate.mutate({
+                confirmReset: true,
+                ...(completedMatches ? { confirmationName } : {}),
+                placement,
+              });
+            }}
+          >
+            <h3 id="reset-bracket-title">Regenerate & Reset Bracket</h3>
+            <p>
+              This resets every bracket match, score, player statistic, and
+              winner progression.{" "}
+              {completedMatches
+                ? `${String(completedMatches)} completed match result(s) will be removed.`
+                : "The current opening slots will be replaced."}
+            </p>
+            <label>
+              Placement
+              <select
+                value={placement}
+                onChange={(event) =>
+                  setPlacement(event.target.value as "SEEDED" | "RANDOM")
+                }
+              >
+                <option value="SEEDED">Deterministic seeded placement</option>
+                <option value="RANDOM">Randomize participants</option>
+              </select>
+            </label>
+            {completedMatches ? (
+              <label>
+                Type <strong>{selected?.name}</strong> to confirm
+                <input
+                  required
+                  value={confirmationName}
+                  onChange={(event) => setConfirmationName(event.target.value)}
+                />
+              </label>
+            ) : null}
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setResetOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="danger-button"
+                disabled={
+                  generate.isPending ||
+                  Boolean(
+                    completedMatches && confirmationName !== selected?.name,
+                  )
+                }
+              >
+                Yes, Reset Bracket
+              </Button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+      {removeTarget ? (
+        <div
+          className="admin-confirm-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="remove-participant-title"
+        >
+          <div className="admin-confirm-dialog">
+            <h3 id="remove-participant-title">
+              Remove {removeTarget.gang.name}?
+            </h3>
+            <p>
+              This removes the gang from this tournament and recursively clears
+              its bracket slots, scores, results, and invalid downstream winner
+              progression. Historical gang and player records remain intact.
+            </p>
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setRemoveTarget(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="danger-button"
+                disabled={remove.isPending}
+                onClick={() => remove.mutate(removeTarget.id)}
+              >
+                Remove Gang &amp; Reset Progression
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

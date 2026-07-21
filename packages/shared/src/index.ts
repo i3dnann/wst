@@ -3,26 +3,40 @@ import { z } from "zod";
 export const permissions = {
   gangRead: "gang.read",
   gangCreate: "gang.create",
+  gangArchive: "gang.archive",
+  gangDelete: "gang.delete",
   gangUpdateOwn: "gang.update.own",
   gangUpdateAny: "gang.update.any",
   gangRosterOwn: "gang.roster.manage.own",
   gangRosterAny: "gang.roster.manage.any",
+  playerRead: "player.read",
+  playerCreate: "player.create",
+  playerUpdate: "player.update",
+  playerArchive: "player.archive",
+  playerDelete: "player.delete",
   tournamentRead: "tournament.read",
   tournamentCreate: "tournament.create",
   tournamentUpdate: "tournament.update",
+  tournamentArchive: "tournament.archive",
+  tournamentDelete: "tournament.delete",
   bracketManage: "tournament.bracket.manage",
   matchCreate: "match.create",
   matchUpdate: "match.update",
   matchFinalize: "match.finalize",
   matchReopen: "match.reopen",
   rankingConfigure: "ranking.configure",
+  seasonManage: "season.manage",
+  mediaUpload: "media.upload",
   mediaModerate: "media.moderate",
+  mediaDelete: "media.delete",
   userManage: "user.manage",
   roleManage: "role.manage",
   auditRead: "audit.read",
+  auditConfigure: "audit.configure",
   settingsManage: "settings.manage",
   eventManage: "event.manage",
   streamManage: "stream.manage",
+  systemHealthRead: "system.health.read",
 } as const;
 
 export type Permission = (typeof permissions)[keyof typeof permissions];
@@ -43,23 +57,90 @@ export const gangListQuerySchema = paginationSchema.extend({
     .default("rank"),
 });
 
-export const matchResultSchema = z.object({
-  version: z.number().int().min(0),
-  gangAScore: z.number().int().min(0).max(99),
-  gangBScore: z.number().int().min(0).max(99),
-  winnerGangId: idSchema,
-  playerStats: z.array(
-    z.object({
-      playerId: idSchema,
-      gangId: idSchema,
-      kills: z.number().int().min(0).max(999),
-      deaths: z.number().int().min(0).max(999),
-      assists: z.number().int().min(0).max(999),
-      roundsPlayed: z.number().int().min(0).max(99),
-      mvp: z.boolean().default(false),
-    }),
-  ),
+export const matchResultSchema = z
+  .object({
+    version: z.number().int().min(0),
+    gangAScore: z.number().int().min(0).max(99),
+    gangBScore: z.number().int().min(0).max(99),
+    winnerGangId: idSchema,
+    resultNotes: z.string().trim().max(4_000).optional(),
+    playerStats: z
+      .array(
+        z.object({
+          playerId: idSchema,
+          gangId: idSchema,
+          kills: z.number().int().min(0).max(999),
+          deaths: z.number().int().min(0).max(999),
+          assists: z.number().int().min(0).max(999),
+          score: z.number().int().min(0).max(1_000_000).default(0),
+          roundsPlayed: z.number().int().min(0).max(99),
+          mvp: z.boolean().default(false),
+          played: z.boolean().default(true),
+          notes: z.string().trim().max(2_000).optional(),
+        }),
+      )
+      .max(128),
+  })
+  .superRefine((value, context) => {
+    const playerIds = new Set(value.playerStats.map((item) => item.playerId));
+    if (playerIds.size !== value.playerStats.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["playerStats"],
+        message: "A player can appear only once in a match result.",
+      });
+    }
+    if (value.playerStats.filter((item) => item.mvp).length > 1) {
+      context.addIssue({
+        code: "custom",
+        path: ["playerStats"],
+        message: "Only one player can be selected as match MVP.",
+      });
+    }
+  });
+
+const optionalHttpsUrl = z
+  .union([
+    z.literal(""),
+    z.url().refine((value) => value.startsWith("https://"), "Must use HTTPS."),
+  ])
+  .optional();
+
+export const websiteSettingsSchema = z.object({
+  general: z.object({
+    websiteName: z.string().trim().min(2).max(80),
+    shortName: z.string().trim().min(1).max(20),
+    description: z.string().trim().max(500),
+    logoUrl: optionalHttpsUrl,
+    faviconUrl: optionalHttpsUrl,
+    defaultLanguage: z.string().trim().min(2).max(12),
+    timeZone: z.string().trim().min(2).max(80),
+    maintenanceMode: z.boolean(),
+  }),
+  homepage: z.object({
+    heroTitle: z.string().trim().min(1).max(120),
+    heroSubtitle: z.string().trim().max(240),
+    heroMediaUrl: optionalHttpsUrl,
+    announcement: z.string().trim().max(240),
+  }),
+  tournament: z.object({
+    defaultBestOf: z.number().int().min(1).max(99),
+    defaultParticipantCapacity: z.number().int().min(2).max(256),
+    registrationRules: z.string().trim().max(4_000),
+    checkInDurationMinutes: z.number().int().min(0).max(1_440),
+    resultSubmissionMinutes: z.number().int().min(0).max(10_080),
+  }),
+  branding: z.object({
+    primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    secondaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    backgroundMediaUrl: optionalHttpsUrl,
+    animationIntensity: z.enum(["NONE", "REDUCED", "NORMAL"]),
+  }),
+  social: z.record(z.string(), optionalHttpsUrl),
 });
+
+export type WebsiteSettings = z.infer<typeof websiteSettingsSchema>;
 
 export const adminLoginSchema = z.object({
   email: z
@@ -109,6 +190,8 @@ export interface GangListItem {
   verified: boolean;
   featured: boolean;
   currentRank: number | null;
+  previousRank: number | null;
+  peakRank: number | null;
   memberCount: number;
   matchesPlayed: number;
   wins: number;
@@ -116,6 +199,9 @@ export interface GangListItem {
   kills: number;
   winRate: number;
   trophies: number;
+  points: number;
+  streak: number;
+  killDifference: number;
 }
 
 export interface BracketMatch {

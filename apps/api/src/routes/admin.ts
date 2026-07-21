@@ -2,11 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { matchResultSchema } from "@mafia/shared";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import {
-  assertValidWinner,
-  generateOpeningRound,
-  nextPowerOfTwo,
-} from "../domain/bracket.js";
+import { assertValidWinner, generateOpeningRound } from "../domain/bracket.js";
 import { envelope } from "../lib/envelope.js";
 import {
   discordAuditCategories,
@@ -48,8 +44,18 @@ const gangInputSchema = z.object({
     .transform((value) => value.toUpperCase()),
   motto: z.string().trim().max(180).optional(),
   description: z.string().trim().max(4000).optional(),
-  logoUrl: z.url().optional(),
-  bannerUrl: z.url().optional(),
+  history: z.string().trim().max(20_000).optional(),
+  logoUrl: httpsUrlSchema.optional(),
+  bannerUrl: httpsUrlSchema.optional(),
+  primaryColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .optional(),
+  secondaryColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .optional(),
+  foundedAt: z.coerce.date().optional(),
   territory: z.string().trim().max(120).optional(),
   status: recordStatusSchema.default("ACTIVE"),
   recruitmentStatus: z
@@ -62,42 +68,86 @@ const playerInputSchema = z.object({
   displayName: z.string().trim().min(2).max(100),
   slug: slugSchema,
   biography: z.string().trim().max(4000).optional(),
-  avatarUrl: z.url().optional(),
+  avatarUrl: httpsUrlSchema.optional(),
+  externalFivemId: z.string().trim().min(2).max(128).optional(),
   status: recordStatusSchema.default("ACTIVE"),
 });
-const tournamentInputSchema = z.object({
-  name: z.string().trim().min(2).max(140),
-  slug: slugSchema,
-  description: z.string().trim().max(4000).optional(),
-  format: z.enum([
-    "SINGLE_ELIMINATION",
-    "DOUBLE_ELIMINATION",
-    "ROUND_ROBIN",
-    "GROUP_KNOCKOUT",
-    "CUSTOM",
-  ]),
-  status: z
-    .enum([
-      "DRAFT",
-      "REGISTRATION_OPEN",
-      "REGISTRATION_CLOSED",
-      "IN_PROGRESS",
-      "COMPLETED",
-      "CANCELLED",
-      "ARCHIVED",
-    ])
-    .default("DRAFT"),
-  startAt: z.coerce.date(),
-  endAt: z.coerce.date().optional(),
-  maximumParticipants: z.number().int().min(2).max(256),
-  rules: z.string().trim().max(20_000).optional(),
-  prizeDescription: z.string().trim().max(1000).optional(),
-});
+const tournamentInputSchema = z
+  .object({
+    name: z.string().trim().min(2).max(140),
+    slug: slugSchema,
+    description: z.string().trim().max(4000).optional(),
+    bannerUrl: httpsUrlSchema.optional(),
+    format: z.enum([
+      "SINGLE_ELIMINATION",
+      "DOUBLE_ELIMINATION",
+      "ROUND_ROBIN",
+      "GROUP_KNOCKOUT",
+      "CUSTOM",
+    ]),
+    status: z
+      .enum([
+        "DRAFT",
+        "REGISTRATION_OPEN",
+        "REGISTRATION_CLOSED",
+        "IN_PROGRESS",
+        "COMPLETED",
+        "CANCELLED",
+        "ARCHIVED",
+      ])
+      .default("DRAFT"),
+    startAt: z.coerce.date(),
+    endAt: z.coerce.date().optional(),
+    registrationOpenAt: z.coerce.date().optional(),
+    registrationCloseAt: z.coerce.date().optional(),
+    seasonId: z.string().min(20).max(40).nullable().optional(),
+    maximumParticipants: z.number().int().min(2).max(256),
+    rules: z.string().trim().max(20_000).optional(),
+    prizeDescription: z.string().trim().max(1000).optional(),
+    featured: z.boolean().default(false),
+    publicVisible: z.boolean().default(true),
+  })
+  .superRefine((value, context) => {
+    if (value.endAt && value.endAt <= value.startAt) {
+      context.addIssue({
+        code: "custom",
+        path: ["endAt"],
+        message: "End time must be after the start time.",
+      });
+    }
+    if (
+      value.registrationOpenAt &&
+      value.registrationCloseAt &&
+      value.registrationCloseAt <= value.registrationOpenAt
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["registrationCloseAt"],
+        message: "Registration close time must be after registration opens.",
+      });
+    }
+    if (
+      value.registrationCloseAt &&
+      value.registrationCloseAt > value.startAt
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["registrationCloseAt"],
+        message: "Registration must close before the tournament starts.",
+      });
+    }
+  });
 const matchInputSchema = z.object({
   tournamentId: z.string().min(20).max(40).optional(),
   gangAId: z.string().min(20).max(40).optional(),
   gangBId: z.string().min(20).max(40).optional(),
-  bestOf: z.number().int().min(1).max(15).default(1),
+  bestOf: z
+    .number()
+    .int()
+    .min(1)
+    .max(15)
+    .refine((value) => value % 2 === 1, "Best-of must be an odd number.")
+    .default(1),
   scheduledAt: z.coerce.date().optional(),
 });
 const settingInputSchema = z.object({
@@ -130,19 +180,36 @@ const participantUpdateSchema = z
   .refine((input) => input.seed !== undefined || input.status !== undefined, {
     message: "Provide a seed or participant status.",
   });
-const eventInputSchema = z.object({
-  title: z.string().trim().min(2).max(160),
-  slug: slugSchema,
-  description: z.string().trim().max(5000).optional(),
-  imageUrl: httpsUrlSchema.optional(),
-  location: z.string().trim().max(160).optional(),
-  startsAt: z.coerce.date(),
-  endsAt: z.coerce.date().optional(),
-  status: z
-    .enum(["DRAFT", "SCHEDULED", "LIVE", "COMPLETED", "CANCELLED", "ARCHIVED"])
-    .default("DRAFT"),
-  featured: z.boolean().default(false),
-});
+const eventInputSchema = z
+  .object({
+    title: z.string().trim().min(2).max(160),
+    slug: slugSchema,
+    description: z.string().trim().max(5000).optional(),
+    imageUrl: httpsUrlSchema.optional(),
+    location: z.string().trim().max(160).optional(),
+    startsAt: z.coerce.date(),
+    endsAt: z.coerce.date().optional(),
+    status: z
+      .enum([
+        "DRAFT",
+        "SCHEDULED",
+        "LIVE",
+        "COMPLETED",
+        "CANCELLED",
+        "ARCHIVED",
+      ])
+      .default("DRAFT"),
+    featured: z.boolean().default(false),
+  })
+  .superRefine((value, context) => {
+    if (value.endsAt && value.endsAt <= value.startsAt) {
+      context.addIssue({
+        code: "custom",
+        path: ["endsAt"],
+        message: "Event end time must be after its start time.",
+      });
+    }
+  });
 const streamInputSchema = z.object({
   streamerName: z.string().trim().min(2).max(120),
   slug: slugSchema,
@@ -163,12 +230,26 @@ const matchUpdateSchema = z.object({
   tournamentId: z.string().min(20).max(40).nullable().optional(),
   gangAId: z.string().min(20).max(40).nullable().optional(),
   gangBId: z.string().min(20).max(40).nullable().optional(),
-  bestOf: z.number().int().min(1).max(15).optional(),
+  bestOf: z
+    .number()
+    .int()
+    .min(1)
+    .max(15)
+    .refine((value) => value % 2 === 1, "Best-of must be an odd number.")
+    .optional(),
   scheduledAt: z.coerce.date().nullable().optional(),
+  bracketRoundId: z.string().min(20).max(40).nullable().optional(),
+  position: z.number().int().min(1).nullable().optional(),
+  streamId: z.string().min(20).max(40).nullable().optional(),
+  resultNotes: z.string().trim().max(4_000).nullable().optional(),
+  disputeReason: z.string().trim().max(4_000).nullable().optional(),
+  disputeNotes: z.string().trim().max(20_000).nullable().optional(),
+  disputeAssignedUserId: z.string().min(20).max(40).nullable().optional(),
   status: z
     .enum([
       "SCHEDULED",
-      "CHECK_IN",
+      "CHECK_IN_OPEN",
+      "READY",
       "LIVE",
       "AWAITING_RESULT",
       "DISPUTED",
@@ -178,6 +259,20 @@ const matchUpdateSchema = z.object({
     ])
     .optional(),
 });
+const bracketGenerateSchema = z.object({
+  confirmReset: z.boolean().default(false),
+  confirmationName: z.string().trim().max(140).optional(),
+  placement: z.enum(["SEEDED", "RANDOM"]).default("SEEDED"),
+});
+const matchReopenSchema = z.object({
+  version: z.number().int().min(0),
+  reason: z.string().trim().min(5).max(4_000),
+});
+const disputeSchema = z.object({
+  reason: z.string().trim().min(5).max(4_000),
+  notes: z.string().trim().max(20_000).optional(),
+  assignedUserId: z.string().min(20).max(40).nullable().optional(),
+});
 const administratorCreateSchema = z.object({
   email: z
     .email()
@@ -185,6 +280,7 @@ const administratorCreateSchema = z.object({
     .transform((value) => value.toLowerCase()),
   displayName: z.string().trim().min(2).max(100),
   password: z.string().min(12).max(128),
+  roleIds: z.array(z.string().min(20).max(40)).min(1).max(20),
 });
 const administratorUpdateSchema = z.object({
   email: z
@@ -221,6 +317,21 @@ const advanceMatchSchema = z.object({
   version: z.number().int().min(0),
 });
 
+const tournamentTransitions: Record<string, readonly string[]> = {
+  DRAFT: ["REGISTRATION_OPEN", "CANCELLED", "ARCHIVED"],
+  REGISTRATION_OPEN: ["REGISTRATION_CLOSED", "CANCELLED", "ARCHIVED"],
+  REGISTRATION_CLOSED: [
+    "IN_PROGRESS",
+    "REGISTRATION_OPEN",
+    "CANCELLED",
+    "ARCHIVED",
+  ],
+  IN_PROGRESS: ["COMPLETED", "CANCELLED", "ARCHIVED"],
+  COMPLETED: ["ARCHIVED"],
+  CANCELLED: ["ARCHIVED", "DRAFT"],
+  ARCHIVED: ["DRAFT", "CANCELLED", "COMPLETED"],
+};
+
 function bracketRoundName(roundNumber: number, totalRounds: number): string {
   const remaining = totalRounds - roundNumber + 1;
   if (remaining === 1) return "Final";
@@ -234,6 +345,7 @@ function assertWinnerHasHigherScore(
   winnerGangId: string,
   gangAScore: number,
   gangBScore: number,
+  bestOf = 1,
 ): void {
   const winnerScore = winnerGangId === gangAId ? gangAScore : gangBScore;
   const loserScore = winnerGangId === gangAId ? gangBScore : gangAScore;
@@ -243,6 +355,15 @@ function assertWinnerHasHigherScore(
       "WINNER_SCORE_INVALID",
       "The selected winner must have the higher score.",
     );
+  if (bestOf > 1) {
+    const requiredWins = Math.floor(bestOf / 2) + 1;
+    if (winnerScore !== requiredWins || loserScore >= requiredWins)
+      throw new HttpError(
+        422,
+        "BEST_OF_SCORE_INVALID",
+        `A best-of-${String(bestOf)} result requires exactly ${String(requiredWins)} wins for the winner.`,
+      );
+  }
 }
 
 type ProgressionMatch = {
@@ -277,6 +398,9 @@ async function clearDownstreamWinner(
       status: "SCHEDULED",
       finalizedAt: null,
       finalizedByUserId: null,
+      reopenedAt: new Date(),
+      reopenReason: "Upstream bracket result was changed.",
+      resultNotes: null,
       version: { increment: 1 },
     },
   });
@@ -294,6 +418,41 @@ async function clearDownstreamWinner(
         data: { status: "APPROVED" },
       });
     }
+  }
+}
+
+function assertTournamentTransition(current: string, next: string): void {
+  if (current === next) return;
+  if (!(tournamentTransitions[current] ?? []).includes(next)) {
+    throw new HttpError(
+      422,
+      "TOURNAMENT_TRANSITION_INVALID",
+      `Tournament status cannot change from ${current.replaceAll("_", " ")} to ${next.replaceAll("_", " ")}.`,
+    );
+  }
+}
+
+async function assertTournamentCanStart(
+  tx: Prisma.TransactionClient | typeof prisma,
+  tournamentId: string,
+): Promise<void> {
+  const approved = await tx.tournamentParticipant.count({
+    where: { tournamentId, status: "APPROVED" },
+  });
+  if (approved < 2) {
+    throw new HttpError(
+      409,
+      "TOURNAMENT_PARTICIPANTS_REQUIRED",
+      "At least two approved participants are required to start a tournament.",
+    );
+  }
+  const rounds = await tx.bracketRound.count({ where: { tournamentId } });
+  if (rounds === 0) {
+    throw new HttpError(
+      409,
+      "TOURNAMENT_BRACKET_REQUIRED",
+      "Generate the tournament bracket before starting the tournament.",
+    );
   }
 }
 
@@ -325,42 +484,106 @@ export function adminRoutes(app: FastifyInstance): void {
     const [
       totalGangs,
       activeGangs,
+      archivedGangs,
       totalPlayers,
+      activePlayers,
+      totalTournaments,
+      draftTournaments,
+      registrationOpenTournaments,
       activeTournaments,
+      completedTournaments,
       upcomingMatches,
+      liveMatches,
       awaitingResults,
       disputedMatches,
+      upcomingEvents,
+      liveStreams,
       pendingMedia,
+      administrators,
       activity,
+      nextMatches,
+      unseededParticipants,
+      streamsWithErrors,
     ] = await Promise.all([
       prisma.gang.count(),
       prisma.gang.count({ where: { status: "ACTIVE" } }),
+      prisma.gang.count({ where: { status: "ARCHIVED" } }),
       prisma.player.count(),
+      prisma.player.count({ where: { status: "ACTIVE" } }),
+      prisma.tournament.count(),
+      prisma.tournament.count({ where: { status: "DRAFT" } }),
+      prisma.tournament.count({ where: { status: "REGISTRATION_OPEN" } }),
       prisma.tournament.count({ where: { status: "IN_PROGRESS" } }),
+      prisma.tournament.count({ where: { status: "COMPLETED" } }),
       prisma.match.count({
         where: { status: "SCHEDULED", scheduledAt: { gte: new Date() } },
       }),
+      prisma.match.count({ where: { status: "LIVE" } }),
       prisma.match.count({ where: { status: "AWAITING_RESULT" } }),
       prisma.match.count({ where: { status: "DISPUTED" } }),
+      prisma.event.count({
+        where: { startsAt: { gte: new Date() }, status: "SCHEDULED" },
+      }),
+      prisma.liveStream.count({ where: { status: "LIVE" } }),
       prisma.mediaAsset.count({ where: { status: "PENDING" } }),
+      prisma.user.count({ where: { email: { not: null }, status: "ACTIVE" } }),
       prisma.auditLog.findMany({
         orderBy: { createdAt: "desc" },
         take: 10,
         include: { actor: { select: { displayName: true } } },
+      }),
+      prisma.match.findMany({
+        where: {
+          scheduledAt: { gte: new Date() },
+          status: { in: ["SCHEDULED", "CHECK_IN_OPEN", "READY"] },
+        },
+        orderBy: { scheduledAt: "asc" },
+        take: 5,
+        include: {
+          gangA: { select: { name: true, tag: true } },
+          gangB: { select: { name: true, tag: true } },
+          tournament: { select: { name: true, slug: true } },
+        },
+      }),
+      prisma.tournamentParticipant.count({
+        where: { status: "APPROVED", seed: null },
+      }),
+      prisma.liveStream.findMany({
+        where: { lastStatusError: { not: null }, status: { not: "ARCHIVED" } },
+        orderBy: { lastCheckedAt: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          streamerName: true,
+          platform: true,
+          lastCheckedAt: true,
+          lastStatusError: true,
+        },
       }),
     ]);
     return envelope(request, {
       summary: {
         totalGangs,
         activeGangs,
+        archivedGangs,
         totalPlayers,
+        activePlayers,
+        totalTournaments,
+        draftTournaments,
+        registrationOpenTournaments,
         activeTournaments,
+        completedTournaments,
         upcomingMatches,
+        liveMatches,
         awaitingResults,
         disputedMatches,
+        upcomingEvents,
+        liveStreams,
         pendingMedia,
+        administrators,
       },
       activity,
+      attention: { nextMatches, unseededParticipants, streamsWithErrors },
     });
   });
 
@@ -377,7 +600,7 @@ export function adminRoutes(app: FastifyInstance): void {
   });
 
   app.get("/api/v1/admin/players", async (request) => {
-    requirePermission(request, "user.manage");
+    requirePermission(request, "player.read");
     const players = await prisma.player.findMany({
       orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
       include: {
@@ -401,6 +624,58 @@ export function adminRoutes(app: FastifyInstance): void {
     });
     return envelope(request, tournaments);
   });
+
+  app.get<{ Params: { id: string } }>(
+    "/api/v1/admin/tournaments/:id",
+    async (request) => {
+      requirePermission(request, "tournament.read");
+      const tournament = await prisma.tournament.findUnique({
+        where: { id: request.params.id },
+        include: {
+          season: { select: { id: true, name: true } },
+          participants: {
+            orderBy: [{ seed: "asc" }, { registeredAt: "asc" }],
+            include: {
+              gang: true,
+              roster: {
+                include: {
+                  player: {
+                    select: { id: true, slug: true, displayName: true },
+                  },
+                },
+              },
+            },
+          },
+          rounds: {
+            orderBy: { sortOrder: "asc" },
+            include: {
+              matches: {
+                orderBy: { position: "asc" },
+                include: {
+                  gangA: {
+                    select: { id: true, name: true, tag: true, logoUrl: true },
+                  },
+                  gangB: {
+                    select: { id: true, name: true, tag: true, logoUrl: true },
+                  },
+                  winnerGang: {
+                    select: { id: true, name: true, tag: true, logoUrl: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      if (!tournament)
+        throw new HttpError(
+          404,
+          "TOURNAMENT_NOT_FOUND",
+          "Tournament was not found.",
+        );
+      return envelope(request, tournament);
+    },
+  );
 
   app.get("/api/v1/admin/matches", async (request) => {
     requirePermission(request, "match.update");
@@ -453,7 +728,7 @@ export function adminRoutes(app: FastifyInstance): void {
   app.patch<{ Params: { id: string } }>(
     "/api/v1/admin/gangs/:id",
     async (request) => {
-      const auth = requirePermission(request, "gang.update.any");
+      const auth = requirePermission(request, "gang.archive");
       const input = gangInputSchema.partial().parse(request.body);
       const gang = await prisma.gang.update({
         where: { id: request.params.id },
@@ -478,7 +753,7 @@ export function adminRoutes(app: FastifyInstance): void {
   );
 
   app.post("/api/v1/admin/players", async (request, reply) => {
-    const auth = requirePermission(request, "user.manage");
+    const auth = requirePermission(request, "player.create");
     const input = playerInputSchema.parse(request.body);
     const player = await prisma.player.create({
       data: compact(input) as Prisma.PlayerCreateInput,
@@ -496,7 +771,7 @@ export function adminRoutes(app: FastifyInstance): void {
   app.patch<{ Params: { id: string } }>(
     "/api/v1/admin/players/:id",
     async (request) => {
-      const auth = requirePermission(request, "user.manage");
+      const auth = requirePermission(request, "player.update");
       const input = playerInputSchema.partial().parse(request.body);
       const player = await prisma.player.update({
         where: { id: request.params.id },
@@ -516,7 +791,7 @@ export function adminRoutes(app: FastifyInstance): void {
   app.delete<{ Params: { id: string } }>(
     "/api/v1/admin/players/:id",
     async (request, reply) => {
-      const auth = requirePermission(request, "user.manage");
+      const auth = requirePermission(request, "player.archive");
       const player = await prisma.player.update({
         where: { id: request.params.id },
         data: { status: "ARCHIVED", archivedAt: new Date() },
@@ -556,17 +831,63 @@ export function adminRoutes(app: FastifyInstance): void {
     async (request) => {
       const auth = requirePermission(request, "tournament.update");
       const input = tournamentInputSchema.partial().parse(request.body);
+      const before = await prisma.tournament.findUniqueOrThrow({
+        where: { id: request.params.id },
+      });
+      if (input.status) {
+        assertTournamentTransition(before.status, input.status);
+        if (input.status === "IN_PROGRESS") {
+          await assertTournamentCanStart(prisma, before.id);
+        }
+      }
+      const startAt = input.startAt ?? before.startAt;
+      const endAt = input.endAt ?? before.endAt;
+      const registrationOpenAt =
+        input.registrationOpenAt ?? before.registrationOpenAt;
+      const registrationCloseAt =
+        input.registrationCloseAt ?? before.registrationCloseAt;
+      if (endAt && endAt <= startAt)
+        throw new HttpError(
+          422,
+          "TOURNAMENT_DATES_INVALID",
+          "Tournament end time must be after its start time.",
+        );
+      if (
+        registrationOpenAt &&
+        registrationCloseAt &&
+        registrationCloseAt <= registrationOpenAt
+      )
+        throw new HttpError(
+          422,
+          "REGISTRATION_DATES_INVALID",
+          "Registration close time must be after registration opens.",
+        );
+      if (registrationCloseAt && registrationCloseAt > startAt)
+        throw new HttpError(
+          422,
+          "REGISTRATION_AFTER_START",
+          "Registration must close before the tournament starts.",
+        );
       const tournament = await prisma.tournament.update({
         where: { id: request.params.id },
-        data: compact(input),
+        data: compact({
+          ...input,
+          archivedAt:
+            input.status === "ARCHIVED"
+              ? new Date()
+              : input.status && before.status === "ARCHIVED"
+                ? null
+                : undefined,
+        }),
       });
-      await recordAudit(
-        auth.userId,
-        "tournament.update",
-        "Tournament",
-        tournament.id,
-        tournament,
-      );
+      await writeAudit({
+        actorUserId: auth.userId,
+        action: "tournament.update",
+        entityType: "Tournament",
+        entityId: tournament.id,
+        beforeData: before,
+        afterData: tournament,
+      });
       return envelope(request, tournament);
     },
   );
@@ -574,7 +895,7 @@ export function adminRoutes(app: FastifyInstance): void {
   app.delete<{ Params: { id: string } }>(
     "/api/v1/admin/tournaments/:id",
     async (request, reply) => {
-      const auth = requirePermission(request, "tournament.update");
+      const auth = requirePermission(request, "tournament.archive");
       const tournament = await prisma.tournament.update({
         where: { id: request.params.id },
         data: { status: "ARCHIVED", archivedAt: new Date() },
@@ -597,13 +918,33 @@ export function adminRoutes(app: FastifyInstance): void {
       const input = participantInputSchema.parse(request.body);
       const tournament = await prisma.tournament.findUnique({
         where: { id: request.params.id },
-        select: { maximumParticipants: true },
+        select: { maximumParticipants: true, status: true },
       });
       if (!tournament)
         throw new HttpError(
           404,
           "TOURNAMENT_NOT_FOUND",
           "Tournament was not found.",
+        );
+      if (
+        ["IN_PROGRESS", "COMPLETED", "CANCELLED", "ARCHIVED"].includes(
+          tournament.status,
+        )
+      )
+        throw new HttpError(
+          409,
+          "PARTICIPANTS_LOCKED",
+          "Participants cannot be added in the tournament's current status.",
+        );
+      const gang = await prisma.gang.findUnique({
+        where: { id: input.gangId },
+        select: { status: true },
+      });
+      if (!gang || gang.status !== "ACTIVE")
+        throw new HttpError(
+          409,
+          "GANG_NOT_ACTIVE",
+          "Only an active gang can be added to a tournament.",
         );
       const count = await prisma.tournamentParticipant.count({
         where: {
@@ -643,6 +984,22 @@ export function adminRoutes(app: FastifyInstance): void {
     async (request) => {
       const auth = requirePermission(request, "tournament.bracket.manage");
       const input = participantUpdateSchema.parse(request.body);
+      const tournament = await prisma.tournament.findUniqueOrThrow({
+        where: { id: request.params.id },
+        select: { maximumParticipants: true, status: true },
+      });
+      if (tournament.status === "ARCHIVED")
+        throw new HttpError(
+          409,
+          "TOURNAMENT_ARCHIVED",
+          "Restore the tournament before editing participants.",
+        );
+      if (input.seed && input.seed > tournament.maximumParticipants)
+        throw new HttpError(
+          422,
+          "SEED_EXCEEDS_CAPACITY",
+          "Seed cannot exceed tournament capacity.",
+        );
       const participant = await prisma.tournamentParticipant.update({
         where: {
           id: request.params.participantId,
@@ -745,6 +1102,7 @@ export function adminRoutes(app: FastifyInstance): void {
     "/api/v1/admin/tournaments/:id/bracket/generate",
     async (request) => {
       const auth = requirePermission(request, "tournament.bracket.manage");
+      const input = bracketGenerateSchema.parse(request.body ?? {});
       const result = await prisma.$transaction(
         async (tx) => {
           const tournament = await tx.tournament.findUnique({
@@ -762,43 +1120,98 @@ export function adminRoutes(app: FastifyInstance): void {
               "TOURNAMENT_NOT_FOUND",
               "Tournament was not found.",
             );
+          if (tournament.status === "ARCHIVED")
+            throw new HttpError(
+              409,
+              "TOURNAMENT_ARCHIVED",
+              "Restore the tournament before generating a bracket.",
+            );
+          if (tournament.format !== "SINGLE_ELIMINATION")
+            throw new HttpError(
+              422,
+              "BRACKET_FORMAT_MANUAL",
+              "Automatic generation is currently available only for single-elimination tournaments. Manage this format manually.",
+            );
           if (tournament.participants.length < 2)
             throw new HttpError(
               409,
               "BRACKET_TOO_SMALL",
               "Add at least two approved gangs before generating the bracket.",
             );
-
-          const usedSeeds = new Set<number>();
-          let nextSeed = 1;
-          const seeded = tournament.participants.map((participant) => {
-            let seed = participant.seed;
-            if (seed === null || usedSeeds.has(seed)) {
-              while (usedSeeds.has(nextSeed)) nextSeed += 1;
-              seed = nextSeed;
-            }
-            usedSeeds.add(seed);
-            return { participant, seed };
+          if (tournament.participants.length > tournament.maximumParticipants)
+            throw new HttpError(
+              409,
+              "TOURNAMENT_OVER_CAPACITY",
+              "Approved participants exceed tournament capacity.",
+            );
+          const existingRounds = await tx.bracketRound.count({
+            where: { tournamentId: tournament.id },
           });
-          for (const entry of seeded) {
-            if (entry.participant.seed !== entry.seed) {
+          const completedMatches = await tx.match.count({
+            where: {
+              tournamentId: tournament.id,
+              bracketRoundId: { not: null },
+              status: "COMPLETED",
+            },
+          });
+          if (existingRounds > 0 && !input.confirmReset)
+            throw new HttpError(
+              409,
+              "BRACKET_RESET_CONFIRMATION_REQUIRED",
+              "Regenerating this bracket resets every match and result. Confirm the destructive reset first.",
+              { completedMatches },
+            );
+          if (
+            completedMatches > 0 &&
+            input.confirmationName !== tournament.name
+          )
+            throw new HttpError(
+              409,
+              "BRACKET_NAME_CONFIRMATION_REQUIRED",
+              "Type the tournament name exactly to reset a bracket containing completed results.",
+              { tournamentName: tournament.name, completedMatches },
+            );
+
+          const participantOrder =
+            input.placement === "RANDOM"
+              ? tournament.participants
+                  .map((participant) => ({
+                    participant,
+                    random: crypto.getRandomValues(new Uint32Array(1))[0] ?? 0,
+                  }))
+                  .sort((left, right) => left.random - right.random)
+                  .map(({ participant }) => participant)
+              : tournament.participants;
+          const seeded = participantOrder.map((participant, index) => ({
+            participant,
+            seed: input.placement === "RANDOM" ? index + 1 : participant.seed,
+          }));
+          if (seeded.some((entry) => entry.seed === null))
+            throw new HttpError(
+              422,
+              "MISSING_SEEDS",
+              "Every approved participant needs a seed before bracket generation.",
+            );
+          if (input.placement === "RANDOM") {
+            await tx.tournamentParticipant.updateMany({
+              where: { tournamentId: tournament.id, status: "APPROVED" },
+              data: { seed: null },
+            });
+            for (const entry of seeded) {
               await tx.tournamentParticipant.update({
                 where: { id: entry.participant.id },
                 data: { seed: entry.seed },
               });
             }
           }
-
-          const slotCount = nextPowerOfTwo(
-            Math.max(tournament.maximumParticipants, seeded.length),
-          );
-          const roundCount = Math.log2(slotCount);
           const opening = generateOpeningRound(
             seeded.map(({ participant, seed }) => ({
               id: participant.id,
-              seed,
+              seed: seed as number,
             })),
           );
+          const slotCount = opening.length * 2;
+          const roundCount = Math.log2(slotCount);
           const gangByParticipant = new Map(
             seeded.map(({ participant }) => [
               participant.id,
@@ -927,17 +1340,31 @@ export function adminRoutes(app: FastifyInstance): void {
             data: { bracketVersion: { increment: 1 } },
             select: { id: true, bracketVersion: true },
           });
-          return { ...updated, slotCount, roundCount };
+          return {
+            ...updated,
+            slotCount,
+            roundCount,
+            resetMatches: completedMatches,
+          };
         },
         { isolationLevel: "Serializable" },
       );
-      await recordAudit(
-        auth.userId,
-        "tournament.bracket.generate",
-        "Tournament",
-        result.id,
-        result,
-      );
+      await writeAudit({
+        actorUserId: auth.userId,
+        action:
+          result.resetMatches > 0
+            ? "tournament.bracket.regenerate"
+            : "tournament.bracket.generate",
+        entityType: "Tournament",
+        entityId: result.id,
+        afterData: result,
+        ...(result.resetMatches > 0
+          ? {
+              reason:
+                "Administrator confirmed destructive bracket regeneration.",
+            }
+          : {}),
+      });
       return envelope(request, result);
     },
   );
@@ -964,6 +1391,18 @@ export function adminRoutes(app: FastifyInstance): void {
     async (request) => {
       const auth = requirePermission(request, "match.update");
       const input = matchUpdateSchema.parse(request.body);
+      if (input.status === "COMPLETED")
+        throw new HttpError(
+          422,
+          "MATCH_FINALIZE_REQUIRED",
+          "Use the result workflow to complete a match so scores, statistics, and winner progression remain consistent.",
+        );
+      if (input.status === "DISPUTED")
+        throw new HttpError(
+          422,
+          "MATCH_DISPUTE_WORKFLOW_REQUIRED",
+          "Open a dispute through Results & Disputes so its reason and assignment are recorded.",
+        );
       if (input.gangAId && input.gangBId && input.gangAId === input.gangBId)
         throw new HttpError(
           422,
@@ -975,7 +1414,13 @@ export function adminRoutes(app: FastifyInstance): void {
       });
       const match = await prisma.match.update({
         where: { id: request.params.id },
-        data: compact(input),
+        data: {
+          ...compact(input),
+          version: { increment: 1 },
+          ...(input.status === "LIVE"
+            ? { startedAt: before.startedAt ?? new Date() }
+            : {}),
+        },
       });
       await writeAudit({
         actorUserId: auth.userId,
@@ -993,15 +1438,38 @@ export function adminRoutes(app: FastifyInstance): void {
     "/api/v1/admin/matches/:id",
     async (request, reply) => {
       const auth = requirePermission(request, "match.update");
-      const match = await prisma.match.delete({
-        where: { id: request.params.id },
+      const { before, match } = await prisma.$transaction(async (tx) => {
+        const before = await tx.match.findUniqueOrThrow({
+          where: { id: request.params.id },
+        });
+        if (before.winnerGangId) await clearDownstreamWinner(tx, before);
+        const match = await tx.match.update({
+          where: { id: before.id },
+          data: {
+            status: "CANCELLED",
+            gangAScore: null,
+            gangBScore: null,
+            winnerGangId: null,
+            finalizedAt: null,
+            finalizedByUserId: null,
+            version: { increment: 1 },
+          },
+        });
+        if (before.tournamentId) {
+          await tx.tournament.update({
+            where: { id: before.tournamentId },
+            data: { bracketVersion: { increment: 1 } },
+          });
+        }
+        return { before, match };
       });
       await writeAudit({
         actorUserId: auth.userId,
-        action: "match.delete",
+        action: "match.cancel",
         entityType: "Match",
         entityId: match.id,
-        beforeData: match,
+        beforeData: before,
+        afterData: match,
       });
       return reply.code(204).send();
     },
@@ -1051,6 +1519,12 @@ export function adminRoutes(app: FastifyInstance): void {
               "MATCH_ALREADY_FINALIZED",
               "This match has already been finalized.",
             );
+          if (match.status === "DISPUTED")
+            throw new HttpError(
+              409,
+              "MATCH_DISPUTED",
+              "Resolve the dispute before finalizing this match.",
+            );
           if (match.version !== input.version)
             throw new HttpError(
               409,
@@ -1069,11 +1543,71 @@ export function adminRoutes(app: FastifyInstance): void {
             input.winnerGangId,
             input.gangAScore,
             input.gangBScore,
+            match.bestOf,
           );
 
+          const competingGangIds = [match.gangAId, match.gangBId].filter(
+            (gangId): gangId is string => Boolean(gangId),
+          );
+          if (competingGangIds.length < 2)
+            throw new HttpError(
+              422,
+              "MATCH_COMPETITORS_MISSING",
+              "Both competitors are required before recording a result.",
+            );
+          if (
+            input.playerStats.some(
+              (stat) => !competingGangIds.includes(stat.gangId),
+            )
+          )
+            throw new HttpError(
+              422,
+              "PLAYER_STAT_GANG_INVALID",
+              "Every player statistic must belong to a competing gang.",
+            );
+          const playerIds = input.playerStats.map((stat) => stat.playerId);
+          const eligiblePlayers = await tx.player.findMany({
+            where: { id: { in: playerIds } },
+            select: {
+              id: true,
+              memberships: {
+                where: { active: true },
+                select: { gangId: true },
+              },
+              rosters: {
+                where: match.tournamentId
+                  ? { participant: { tournamentId: match.tournamentId } }
+                  : { id: "__independent_match_has_no_roster__" },
+                select: { participant: { select: { gangId: true } } },
+              },
+            },
+          });
+          const eligibleById = new Map(
+            eligiblePlayers.map((player) => [player.id, player]),
+          );
+          for (const stat of input.playerStats) {
+            const player = eligibleById.get(stat.playerId);
+            const eligible =
+              player?.memberships.some(
+                (membership) => membership.gangId === stat.gangId,
+              ) ||
+              player?.rosters.some(
+                (roster) => roster.participant.gangId === stat.gangId,
+              );
+            if (!eligible)
+              throw new HttpError(
+                422,
+                "PLAYER_NOT_ELIGIBLE",
+                "A player is not on the selected gang's active membership or tournament roster.",
+                { playerId: stat.playerId },
+              );
+          }
+
+          await tx.matchPlayerStat.deleteMany({ where: { matchId: match.id } });
           await tx.matchPlayerStat.createMany({
             data: input.playerStats.map((stat) => ({
               ...stat,
+              notes: stat.notes ?? null,
               matchId: match.id,
             })),
           });
@@ -1086,6 +1620,9 @@ export function adminRoutes(app: FastifyInstance): void {
               status: "COMPLETED",
               finalizedAt: new Date(),
               finalizedByUserId: auth.userId,
+              ...(input.resultNotes !== undefined
+                ? { resultNotes: input.resultNotes }
+                : {}),
               version: { increment: 1 },
             },
           });
@@ -1099,18 +1636,48 @@ export function adminRoutes(app: FastifyInstance): void {
                 "BRACKET_PATH_INVALID",
                 "Next bracket match does not exist.",
               );
-            const data = next.gangAId
-              ? next.gangBId
-                ? null
-                : { gangBId: input.winnerGangId }
-              : { gangAId: input.winnerGangId };
-            if (!data)
+            const winnerEntersGangB = Boolean(
+              match.position && match.position % 2 === 0,
+            );
+            const occupied = winnerEntersGangB ? next.gangBId : next.gangAId;
+            if (occupied && occupied !== input.winnerGangId)
               throw new HttpError(
                 409,
                 "BRACKET_SLOT_OCCUPIED",
-                "The next bracket match is already full.",
+                "The winner's next bracket slot is occupied by a different gang.",
               );
-            await tx.match.update({ where: { id: next.id }, data });
+            await tx.match.update({
+              where: { id: next.id },
+              data: winnerEntersGangB
+                ? { gangBId: input.winnerGangId }
+                : { gangAId: input.winnerGangId },
+            });
+          }
+          if (match.tournamentId) {
+            const loserGangId =
+              input.winnerGangId === match.gangAId
+                ? match.gangBId
+                : match.gangAId;
+            if (loserGangId) {
+              await tx.tournamentParticipant.updateMany({
+                where: {
+                  tournamentId: match.tournamentId,
+                  gangId: loserGangId,
+                },
+                data: { status: "ELIMINATED" },
+              });
+            }
+            await tx.tournamentParticipant.updateMany({
+              where: {
+                tournamentId: match.tournamentId,
+                gangId: input.winnerGangId,
+              },
+              data: { status: match.nextMatchId ? "APPROVED" : "CHAMPION" },
+            });
+            await tx.tournament.update({
+              where: { id: match.tournamentId },
+              data: { bracketVersion: { increment: 1 } },
+            });
           }
           return { before: match, updated };
         },
@@ -1146,6 +1713,12 @@ export function adminRoutes(app: FastifyInstance): void {
               "VERSION_CONFLICT",
               "The match changed. Refresh before advancing a winner.",
             );
+          if (match.status === "DISPUTED")
+            throw new HttpError(
+              409,
+              "MATCH_DISPUTED",
+              "Resolve the dispute before advancing a winner.",
+            );
           assertValidWinner(match.gangAId, match.gangBId, input.winnerGangId);
           if (input.gangAScore === input.gangBScore)
             throw new HttpError(
@@ -1158,7 +1731,11 @@ export function adminRoutes(app: FastifyInstance): void {
             input.winnerGangId,
             input.gangAScore,
             input.gangBScore,
+            match.bestOf,
           );
+          if (match.winnerGangId && match.winnerGangId !== input.winnerGangId) {
+            await clearDownstreamWinner(tx, match);
+          }
           const updated = await tx.match.update({
             where: { id: match.id, version: input.version },
             data: {
@@ -1236,6 +1813,10 @@ export function adminRoutes(app: FastifyInstance): void {
                 status: match.nextMatchId ? "APPROVED" : "CHAMPION",
               },
             });
+            await tx.tournament.update({
+              where: { id: match.tournamentId },
+              data: { bracketVersion: { increment: 1 } },
+            });
           }
           return { before: match, updated };
         },
@@ -1250,6 +1831,200 @@ export function adminRoutes(app: FastifyInstance): void {
         afterData: result.updated,
       });
       return envelope(request, result.updated);
+    },
+  );
+
+  app.get<{ Params: { id: string } }>(
+    "/api/v1/admin/matches/:id/downstream-impact",
+    async (request) => {
+      requirePermission(request, "match.reopen");
+      const source = await prisma.match.findUnique({
+        where: { id: request.params.id },
+      });
+      if (!source)
+        throw new HttpError(404, "MATCH_NOT_FOUND", "Match was not found.");
+      const affected = [];
+      let nextId = source.nextMatchId;
+      while (nextId) {
+        const next = await prisma.match.findUnique({
+          where: { id: nextId },
+          include: {
+            bracketRound: { select: { name: true } },
+            gangA: { select: { name: true } },
+            gangB: { select: { name: true } },
+          },
+        });
+        if (!next) break;
+        affected.push(next);
+        nextId = next.nextMatchId;
+      }
+      return envelope(request, { source, affected });
+    },
+  );
+
+  app.get("/api/v1/admin/dispute-assignees", async (request) => {
+    requirePermission(request, "match.finalize");
+    const administrators = await prisma.user.findMany({
+      where: {
+        status: "ACTIVE",
+        email: { not: null },
+        roles: { some: { gangId: null, role: { status: "ACTIVE" } } },
+      },
+      orderBy: { displayName: "asc" },
+      select: { id: true, displayName: true, email: true },
+    });
+    return envelope(request, administrators);
+  });
+
+  app.post<{ Params: { id: string } }>(
+    "/api/v1/admin/matches/:id/reopen",
+    async (request) => {
+      const auth = requirePermission(request, "match.reopen");
+      const input = matchReopenSchema.parse(request.body);
+      const result = await prisma.$transaction(
+        async (tx) => {
+          const before = await tx.match.findUnique({
+            where: { id: request.params.id },
+          });
+          if (!before)
+            throw new HttpError(404, "MATCH_NOT_FOUND", "Match was not found.");
+          if (before.version !== input.version)
+            throw new HttpError(
+              409,
+              "VERSION_CONFLICT",
+              "The match changed. Reload it before reopening the result.",
+            );
+          if (!before.winnerGangId && before.status !== "DISPUTED")
+            throw new HttpError(
+              409,
+              "MATCH_NOT_FINALIZED",
+              "Only a finalized or disputed match can be reopened.",
+            );
+          if (before.winnerGangId) await clearDownstreamWinner(tx, before);
+          const updated = await tx.match.update({
+            where: { id: before.id, version: input.version },
+            data: {
+              gangAScore: null,
+              gangBScore: null,
+              winnerGangId: null,
+              status: "AWAITING_RESULT",
+              finalizedAt: null,
+              finalizedByUserId: null,
+              reopenedAt: new Date(),
+              reopenReason: input.reason,
+              version: { increment: 1 },
+            },
+          });
+          await tx.matchPlayerStat.deleteMany({
+            where: { matchId: before.id },
+          });
+          if (before.tournamentId) {
+            await tx.tournamentParticipant.updateMany({
+              where: {
+                tournamentId: before.tournamentId,
+                gangId: {
+                  in: [before.gangAId, before.gangBId].filter(
+                    (id): id is string => Boolean(id),
+                  ),
+                },
+              },
+              data: { status: "APPROVED" },
+            });
+            await tx.tournament.update({
+              where: { id: before.tournamentId },
+              data: { bracketVersion: { increment: 1 } },
+            });
+          }
+          return { before, updated };
+        },
+        { isolationLevel: "Serializable" },
+      );
+      await writeAudit({
+        actorUserId: auth.userId,
+        action: "match.reopen",
+        entityType: "Match",
+        entityId: result.updated.id,
+        beforeData: result.before,
+        afterData: result.updated,
+        reason: input.reason,
+      });
+      return envelope(request, result.updated);
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    "/api/v1/admin/matches/:id/dispute",
+    async (request) => {
+      const auth = requirePermission(request, "match.update");
+      const input = disputeSchema.parse(request.body);
+      const before = await prisma.match.findUniqueOrThrow({
+        where: { id: request.params.id },
+      });
+      if (before.winnerGangId)
+        throw new HttpError(
+          409,
+          "MATCH_ALREADY_FINALIZED",
+          "Reopen the finalized result before marking a dispute.",
+        );
+      const updated = await prisma.match.update({
+        where: { id: before.id },
+        data: compact({
+          status: "DISPUTED",
+          disputeReason: input.reason,
+          disputeNotes: input.notes,
+          disputeAssignedUserId: input.assignedUserId,
+          version: { increment: 1 },
+        }),
+      });
+      await writeAudit({
+        actorUserId: auth.userId,
+        action: "match.dispute.open",
+        entityType: "Match",
+        entityId: updated.id,
+        beforeData: before,
+        afterData: updated,
+        reason: input.reason,
+      });
+      return envelope(request, updated);
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    "/api/v1/admin/matches/:id/dispute/resolve",
+    async (request) => {
+      const auth = requirePermission(request, "match.finalize");
+      const input = z
+        .object({ resolution: z.string().trim().min(5).max(4_000) })
+        .parse(request.body);
+      const before = await prisma.match.findUniqueOrThrow({
+        where: { id: request.params.id },
+      });
+      if (before.status !== "DISPUTED")
+        throw new HttpError(
+          409,
+          "MATCH_NOT_DISPUTED",
+          "This match has no open dispute.",
+        );
+      const updated = await prisma.match.update({
+        where: { id: before.id },
+        data: {
+          status: "AWAITING_RESULT",
+          disputeNotes: [before.disputeNotes, input.resolution]
+            .filter(Boolean)
+            .join("\n\nResolution: "),
+          version: { increment: 1 },
+        },
+      });
+      await writeAudit({
+        actorUserId: auth.userId,
+        action: "match.dispute.resolve",
+        entityType: "Match",
+        entityId: updated.id,
+        beforeData: before,
+        afterData: updated,
+        reason: input.resolution,
+      });
+      return envelope(request, updated);
     },
   );
 
@@ -1271,11 +2046,37 @@ export function adminRoutes(app: FastifyInstance): void {
     async (request) => {
       const auth = requirePermission(request, "event.manage");
       const input = eventInputSchema.partial().parse(request.body);
+      const before = await prisma.event.findUniqueOrThrow({
+        where: { id: request.params.id },
+      });
+      const startsAt = input.startsAt ?? before.startsAt;
+      const endsAt = input.endsAt ?? before.endsAt;
+      if (endsAt && endsAt <= startsAt)
+        throw new HttpError(
+          422,
+          "EVENT_DATES_INVALID",
+          "Event end time must be after its start time.",
+        );
       const event = await prisma.event.update({
         where: { id: request.params.id },
-        data: compact(input),
+        data: compact({
+          ...input,
+          archivedAt:
+            input.status === "ARCHIVED"
+              ? new Date()
+              : input.status && before.status === "ARCHIVED"
+                ? null
+                : undefined,
+        }),
       });
-      await recordAudit(auth.userId, "event.update", "Event", event.id, event);
+      await writeAudit({
+        actorUserId: auth.userId,
+        action: "event.update",
+        entityType: "Event",
+        entityId: event.id,
+        beforeData: before,
+        afterData: event,
+      });
       return envelope(request, event);
     },
   );
@@ -1286,7 +2087,7 @@ export function adminRoutes(app: FastifyInstance): void {
       const auth = requirePermission(request, "event.manage");
       const event = await prisma.event.update({
         where: { id: request.params.id },
-        data: { status: "ARCHIVED" },
+        data: { status: "ARCHIVED", archivedAt: new Date() },
       });
       await recordAudit(auth.userId, "event.archive", "Event", event.id, event);
       return reply.code(204).send();
@@ -1338,7 +2139,7 @@ export function adminRoutes(app: FastifyInstance): void {
       const auth = requirePermission(request, "stream.manage");
       const stream = await prisma.liveStream.update({
         where: { id: request.params.id },
-        data: { status: "ARCHIVED" },
+        data: { status: "ARCHIVED", archivedAt: new Date() },
       });
       await recordAudit(
         auth.userId,
@@ -1394,7 +2195,7 @@ export function adminRoutes(app: FastifyInstance): void {
   app.get("/api/v1/admin/administrators", async (request) => {
     requirePermission(request, "user.manage");
     const administrators = await prisma.user.findMany({
-      where: { roles: { some: { role: { name: "Super Administrator" } } } },
+      where: { email: { not: null }, roles: { some: { gangId: null } } },
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       select: {
         id: true,
@@ -1403,7 +2204,10 @@ export function adminRoutes(app: FastifyInstance): void {
         status: true,
         lastLoginAt: true,
         createdAt: true,
-        roles: { select: { role: { select: { name: true } } } },
+        roles: {
+          where: { gangId: null },
+          select: { role: { select: { id: true, name: true } } },
+        },
       },
     });
     return envelope(request, administrators);
@@ -1411,16 +2215,17 @@ export function adminRoutes(app: FastifyInstance): void {
 
   app.post("/api/v1/admin/administrators", async (request, reply) => {
     const auth = requirePermission(request, "user.manage");
+    requirePermission(request, "role.manage");
     const input = administratorCreateSchema.parse(request.body);
     const passwordHash = await hashPassword(input.password);
-    const role = await prisma.role.findUnique({
-      where: { name: "Super Administrator" },
+    const roles = await prisma.role.findMany({
+      where: { id: { in: input.roleIds }, status: "ACTIVE" },
     });
-    if (!role)
+    if (roles.length !== input.roleIds.length)
       throw new HttpError(
-        409,
-        "ADMIN_ROLE_MISSING",
-        "Run the database seed before creating administrators.",
+        422,
+        "ADMIN_ROLE_INVALID",
+        "Select one or more active administrator roles.",
       );
     const administrator = await prisma.user.create({
       data: {
@@ -1429,7 +2234,7 @@ export function adminRoutes(app: FastifyInstance): void {
         displayName: input.displayName,
         passwordHash,
         status: "ACTIVE",
-        roles: { create: { roleId: role.id } },
+        roles: { create: input.roleIds.map((roleId) => ({ roleId })) },
       },
       select: {
         id: true,
@@ -1473,8 +2278,36 @@ export function adminRoutes(app: FastifyInstance): void {
           displayName: true,
           status: true,
           lastLoginAt: true,
+          roles: {
+            where: { gangId: null, role: { name: "Super Administrator" } },
+            select: { id: true },
+          },
         },
       });
+      if (
+        before.roles.length > 0 &&
+        input.status &&
+        input.status !== "ACTIVE"
+      ) {
+        const otherActiveSuperAdministrators = await prisma.user.count({
+          where: {
+            id: { not: before.id },
+            status: "ACTIVE",
+            roles: {
+              some: {
+                gangId: null,
+                role: { name: "Super Administrator", status: "ACTIVE" },
+              },
+            },
+          },
+        });
+        if (otherActiveSuperAdministrators === 0)
+          throw new HttpError(
+            409,
+            "FINAL_SUPER_ADMIN",
+            "Assign another active Super Administrator before suspending or archiving this account.",
+          );
+      }
       const administrator = await prisma.user.update({
         where: { id: request.params.id },
         data: compact({
@@ -1520,18 +2353,35 @@ export function adminRoutes(app: FastifyInstance): void {
           "ADMIN_SELF_DELETE",
           "You cannot remove your own administrator account.",
         );
-      const activeCount = await prisma.user.count({
-        where: {
-          status: "ACTIVE",
-          roles: { some: { role: { name: "Super Administrator" } } },
+      const target = await prisma.user.findUniqueOrThrow({
+        where: { id: request.params.id },
+        select: {
+          roles: {
+            where: { gangId: null, role: { name: "Super Administrator" } },
+            select: { id: true },
+          },
         },
       });
-      if (activeCount <= 1)
-        throw new HttpError(
-          409,
-          "LAST_ADMIN_REQUIRED",
-          "At least one active administrator must remain.",
-        );
+      if (target.roles.length > 0) {
+        const otherActiveSuperAdministrators = await prisma.user.count({
+          where: {
+            id: { not: request.params.id },
+            status: "ACTIVE",
+            roles: {
+              some: {
+                gangId: null,
+                role: { name: "Super Administrator", status: "ACTIVE" },
+              },
+            },
+          },
+        });
+        if (otherActiveSuperAdministrators === 0)
+          throw new HttpError(
+            409,
+            "FINAL_SUPER_ADMIN",
+            "Assign another active Super Administrator before archiving this account.",
+          );
+      }
       const administrator = await prisma.user.update({
         where: { id: request.params.id },
         data: {
@@ -1557,7 +2407,7 @@ export function adminRoutes(app: FastifyInstance): void {
   );
 
   app.get("/api/v1/admin/discord-audit", async (request) => {
-    requirePermission(request, "settings.manage");
+    requirePermission(request, "audit.configure");
     const config = await getDiscordAuditConfig();
     return envelope(request, {
       enabled: config.enabled,
@@ -1568,7 +2418,7 @@ export function adminRoutes(app: FastifyInstance): void {
   });
 
   app.put("/api/v1/admin/discord-audit", async (request) => {
-    const auth = requirePermission(request, "settings.manage");
+    const auth = requirePermission(request, "audit.configure");
     const input = discordWebhookSchema.parse(request.body);
     const current = await getDiscordAuditConfig();
     const webhookUrl = input.webhookUrl ?? current.webhookUrl;
@@ -1612,7 +2462,7 @@ export function adminRoutes(app: FastifyInstance): void {
   });
 
   app.post("/api/v1/admin/discord-audit/test", async (request) => {
-    const auth = requirePermission(request, "settings.manage");
+    const auth = requirePermission(request, "audit.configure");
     const input = discordWebhookTestSchema.parse(request.body ?? {});
     const current = await getDiscordAuditConfig();
     const webhookUrl = input.webhookUrl ?? current.webhookUrl;
@@ -1640,13 +2490,48 @@ export function adminRoutes(app: FastifyInstance): void {
     return envelope(request, { delivered: true });
   });
 
-  app.get("/api/v1/admin/audit-logs", async (request) => {
-    requirePermission(request, "audit.read");
-    const logs = await prisma.auditLog.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 100,
-      include: { actor: { select: { id: true, displayName: true } } },
-    });
-    return envelope(request, logs);
-  });
+  app.get<{ Querystring: Record<string, string | undefined> }>(
+    "/api/v1/admin/audit-logs",
+    async (request) => {
+      requirePermission(request, "audit.read");
+      const input = z
+        .object({
+          page: z.coerce.number().int().min(1).default(1),
+          pageSize: z.coerce.number().int().min(1).max(100).default(50),
+          actorUserId: z.string().min(20).max(40).optional(),
+          action: z.string().trim().max(128).optional(),
+          entityType: z.string().trim().max(64).optional(),
+          entityId: z.string().trim().max(30).optional(),
+          from: z.coerce.date().optional(),
+          to: z.coerce.date().optional(),
+        })
+        .parse(request.query);
+      const dateRange = compact({ gte: input.from, lte: input.to });
+      const where = compact({
+        actorUserId: input.actorUserId,
+        action: input.action ? { contains: input.action } : undefined,
+        entityType: input.entityType,
+        entityId: input.entityId,
+        createdAt:
+          input.from || input.to
+            ? (dateRange as Prisma.DateTimeFilter)
+            : undefined,
+      }) as Prisma.AuditLogWhereInput;
+      const [logs, total] = await Promise.all([
+        prisma.auditLog.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip: (input.page - 1) * input.pageSize,
+          take: input.pageSize,
+          include: { actor: { select: { id: true, displayName: true } } },
+        }),
+        prisma.auditLog.count({ where }),
+      ]);
+      return envelope(request, logs, {
+        page: input.page,
+        pageSize: input.pageSize,
+        total,
+      });
+    },
+  );
 }

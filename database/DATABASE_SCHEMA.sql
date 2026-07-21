@@ -55,6 +55,20 @@ INSERT INTO `_prisma_migrations` (
     1
 );
 
+INSERT INTO `_prisma_migrations` (
+    `id`,
+    `checksum`,
+    `finished_at`,
+    `migration_name`,
+    `applied_steps_count`
+) VALUES (
+    UUID(),
+    'de14458bd41dbe3c6742547ac6e3142911a9d8fd3e854d688a5f346df122c814',
+    CURRENT_TIMESTAMP(3),
+    '0003_complete_administration',
+    1
+);
+
 -- CreateTable
 CREATE TABLE `User` (
     `id` VARCHAR(191) NOT NULL,
@@ -93,6 +107,9 @@ CREATE TABLE `Role` (
     `id` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `description` TEXT NULL,
+    `status` ENUM('ACTIVE', 'INACTIVE', 'SUSPENDED', 'ARCHIVED') NOT NULL DEFAULT 'ACTIVE',
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `Role_name_key`(`name`),
     PRIMARY KEY (`id`)
@@ -170,6 +187,10 @@ CREATE TABLE `GangRole` (
     `public` BOOLEAN NOT NULL DEFAULT true,
     `leadership` BOOLEAN NOT NULL DEFAULT false,
     `sortOrder` INTEGER NOT NULL DEFAULT 0,
+    `status` ENUM('ACTIVE', 'INACTIVE', 'SUSPENDED', 'ARCHIVED') NOT NULL DEFAULT 'ACTIVE',
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `archivedAt` DATETIME(3) NULL,
 
     UNIQUE INDEX `GangRole_gangId_name_key`(`gangId`, `name`),
     UNIQUE INDEX `GangRole_gangId_hierarchyLevel_key`(`gangId`, `hierarchyLevel`),
@@ -184,6 +205,7 @@ CREATE TABLE `Player` (
     `displayName` VARCHAR(191) NOT NULL,
     `avatarUrl` TEXT NULL,
     `biography` TEXT NULL,
+    `externalFivemId` VARCHAR(128) NULL,
     `status` ENUM('ACTIVE', 'INACTIVE', 'SUSPENDED', 'ARCHIVED') NOT NULL DEFAULT 'ACTIVE',
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -191,6 +213,7 @@ CREATE TABLE `Player` (
 
     UNIQUE INDEX `Player_slug_key`(`slug`),
     UNIQUE INDEX `Player_userId_key`(`userId`),
+    UNIQUE INDEX `Player_externalFivemId_key`(`externalFivemId`),
     INDEX `Player_status_idx`(`status`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -247,6 +270,8 @@ CREATE TABLE `Tournament` (
     `maximumParticipants` INTEGER NOT NULL,
     `rules` LONGTEXT NULL,
     `prizeDescription` TEXT NULL,
+    `featured` BOOLEAN NOT NULL DEFAULT false,
+    `publicVisible` BOOLEAN NOT NULL DEFAULT true,
     `organizerUserId` VARCHAR(191) NOT NULL,
     `bracketVersion` INTEGER NOT NULL DEFAULT 0,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -311,6 +336,7 @@ CREATE TABLE `Match` (
     `gangAScore` INTEGER NULL,
     `gangBScore` INTEGER NULL,
     `winnerGangId` VARCHAR(191) NULL,
+    `streamId` VARCHAR(191) NULL,
     `status` ENUM('SCHEDULED', 'CHECK_IN_OPEN', 'READY', 'LIVE', 'AWAITING_RESULT', 'DISPUTED', 'COMPLETED', 'CANCELLED', 'FORFEIT') NOT NULL DEFAULT 'SCHEDULED',
     `bestOf` INTEGER NOT NULL DEFAULT 1,
     `scheduledAt` DATETIME(3) NULL,
@@ -319,6 +345,10 @@ CREATE TABLE `Match` (
     `finalizedByUserId` VARCHAR(191) NULL,
     `reopenedAt` DATETIME(3) NULL,
     `reopenReason` TEXT NULL,
+    `resultNotes` TEXT NULL,
+    `disputeReason` TEXT NULL,
+    `disputeNotes` LONGTEXT NULL,
+    `disputeAssignedUserId` VARCHAR(191) NULL,
     `version` INTEGER NOT NULL DEFAULT 0,
     `position` INTEGER NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -326,6 +356,8 @@ CREATE TABLE `Match` (
 
     INDEX `Match_tournamentId_status_scheduledAt_idx`(`tournamentId`, `status`, `scheduledAt`),
     INDEX `Match_nextMatchId_idx`(`nextMatchId`),
+    INDEX `Match_streamId_idx`(`streamId`),
+    INDEX `Match_disputeAssignedUserId_idx`(`disputeAssignedUserId`),
     UNIQUE INDEX `Match_bracketRoundId_position_key`(`bracketRoundId`, `position`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -345,6 +377,7 @@ CREATE TABLE `Event` (
     `createdByUserId` VARCHAR(191) NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
+    `archivedAt` DATETIME(3) NULL,
 
     UNIQUE INDEX `Event_slug_key`(`slug`),
     INDEX `Event_status_startsAt_idx`(`status`, `startsAt`),
@@ -373,6 +406,7 @@ CREATE TABLE `LiveStream` (
     `createdByUserId` VARCHAR(191) NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
+    `archivedAt` DATETIME(3) NULL,
 
     UNIQUE INDEX `LiveStream_slug_key`(`slug`),
     INDEX `LiveStream_status_featured_updatedAt_idx`(`status`, `featured`, `updatedAt`),
@@ -389,8 +423,11 @@ CREATE TABLE `MatchPlayerStat` (
     `kills` INTEGER NOT NULL DEFAULT 0,
     `deaths` INTEGER NOT NULL DEFAULT 0,
     `assists` INTEGER NOT NULL DEFAULT 0,
+    `score` INTEGER NOT NULL DEFAULT 0,
     `roundsPlayed` INTEGER NOT NULL DEFAULT 0,
     `mvp` BOOLEAN NOT NULL DEFAULT false,
+    `played` BOOLEAN NOT NULL DEFAULT true,
+    `notes` TEXT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -497,7 +534,7 @@ CREATE TABLE `MediaAsset` (
     `size` INTEGER NOT NULL,
     `width` INTEGER NULL,
     `height` INTEGER NULL,
-    `status` ENUM('PENDING', 'APPROVED', 'REJECTED', 'DELETED') NOT NULL DEFAULT 'PENDING',
+    `status` ENUM('PENDING', 'APPROVED', 'REJECTED', 'ARCHIVED', 'DELETED') NOT NULL DEFAULT 'PENDING',
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `reviewedAt` DATETIME(3) NULL,
     `reviewedByUserId` VARCHAR(191) NULL,
@@ -628,6 +665,12 @@ ALTER TABLE `Match` ADD CONSTRAINT `Match_winnerGangId_fkey` FOREIGN KEY (`winne
 
 -- AddForeignKey
 ALTER TABLE `Match` ADD CONSTRAINT `Match_finalizedByUserId_fkey` FOREIGN KEY (`finalizedByUserId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Match` ADD CONSTRAINT `Match_streamId_fkey` FOREIGN KEY (`streamId`) REFERENCES `LiveStream`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Match` ADD CONSTRAINT `Match_disputeAssignedUserId_fkey` FOREIGN KEY (`disputeAssignedUserId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Event` ADD CONSTRAINT `Event_createdByUserId_fkey` FOREIGN KEY (`createdByUserId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

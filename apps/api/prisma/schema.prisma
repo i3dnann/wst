@@ -82,6 +82,7 @@ enum MediaStatus {
   PENDING
   APPROVED
   REJECTED
+  ARCHIVED
   DELETED
 }
 
@@ -124,6 +125,7 @@ model User {
   player           Player?
   organized        Tournament[]      @relation("TournamentOrganizer")
   finalizedMatches Match[]           @relation("MatchFinalizer")
+  assignedDisputes Match[]           @relation("MatchDisputeAssignee")
   awardsGranted    MvpAward[]        @relation("AwardGranter")
   rankingEvents    RankingEvent[]    @relation("RankingEventCreator")
   media            MediaAsset[]      @relation("MediaUploader")
@@ -154,6 +156,9 @@ model Role {
   id          String           @id @default(cuid())
   name        String           @unique
   description String?          @db.Text
+  status      RecordStatus     @default(ACTIVE)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   users       UserRole[]
   permissions RolePermission[]
 }
@@ -235,6 +240,10 @@ model GangRole {
   public         Boolean          @default(true)
   leadership     Boolean          @default(false)
   sortOrder      Int              @default(0)
+  status         RecordStatus     @default(ACTIVE)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  archivedAt     DateTime?
   gang           Gang             @relation(fields: [gangId], references: [id], onDelete: Cascade)
   memberships    GangMembership[]
 
@@ -243,22 +252,23 @@ model GangRole {
 }
 
 model Player {
-  id          String             @id @default(cuid())
-  slug        String             @unique
-  userId      String?            @unique
-  displayName String
-  avatarUrl   String?            @db.Text
-  biography   String?            @db.Text
-  status      RecordStatus       @default(ACTIVE)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  archivedAt  DateTime?
-  user        User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
-  memberships GangMembership[]
-  rosters     TournamentRoster[]
-  matchStats  MatchPlayerStat[]
-  awards      MvpAward[]
-  seasonStats PlayerSeasonStat[]
+  id              String             @id @default(cuid())
+  slug            String             @unique
+  userId          String?            @unique
+  displayName     String
+  avatarUrl       String?            @db.Text
+  biography       String?            @db.Text
+  externalFivemId String?            @unique @db.VarChar(128)
+  status          RecordStatus       @default(ACTIVE)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  archivedAt      DateTime?
+  user            User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  memberships     GangMembership[]
+  rosters         TournamentRoster[]
+  matchStats      MatchPlayerStat[]
+  awards          MvpAward[]
+  seasonStats     PlayerSeasonStat[]
 
   @@index([status])
 }
@@ -317,6 +327,8 @@ model Tournament {
   maximumParticipants Int
   rules               String?                 @db.LongText
   prizeDescription    String?                 @db.Text
+  featured            Boolean                 @default(false)
+  publicVisible       Boolean                 @default(true)
   organizerUserId     String
   bracketVersion      Int                     @default(0)
   createdAt           DateTime                @default(now())
@@ -376,44 +388,53 @@ model BracketRound {
 }
 
 model Match {
-  id                String            @id @default(cuid())
-  tournamentId      String?
-  bracketRoundId    String?
-  nextMatchId       String?
-  loserNextMatchId  String?
-  gangAId           String?
-  gangBId           String?
-  gangAScore        Int?
-  gangBScore        Int?
-  winnerGangId      String?
-  status            MatchStatus       @default(SCHEDULED)
-  bestOf            Int               @default(1)
-  scheduledAt       DateTime?
-  startedAt         DateTime?
-  finalizedAt       DateTime?
-  finalizedByUserId String?
-  reopenedAt        DateTime?
-  reopenReason      String?           @db.Text
-  version           Int               @default(0)
-  position          Int?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  tournament        Tournament?       @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
-  bracketRound      BracketRound?     @relation(fields: [bracketRoundId], references: [id], onDelete: SetNull)
-  nextMatch         Match?            @relation("WinnerProgression", fields: [nextMatchId], references: [id], onDelete: SetNull)
-  previousMatches   Match[]           @relation("WinnerProgression")
-  loserNextMatch    Match?            @relation("LoserProgression", fields: [loserNextMatchId], references: [id], onDelete: SetNull)
-  loserPrevious     Match[]           @relation("LoserProgression")
-  gangA             Gang?             @relation("GangA", fields: [gangAId], references: [id], onDelete: Restrict)
-  gangB             Gang?             @relation("GangB", fields: [gangBId], references: [id], onDelete: Restrict)
-  winnerGang        Gang?             @relation("WinnerGang", fields: [winnerGangId], references: [id], onDelete: Restrict)
-  finalizedBy       User?             @relation("MatchFinalizer", fields: [finalizedByUserId], references: [id], onDelete: Restrict)
-  playerStats       MatchPlayerStat[]
-  awards            MvpAward[]
+  id                    String            @id @default(cuid())
+  tournamentId          String?
+  bracketRoundId        String?
+  nextMatchId           String?
+  loserNextMatchId      String?
+  gangAId               String?
+  gangBId               String?
+  gangAScore            Int?
+  gangBScore            Int?
+  winnerGangId          String?
+  streamId              String?
+  status                MatchStatus       @default(SCHEDULED)
+  bestOf                Int               @default(1)
+  scheduledAt           DateTime?
+  startedAt             DateTime?
+  finalizedAt           DateTime?
+  finalizedByUserId     String?
+  reopenedAt            DateTime?
+  reopenReason          String?           @db.Text
+  resultNotes           String?           @db.Text
+  disputeReason         String?           @db.Text
+  disputeNotes          String?           @db.LongText
+  disputeAssignedUserId String?
+  version               Int               @default(0)
+  position              Int?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  tournament            Tournament?       @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  bracketRound          BracketRound?     @relation(fields: [bracketRoundId], references: [id], onDelete: SetNull)
+  nextMatch             Match?            @relation("WinnerProgression", fields: [nextMatchId], references: [id], onDelete: SetNull)
+  previousMatches       Match[]           @relation("WinnerProgression")
+  loserNextMatch        Match?            @relation("LoserProgression", fields: [loserNextMatchId], references: [id], onDelete: SetNull)
+  loserPrevious         Match[]           @relation("LoserProgression")
+  gangA                 Gang?             @relation("GangA", fields: [gangAId], references: [id], onDelete: Restrict)
+  gangB                 Gang?             @relation("GangB", fields: [gangBId], references: [id], onDelete: Restrict)
+  winnerGang            Gang?             @relation("WinnerGang", fields: [winnerGangId], references: [id], onDelete: Restrict)
+  finalizedBy           User?             @relation("MatchFinalizer", fields: [finalizedByUserId], references: [id], onDelete: Restrict)
+  disputeAssignedTo     User?             @relation("MatchDisputeAssignee", fields: [disputeAssignedUserId], references: [id], onDelete: SetNull)
+  stream                LiveStream?       @relation(fields: [streamId], references: [id], onDelete: SetNull)
+  playerStats           MatchPlayerStat[]
+  awards                MvpAward[]
 
   @@unique([bracketRoundId, position])
   @@index([tournamentId, status, scheduledAt])
   @@index([nextMatchId])
+  @@index([streamId])
+  @@index([disputeAssignedUserId])
 }
 
 model Event {
@@ -430,6 +451,7 @@ model Event {
   createdByUserId String
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+  archivedAt      DateTime?
   createdBy       User        @relation("EventCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
 
   @@index([status, startsAt])
@@ -456,8 +478,10 @@ model LiveStream {
   createdByUserId   String
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
+  archivedAt        DateTime?
   tournament        Tournament?    @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
   createdBy         User           @relation("StreamCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  matches           Match[]
 
   @@index([status, featured, updatedAt])
   @@index([tournamentId])
@@ -471,8 +495,11 @@ model MatchPlayerStat {
   kills        Int      @default(0)
   deaths       Int      @default(0)
   assists      Int      @default(0)
+  score        Int      @default(0)
   roundsPlayed Int      @default(0)
   mvp          Boolean  @default(false)
+  played       Boolean  @default(true)
+  notes        String?  @db.Text
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   match        Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { gangListQuerySchema } from "@mafia/shared";
+import { gangListQuerySchema, websiteSettingsSchema } from "@mafia/shared";
 import { envelope } from "../lib/envelope.js";
 import { HttpError } from "../lib/http-error.js";
 import { prisma } from "../lib/prisma.js";
@@ -27,6 +27,8 @@ function toGangListItem(gang: Awaited<ReturnType<typeof findGangs>>[number]) {
     verified: gang.verified,
     featured: gang.featured,
     currentRank: gang.currentRank,
+    previousRank: gang.previousRank,
+    peakRank: gang.peakRank,
     memberCount: gang.memberships.length,
     matchesPlayed: matches,
     wins: stat?.wins ?? 0,
@@ -35,6 +37,9 @@ function toGangListItem(gang: Awaited<ReturnType<typeof findGangs>>[number]) {
     winRate:
       matches > 0 ? Math.round(((stat?.wins ?? 0) / matches) * 1000) / 10 : 0,
     trophies: gang.awards.length,
+    points: stat?.points ?? 0,
+    streak: stat?.streak ?? 0,
+    killDifference: (stat?.kills ?? 0) - (stat?.deaths ?? 0),
   };
 }
 
@@ -208,7 +213,7 @@ export function publicRoutes(app: FastifyInstance): void {
 
   app.get("/api/v1/tournaments", async (request) => {
     const tournaments = await prisma.tournament.findMany({
-      where: { status: { not: "ARCHIVED" } },
+      where: { status: { not: "ARCHIVED" }, publicVisible: true },
       orderBy: { startAt: "desc" },
       include: {
         _count: { select: { participants: true } },
@@ -226,7 +231,11 @@ export function publicRoutes(app: FastifyInstance): void {
     "/api/v1/tournaments/:slug",
     async (request) => {
       const tournament = await prisma.tournament.findFirst({
-        where: { slug: request.params.slug, status: { not: "ARCHIVED" } },
+        where: {
+          slug: request.params.slug,
+          status: { not: "ARCHIVED" },
+          publicVisible: true,
+        },
         include: {
           organizer: {
             select: { id: true, displayName: true, avatarUrl: true },
@@ -249,8 +258,12 @@ export function publicRoutes(app: FastifyInstance): void {
   app.get<{ Params: { slug: string } }>(
     "/api/v1/tournaments/:slug/bracket",
     async (request) => {
-      const tournament = await prisma.tournament.findUnique({
-        where: { slug: request.params.slug },
+      const tournament = await prisma.tournament.findFirst({
+        where: {
+          slug: request.params.slug,
+          status: { not: "ARCHIVED" },
+          publicVisible: true,
+        },
         select: { id: true, bracketVersion: true },
       });
       if (!tournament)
@@ -280,6 +293,21 @@ export function publicRoutes(app: FastifyInstance): void {
       take: 100,
     });
     return envelope(request, rankings.map(toGangListItem));
+  });
+
+  app.get("/api/v1/rankings/players", async (request) => {
+    const season = await prisma.season.findFirst({
+      where: { status: "ACTIVE" },
+      orderBy: { startsAt: "desc" },
+    });
+    if (!season) return envelope(request, []);
+    const rankings = await prisma.playerSeasonStat.findMany({
+      where: { seasonId: season.id, player: { status: "ACTIVE" } },
+      orderBy: [{ currentRank: "asc" }, { points: "desc" }],
+      take: 100,
+      include: { player: true },
+    });
+    return envelope(request, rankings);
   });
 
   app.get("/api/v1/matches", async (request) => {
@@ -347,5 +375,17 @@ export function publicRoutes(app: FastifyInstance): void {
       },
     });
     return envelope(request, seasons);
+  });
+
+  app.get("/api/v1/public/settings", async (request) => {
+    const setting = await prisma.platformSetting.findUnique({
+      where: { key: "website.structured" },
+      select: { value: true, updatedAt: true },
+    });
+    const parsed = websiteSettingsSchema.safeParse(setting?.value);
+    return envelope(request, {
+      value: parsed.success ? parsed.data : null,
+      updatedAt: setting?.updatedAt ?? null,
+    });
   });
 }
