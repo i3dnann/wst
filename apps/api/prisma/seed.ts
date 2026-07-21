@@ -1,42 +1,11 @@
 import { PrismaClient } from "@prisma/client";
-import { permissions } from "@mafia/shared";
 import { hashPassword } from "../src/lib/password.js";
+import { synchronizePermissionCatalog } from "../src/lib/permission-catalog.js";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const permissionRecords = [];
-  for (const [name, key] of Object.entries(permissions)) {
-    permissionRecords.push(
-      await prisma.permission.upsert({
-        where: { key },
-        update: {},
-        create: { key, description: `World Star permission: ${name}` },
-      }),
-    );
-  }
-
-  const role = await prisma.role.upsert({
-    where: { name: "Super Administrator" },
-    update: { description: "Full manual control of published World Star data" },
-    create: {
-      name: "Super Administrator",
-      description: "Full manual control of published World Star data",
-    },
-  });
-
-  for (const permission of permissionRecords) {
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permissionId: {
-          roleId: role.id,
-          permissionId: permission.id,
-        },
-      },
-      update: {},
-      create: { roleId: role.id, permissionId: permission.id },
-    });
-  }
+  const { role } = await synchronizePermissionCatalog(prisma);
 
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;

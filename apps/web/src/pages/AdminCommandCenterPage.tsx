@@ -32,7 +32,7 @@ import {
   type PublicLiveStream,
 } from "@mafia/shared";
 import { Button } from "@/components/ui/button";
-import { PageSkeleton } from "@/components/data/StatusState";
+import { ErrorState, PageSkeleton } from "@/components/data/StatusState";
 import {
   api,
   type AdminOverviewData,
@@ -230,6 +230,37 @@ const kindLabels: Record<RecordKind, { singular: string; plural: string }> = {
   event: { singular: "Event", plural: "Events" },
 };
 
+const recordPermissionKeys: Record<
+  RecordKind,
+  { create: string; update: string; remove: string }
+> = {
+  gang: {
+    create: "gang.create",
+    update: "gang.update.any",
+    remove: "gang.archive",
+  },
+  player: {
+    create: "player.create",
+    update: "player.update",
+    remove: "player.archive",
+  },
+  tournament: {
+    create: "tournament.create",
+    update: "tournament.update",
+    remove: "tournament.archive",
+  },
+  match: {
+    create: "match.create",
+    update: "match.update",
+    remove: "match.update",
+  },
+  event: {
+    create: "event.manage",
+    update: "event.manage",
+    remove: "event.manage",
+  },
+};
+
 const recordStatuses: string[] = [...sharedRecordStatuses];
 const tournamentStatuses: string[] = [...sharedTournamentStatuses];
 const matchStatuses: string[] = [...sharedMatchStatuses];
@@ -253,6 +284,10 @@ function dateTimeInput(value: unknown): string {
 
 function optional(value: string): string | undefined {
   return value.trim() ? value.trim() : undefined;
+}
+
+function showMutationError(error: Error): void {
+  toast.error(error.message || "The action could not be completed.");
 }
 
 function slugify(value: string): string {
@@ -461,7 +496,9 @@ function payloadFor(kind: RecordKind, values: FormValues) {
   if (kind === "gang")
     return {
       name: String(values.name ?? ""),
-      slug: String(values.slug ?? ""),
+      slug:
+        optional(String(values.slug ?? "")) ??
+        slugify(String(values.name ?? "")),
       tag: String(values.tag ?? ""),
       motto: optional(String(values.motto ?? "")),
       description: optional(String(values.description ?? "")),
@@ -480,7 +517,9 @@ function payloadFor(kind: RecordKind, values: FormValues) {
   if (kind === "player")
     return {
       displayName: String(values.displayName ?? ""),
-      slug: String(values.slug ?? ""),
+      slug:
+        optional(String(values.slug ?? "")) ??
+        slugify(String(values.displayName ?? "")),
       biography: optional(String(values.biography ?? "")),
       avatarUrl: optional(String(values.avatarUrl ?? "")),
       externalFivemId: optional(String(values.externalFivemId ?? "")),
@@ -489,7 +528,9 @@ function payloadFor(kind: RecordKind, values: FormValues) {
   if (kind === "tournament")
     return {
       name: String(values.name ?? ""),
-      slug: String(values.slug ?? ""),
+      slug:
+        optional(String(values.slug ?? "")) ??
+        slugify(String(values.name ?? "")),
       description: optional(String(values.description ?? "")),
       bannerUrl: optional(String(values.bannerUrl ?? "")),
       format: String(values.format),
@@ -686,11 +727,10 @@ function RecordEditorFields({
           required
         />
         <Field
-          label="URL slug"
+          label="URL slug (auto if blank)"
           name="slug"
           values={values}
           setValue={setValue}
-          required
         />
         <Field
           label="Logo URL / profile image"
@@ -807,11 +847,10 @@ function RecordEditorFields({
           full
         />
         <Field
-          label="URL slug"
+          label="URL slug (auto if blank)"
           name="slug"
           values={values}
           setValue={setValue}
-          required
           full
         />
         <Field
@@ -864,11 +903,10 @@ function RecordEditorFields({
           full
         />
         <Field
-          label="URL slug"
+          label="URL slug (auto if blank)"
           name="slug"
           values={values}
           setValue={setValue}
-          required
         />
         <Field
           label="Participant capacity"
@@ -1143,9 +1181,20 @@ function RecordEditorFields({
   );
 }
 
-function RecordsManager({ kind }: { kind: RecordKind }) {
+function RecordsManager({
+  kind,
+  permissions,
+}: {
+  kind: RecordKind;
+  permissions: readonly string[];
+}) {
   const queryClient = useQueryClient();
   const labels = kindLabels[kind];
+  const permissionSet = new Set(permissions);
+  const permissionKeys = recordPermissionKeys[kind];
+  const canCreate = permissionSet.has(permissionKeys.create);
+  const canUpdate = permissionSet.has(permissionKeys.update);
+  const canRemove = permissionSet.has(permissionKeys.remove);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<AdminRecord | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -1232,7 +1281,7 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
       setValues(blankValues(kind));
       void queryClient.invalidateQueries();
     },
-    onError: (error) => toast.error(error.message),
+    onError: showMutationError,
   });
   const remove = useMutation({
     mutationFn: async (record: AdminRecord) => {
@@ -1259,9 +1308,7 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
       setEditorOpen(false);
       void queryClient.invalidateQueries();
     },
-    onError: (error) => {
-      toast.error(error.message);
-    },
+    onError: showMutationError,
   });
   const openNew = () => {
     setSelected(null);
@@ -1294,10 +1341,22 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
             record. Removed records are hidden after refresh.
           </p>
         </div>
-        <Button onClick={openNew}>
-          <Plus /> Add {labels.singular}
-        </Button>
+        {canCreate ? (
+          <Button onClick={openNew}>
+            <Plus /> Add {labels.singular}
+          </Button>
+        ) : (
+          <span className="admin-read-only-badge">Read-only access</span>
+        )}
       </header>
+      {records.isError ? (
+        <ErrorState
+          compact
+          title={`${labels.plural} could not load`}
+          message={records.error.message}
+          retry={() => void records.refetch()}
+        />
+      ) : null}
       <div className="admin-table-toolbar">
         <label>
           <Search />
@@ -1324,28 +1383,33 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
               <tr key={record.id}>
                 <RecordTableCells kind={kind} record={record} />
                 <td className="admin-row-actions">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(record)}
-                    aria-label={`Edit ${labels.singular}`}
-                  >
-                    <Pencil />
-                  </button>
-                  <button
-                    type="button"
-                    className="danger"
-                    onClick={() => setConfirming(record)}
-                    aria-label={`Remove ${labels.singular}`}
-                  >
-                    <Trash2 />
-                  </button>
+                  {canUpdate ? (
+                    <button
+                      type="button"
+                      onClick={() => openEdit(record)}
+                      aria-label={`Edit ${labels.singular}`}
+                    >
+                      <Pencil />
+                    </button>
+                  ) : null}
+                  {canRemove ? (
+                    <button
+                      type="button"
+                      className="danger"
+                      onClick={() => setConfirming(record)}
+                      aria-label={`Remove ${labels.singular}`}
+                    >
+                      <Trash2 />
+                    </button>
+                  ) : null}
+                  {!canUpdate && !canRemove ? <span>Read only</span> : null}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {!visible.length ? (
+      {!visible.length && !records.isError ? (
         <div className="gold-empty-copy compact">
           <Shield />
           <strong>No {labels.plural.toLowerCase()} found</strong>
@@ -1394,10 +1458,15 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
                 <p className="form-error full-width">{save.error.message}</p>
               ) : null}
               <div className="admin-drawer-actions full-width">
-                <Button type="submit" disabled={save.isPending}>
+                <Button
+                  type="submit"
+                  disabled={
+                    save.isPending || (selected ? !canUpdate : !canCreate)
+                  }
+                >
                   {save.isPending ? "Saving…" : "Save Changes"}
                 </Button>
-                {selected ? (
+                {selected && canRemove ? (
                   <Button
                     type="button"
                     variant="outline"
@@ -1518,7 +1587,9 @@ function StreamManager() {
   }, [selected, isNew]);
   const payload = () => ({
     streamerName: String(values.streamerName ?? ""),
-    slug: String(values.slug ?? ""),
+    slug:
+      optional(String(values.slug ?? "")) ??
+      slugify(String(values.streamerName ?? "")),
     platform: String(values.platform),
     channelUrl: String(values.channelUrl ?? ""),
     embedUrl: optional(String(values.embedUrl ?? "")),
@@ -1540,6 +1611,7 @@ function StreamManager() {
       setSelectedId(result.data.id);
       void queryClient.invalidateQueries();
     },
+    onError: showMutationError,
   });
   const refresh = useMutation({
     mutationFn: async (id?: string) => {
@@ -1550,6 +1622,7 @@ function StreamManager() {
       toast.success("Stream status refreshed.");
       void queryClient.invalidateQueries();
     },
+    onError: showMutationError,
   });
   const archive = useMutation({
     mutationFn: api.archiveLiveStream,
@@ -1558,6 +1631,7 @@ function StreamManager() {
       setSelectedId(null);
       void queryClient.invalidateQueries();
     },
+    onError: showMutationError,
   });
   const previewUrl = streamEmbedUrl(selected);
   return (
@@ -1593,6 +1667,20 @@ function StreamManager() {
           </Button>
         </div>
       </header>
+      {streams.isError || tournaments.isError ? (
+        <ErrorState
+          compact
+          title="Stream manager could not load"
+          message={
+            (streams.error ?? tournaments.error)?.message ??
+            "The stream records could not be loaded."
+          }
+          retry={() => {
+            void streams.refetch();
+            void tournaments.refetch();
+          }}
+        />
+      ) : null}
       <div className="stream-admin-grid">
         <div className="stream-admin-list">
           {rows.map((stream) => (
@@ -1689,11 +1777,10 @@ function StreamManager() {
             required
           />
           <Field
-            label="URL slug"
+            label="URL slug (auto if blank)"
             name="slug"
             values={values}
             setValue={setValue}
-            required
           />
           <SelectField
             label="Platform"
@@ -1866,6 +1953,7 @@ function AdministratorManager({
       setValues({ status: "ACTIVE" });
       void queryClient.invalidateQueries();
     },
+    onError: showMutationError,
   });
   const remove = useMutation({
     mutationFn: api.removeAdministrator,
@@ -1873,6 +1961,7 @@ function AdministratorManager({
       toast.success("Administrator removed.");
       void queryClient.invalidateQueries();
     },
+    onError: showMutationError,
   });
   const edit = (id: string) => {
     const item = administratorRows.find((entry) => entry.id === id);
@@ -1903,6 +1992,20 @@ function AdministratorManager({
           <Plus /> Add Administrator
         </Button>
       </header>
+      {administrators.isError || roles.isError ? (
+        <ErrorState
+          compact
+          title="Administrator records could not load"
+          message={
+            (administrators.error ?? roles.error)?.message ??
+            "The administrator records could not be loaded."
+          }
+          retry={() => {
+            void administrators.refetch();
+            if (canManageRoles) void roles.refetch();
+          }}
+        />
+      ) : null}
       <div className="administrator-admin-grid">
         <div className="admin-table-scroll">
           <table className="admin-data-table">
@@ -2087,10 +2190,12 @@ function AuditManager({ integration = false }: { integration?: boolean }) {
       setWebhookUrl("");
       void queryClient.invalidateQueries({ queryKey: ["discord-audit"] });
     },
+    onError: showMutationError,
   });
   const test = useMutation({
     mutationFn: () => api.testDiscordAuditWebhook(optional(webhookUrl)),
     onSuccess: () => toast.success("Test log delivered to Discord."),
+    onError: showMutationError,
   });
   const auditRows = asArray<AuditRecord>(logs.data?.data);
   const toggleCategory = (category: string) =>
@@ -2107,6 +2212,24 @@ function AuditManager({ integration = false }: { integration?: boolean }) {
           <p>See exactly who created, changed, or removed every record.</p>
         </div>
       </header>
+      {logs.isError || settings.isError ? (
+        <ErrorState
+          compact
+          title={
+            integration
+              ? "Discord integration could not load"
+              : "Audit log could not load"
+          }
+          message={
+            (logs.error ?? settings.error)?.message ??
+            "The audit records could not be loaded."
+          }
+          retry={() => {
+            void logs.refetch();
+            if (integration) void settings.refetch();
+          }}
+        />
+      ) : null}
       <div
         className={
           integration
@@ -2390,6 +2513,14 @@ function Overview() {
     disputedMatches: [Gavel, "Disputed matches"],
     pendingMedia: [Eye, "Pending media"],
   } as const;
+  if (overview.isError)
+    return (
+      <ErrorState
+        title="Admin overview could not load"
+        message={overview.error.message}
+        retry={() => void overview.refetch()}
+      />
+    );
   return (
     <>
       <section className="control-metrics">
@@ -2576,7 +2707,10 @@ export default function AdminCommandCenterPage() {
           effectiveSection === "tournament" ||
           effectiveSection === "match" ||
           effectiveSection === "event" ? (
-            <RecordsManager kind={effectiveSection} />
+            <RecordsManager
+              kind={effectiveSection}
+              permissions={grantedPermissions}
+            />
           ) : null}
           {effectiveSection === "gang-organization" ? (
             <GangOrganizationManager />

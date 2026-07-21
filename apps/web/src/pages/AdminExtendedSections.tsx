@@ -16,6 +16,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ErrorState } from "@/components/data/StatusState";
 import { Button } from "@/components/ui/button";
 import { ApiError, api } from "@/lib/api";
 
@@ -59,6 +60,11 @@ function message(error: Error) {
   if (error instanceof ApiError && error.requestId)
     return `${error.message} (request ${error.requestId})`;
   return error.message;
+}
+
+function queryErrorMessage(...errors: unknown[]) {
+  const error = errors.find((value): value is Error => value instanceof Error);
+  return error ? message(error) : "The admin data could not be loaded.";
 }
 
 function date(value: unknown): string {
@@ -219,6 +225,22 @@ export function GangOrganizationManager() {
           <RefreshCw /> Refresh
         </Button>
       </header>
+      {gangs.isError ||
+      players.isError ||
+      roles.isError ||
+      memberships.isError ? (
+        <ErrorState
+          compact
+          title="Gang organization could not load"
+          message={queryErrorMessage(
+            gangs.error,
+            players.error,
+            roles.error,
+            memberships.error,
+          )}
+          retry={() => void refresh()}
+        />
+      ) : null}
       <label className="admin-wide-select">
         Gang
         <select
@@ -651,6 +673,14 @@ export function SeasonsManager() {
           </p>
         </div>
       </header>
+      {seasons.isError ? (
+        <ErrorState
+          compact
+          title="Seasons could not load"
+          message={queryErrorMessage(seasons.error)}
+          retry={() => void seasons.refetch()}
+        />
+      ) : null}
       <form
         className="admin-form-grid admin-card"
         onSubmit={(event) => {
@@ -851,6 +881,14 @@ export function RolesPermissionsManager() {
           </Button>
         </form>
       </header>
+      {data.isError ? (
+        <ErrorState
+          compact
+          title="Roles and permissions could not load"
+          message={queryErrorMessage(data.error)}
+          retry={() => void data.refetch()}
+        />
+      ) : null}
       <div className="permission-role-grid">
         {((data.data?.data.roles ?? []) as Row[]).map((role) => {
           const assignments = Array.isArray(role.permissions)
@@ -1111,6 +1149,14 @@ export function WebsiteSettingsManager() {
           <Save /> Save Settings
         </Button>
       </header>
+      {settings.isError ? (
+        <ErrorState
+          compact
+          title="Website settings could not load"
+          message={queryErrorMessage(settings.error)}
+          retry={() => void settings.refetch()}
+        />
+      ) : null}
       <div className="settings-card-grid">
         <section className="admin-card admin-form-grid">
           <h3 className="full-width">General</h3>
@@ -1365,6 +1411,14 @@ export function MediaManager() {
           </p>
         </div>
       </header>
+      {media.isError ? (
+        <ErrorState
+          compact
+          title="Media library could not load"
+          message={queryErrorMessage(media.error)}
+          retry={() => void media.refetch()}
+        />
+      ) : null}
       <form
         className="media-upload-card admin-card"
         onSubmit={(event) => {
@@ -1621,6 +1675,22 @@ export function ResultsDisputesManager() {
           </p>
         </div>
       </header>
+      {matches.isError || players.isError || assignees.isError ? (
+        <ErrorState
+          compact
+          title="Results and disputes could not load"
+          message={queryErrorMessage(
+            matches.error,
+            players.error,
+            assignees.error,
+          )}
+          retry={() => {
+            void matches.refetch();
+            void players.refetch();
+            void assignees.refetch();
+          }}
+        />
+      ) : null}
       <div className="admin-table-scroll">
         <table className="admin-data-table">
           <thead>

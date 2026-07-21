@@ -9208,6 +9208,20 @@ textarea:focus,
   color: #f7f7f8 !important;
 }
 
+.admin-read-only-badge {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  padding: 0 14px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 6px;
+  background: #101014;
+  color: #a4a4ad;
+  font: 700 11px/1 var(--ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 /* Screenshot QA pass: lock the public shell to the crimson system. */
 .site-header {
   min-height: 72px !important;

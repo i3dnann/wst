@@ -23,9 +23,13 @@ export function EmptyState({
 export function ErrorState({
   retry,
   compact = false,
+  title = "Live records unavailable",
+  message = "The API is unreachable or the database is not configured yet.",
 }: {
   retry?: () => void;
   compact?: boolean;
+  title?: string;
+  message?: string;
 }) {
   return (
     <div
@@ -36,8 +40,8 @@ export function ErrorState({
     >
       <AlertTriangle aria-hidden="true" />
       <div>
-        <strong>Live records unavailable</strong>
-        <p>The API is unreachable or the database is not configured yet.</p>
+        <strong>{title}</strong>
+        <p>{message}</p>
       </div>
       {retry ? (
         <Button variant="outline" size="sm" onClick={retry}>

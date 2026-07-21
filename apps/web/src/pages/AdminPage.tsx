@@ -25,7 +25,7 @@ import {
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { PageSkeleton } from "@/components/data/StatusState";
+import { ErrorState, PageSkeleton } from "@/components/data/StatusState";
 import { api } from "@/lib/api";
 
 type AdminSection =
@@ -590,6 +590,23 @@ export function BracketManager() {
         </div>
         <Trophy />
       </header>
+      {tournaments.isError || gangs.isError || detail.isError ? (
+        <ErrorState
+          compact
+          title="Bracket data could not load"
+          message={
+            tournaments.error?.message ??
+            gangs.error?.message ??
+            detail.error?.message ??
+            "The bracket data could not be loaded."
+          }
+          retry={() => {
+            void tournaments.refetch();
+            void gangs.refetch();
+            if (selectedId) void detail.refetch();
+          }}
+        />
+      ) : null}
       <div className="bracket-admin-toolbar">
         <label>
           Tournament

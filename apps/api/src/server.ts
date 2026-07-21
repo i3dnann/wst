@@ -1,6 +1,7 @@
 import "dotenv/config";
 import Fastify from "fastify";
 import { env } from "./lib/env.js";
+import { synchronizePermissionCatalog } from "./lib/permission-catalog.js";
 import { prisma } from "./lib/prisma.js";
 import { registerErrorHandler } from "./plugins/error-handler.js";
 import { registerSecurity } from "./plugins/security.js";
@@ -28,6 +29,15 @@ authRoutes(app);
 adminRoutes(app);
 adminExtendedRoutes(app);
 mediaRoutes(app);
+
+const permissionCatalog = await synchronizePermissionCatalog(prisma);
+app.log.info(
+  {
+    roleId: permissionCatalog.role.id,
+    permissionCount: permissionCatalog.permissionCount,
+  },
+  "authorization catalog synchronized",
+);
 
 const close = async (signal: string) => {
   app.log.info({ signal }, "shutting down");
