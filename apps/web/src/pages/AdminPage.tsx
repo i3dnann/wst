@@ -1331,7 +1331,7 @@ export default function AdminPage() {
     <div className="control-shell gold-control-shell">
       <aside className="control-sidebar">
         <div className="control-brand">
-          <img src="/assets/wst-gold/wst-gold.png" alt="World Star" />
+          <img src="/assets/wst/wst-mafia-mark.svg" alt="World Star" />
           <span>
             <strong>WORLD STAR</strong>
             <small>Admin Command Center</small>

@@ -5599,6 +5599,511 @@ textarea:focus-visible {
   }
 }
 
+/* Mafia noir palette lock: replaces the interim cyan/esports skin everywhere. */
+:root {
+  --background: #050507;
+  --foreground: #f4efe5;
+  --card: #0d0d12;
+  --card-foreground: #f4efe5;
+  --popover: #0d0d12;
+  --popover-foreground: #f4efe5;
+  --primary: #9f1d2f;
+  --primary-foreground: #fff8ee;
+  --secondary: #171217;
+  --secondary-foreground: #f4efe5;
+  --muted: #151318;
+  --muted-foreground: #a3a3a3;
+  --accent: #d7c7a1;
+  --accent-foreground: #050507;
+  --border: rgb(244 239 229 / 0.14);
+  --input: rgb(244 239 229 / 0.14);
+  --ring: #9f1d2f;
+  --cyan: #9f1d2f;
+  --cyan-strong: #b32636;
+  --cyan-dim: #4a0f18;
+  --neo-bg: #050507;
+  --neo-bg-2: #0d0d12;
+  --neo-panel: rgb(13 13 18 / 0.9);
+  --neo-panel-strong: rgb(18 16 20 / 0.96);
+  --neo-line: rgb(244 239 229 / 0.14);
+  --neo-line-strong: rgb(159 29 47 / 0.5);
+  --neo-cyan: #9f1d2f;
+  --neo-cyan-strong: #b32636;
+  --neo-violet: #d7c7a1;
+  --neo-emerald: #7f1d1d;
+  --neo-rose: #ef4444;
+  --neo-text: #f4efe5;
+  --neo-muted: #a3a3a3;
+  --neo-faint: #71717a;
+  --display: "Bebas Neue", "Inter", "Segoe UI", system-ui, sans-serif;
+  --ui: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+body {
+  background:
+    radial-gradient(circle at 16% 0%, rgb(159 29 47 / 0.2), transparent 30rem),
+    radial-gradient(circle at 84% 6%, rgb(215 199 161 / 0.09), transparent 28rem),
+    radial-gradient(circle at 50% 100%, rgb(74 15 24 / 0.24), transparent 34rem),
+    linear-gradient(180deg, #050507 0%, #09090d 44%, #050507 100%);
+  color: var(--neo-text);
+}
+
+body::before {
+  background-image:
+    linear-gradient(rgb(244 239 229 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(244 239 229 / 0.035) 1px, transparent 1px);
+}
+
+h1,
+h2,
+h3,
+.wst-brand,
+.control-brand,
+.page-heading h1,
+.gold-hero h1,
+.gold-section-heading h2,
+.tournament-gold-header h1,
+.admin-dataset-heading h2,
+.admin-manager-panel h2,
+.control-heading h1 {
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: 0.015em;
+}
+
+[data-slot="button"] {
+  border-color: rgb(215 199 161 / 0.22);
+  background: linear-gradient(135deg, #4a0f18, #9f1d2f);
+  color: #fff8ee;
+  text-shadow: 0 1px 0 rgb(0 0 0 / 0.28);
+}
+
+[data-slot="button"]:hover {
+  border-color: rgb(215 199 161 / 0.45);
+  background: linear-gradient(135deg, #7f1d1d, #b32636);
+  color: #fff8ee;
+}
+
+[data-slot="button"][data-variant="outline"],
+[data-slot="button"][data-variant="ghost"] {
+  border-color: rgb(215 199 161 / 0.16);
+  background: rgb(13 13 18 / 0.7);
+  color: #f4efe5;
+}
+
+[data-slot="button"][data-variant="outline"]:hover,
+[data-slot="button"][data-variant="ghost"]:hover {
+  border-color: rgb(159 29 47 / 0.5);
+  background: rgb(74 15 24 / 0.5);
+  color: #fff8ee;
+}
+
+.site-frame {
+  background:
+    radial-gradient(circle at 50% -12%, rgb(159 29 47 / 0.18), transparent 38rem),
+    linear-gradient(180deg, rgb(5 5 7 / 0.86), rgb(5 5 7 / 0.98));
+}
+
+.site-scroll-progress {
+  background: linear-gradient(90deg, #4a0f18, #9f1d2f, #d7c7a1);
+}
+
+.site-announcement,
+.site-header,
+.nav-more-menu,
+.mobile-navigation,
+.filter-rail,
+.results-toolbar,
+.bracket-toolbar,
+.bracket-round-tabs,
+.admin-table-toolbar,
+.bracket-admin-toolbar {
+  border-color: rgb(244 239 229 / 0.13);
+  background: rgb(5 5 7 / 0.82);
+  box-shadow: none !important;
+}
+
+.site-header {
+  border-radius: 6px;
+}
+
+.wst-brand img,
+.control-brand img,
+.gold-hero-mark,
+.registry-seal,
+.admin-login-logo,
+.maintenance-page__content img,
+.footer-brand img,
+.tournament-gold-header > img,
+.live-stage-info > img {
+  border-color: rgb(159 29 47 / 0.42);
+  background:
+    linear-gradient(135deg, rgb(74 15 24 / 0.62), rgb(13 13 18 / 0.88)),
+    #050507;
+  filter: drop-shadow(0 0 20px rgb(159 29 47 / 0.22));
+}
+
+.wst-brand small,
+.gold-stat-rail strong,
+.gold-section-heading span,
+.tournament-info-rail span,
+.event-date-block span,
+.admin-dataset-heading p,
+.admin-manager-panel header span,
+.admin-manager-header span,
+.admin-data-table th,
+.ranking-table-head,
+.filter-rail label > span,
+.results-toolbar,
+.control-heading p,
+.administrator-chip small {
+  color: #a3a3a3;
+}
+
+.nav-link:hover,
+.nav-link--active,
+.nav-more[open] > summary {
+  border-color: rgb(159 29 47 / 0.42);
+  background: rgb(74 15 24 / 0.46);
+  color: #fff8ee;
+}
+
+.nav-link--active {
+  color: #fff8ee;
+}
+
+.login-button,
+.mobile-menu-trigger {
+  border-color: rgb(215 199 161 / 0.2);
+  background: rgb(74 15 24 / 0.3);
+}
+
+.gold-hero {
+  background:
+    radial-gradient(circle at 70% 24%, rgb(159 29 47 / 0.2), transparent 26rem),
+    radial-gradient(circle at 28% 80%, rgb(215 199 161 / 0.08), transparent 20rem),
+    linear-gradient(135deg, #050507 0%, #0d0d12 54%, #050507 100%);
+}
+
+.gold-hero-image,
+.admin-login-media img,
+.admin-art-panel > img,
+.maintenance-page__image,
+.live-player-empty > img,
+.gold-feature-media img,
+.tournament-ledger-media img,
+.event-directory li > img {
+  filter: saturate(0.62) sepia(0.2) hue-rotate(310deg) contrast(1.12) brightness(0.58);
+}
+
+.gold-hero-shade {
+  background:
+    radial-gradient(circle at 70% 28%, rgb(159 29 47 / 0.15), transparent 23rem),
+    linear-gradient(90deg, #050507 0%, rgb(5 5 7 / 0.9) 42%, transparent 80%);
+}
+
+.gold-hero h1,
+.maintenance-page__content h1 {
+  background: linear-gradient(180deg, #fff8ee 0%, #d7c7a1 56%, #9f1d2f 100%);
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 18px 60px rgb(0 0 0 / 0.56);
+}
+
+.gold-hero-content > p,
+.gold-stat-rail span,
+.gold-event-list p,
+.gold-live-strip p,
+.page-heading p,
+.tournament-ledger-copy > p,
+.information-page p,
+.live-title p,
+.tournament-gold-header p,
+.site-footer a,
+.site-footer p,
+.site-footer small {
+  color: #c9c2b8;
+}
+
+.gold-stat-rail,
+.gold-feature-panel,
+.gold-events-panel,
+.gold-table,
+.gold-live-strip,
+.gold-page-section,
+.live-stage,
+.live-events-preview,
+.tournament-gold-header,
+.tournament-info-rail,
+.bracket-empty-gold,
+.registry-panel,
+.directory-card,
+.information-card,
+.tournament-card,
+.gang-card,
+.registry-dossier,
+.tournament-ledger-list article,
+.ranking-table,
+.gang-profile,
+.tournament-page,
+.bracket-workspace,
+.bracket-canvas,
+.admin-manager-panel,
+.admin-dataset,
+.bracket-admin-workspace,
+.admin-card,
+.admin-empty-state,
+.admin-confirm-dialog,
+.admin-edit-drawer,
+.admin-attention-panel,
+.recent-content,
+.admin-art-panel,
+.page-heading,
+.information-page,
+.admin-login-panel {
+  border-color: rgb(244 239 229 / 0.13);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 0% 0%, rgb(159 29 47 / 0.12), transparent 18rem),
+    linear-gradient(180deg, rgb(13 13 18 / 0.9), rgb(8 8 11 / 0.95));
+  box-shadow: none !important;
+}
+
+.gold-page-hero,
+.tournament-ledger-heading,
+.tournament-gold-header,
+.control-heading {
+  border-color: rgb(244 239 229 / 0.13);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 12% 16%, rgb(159 29 47 / 0.24), transparent 24rem),
+    radial-gradient(circle at 90% 12%, rgb(215 199 161 / 0.08), transparent 26rem),
+    linear-gradient(135deg, rgb(13 13 18 / 0.96), rgb(5 5 7 / 0.98));
+  box-shadow: none !important;
+}
+
+.gold-feature-media,
+.tournament-ledger-media,
+.live-player,
+.live-player-empty {
+  border-color: rgb(159 29 47 / 0.22);
+  background:
+    radial-gradient(circle at center, rgb(159 29 47 / 0.14), rgb(5 5 7 / 0.82));
+}
+
+.gold-stat-rail svg,
+.gold-section-heading > svg,
+.page-heading-icon,
+.live-title > svg,
+.admin-manager-panel > header > svg,
+.admin-manager-header > svg,
+.gold-empty-copy svg,
+.information-page > svg,
+.tournament-gold-meta svg,
+.tournament-info-rail svg,
+.event-meta svg {
+  color: #d7c7a1;
+}
+
+.gold-event-list li {
+  border-left-color: rgb(159 29 47 / 0.45);
+}
+
+.gold-event-list li::before {
+  background: #9f1d2f;
+  box-shadow: 0 0 0 4px rgb(159 29 47 / 0.18);
+}
+
+.gold-table-row,
+.ranking-table-row,
+.ranking-table-head,
+.admin-data-table th,
+.admin-data-table td,
+.admin-record-list article,
+.event-directory li,
+.live-events-preview li,
+.bracket-team,
+.football-match {
+  border-color: rgb(244 239 229 / 0.12);
+}
+
+.gold-table-row:not(.gold-table-head):hover,
+.ranking-table-row:hover,
+.admin-data-table tbody tr:hover,
+.registry-dossier:hover,
+.tournament-ledger-list article:hover,
+.event-directory li:hover,
+.live-events-preview li:hover {
+  background: rgb(74 15 24 / 0.42);
+  transform: translateY(-1px);
+}
+
+.gold-gang-name img,
+.gold-gang-name svg,
+.gang-crest,
+.event-date-block,
+.administrator-chip,
+.control-metrics article,
+.registry-rank,
+.record-status,
+.event-status,
+.badge,
+[data-slot="badge"] {
+  border-color: rgb(159 29 47 / 0.34);
+  background: linear-gradient(135deg, rgb(74 15 24 / 0.55), rgb(13 13 18 / 0.78));
+  color: #d7c7a1;
+}
+
+.record-status.active,
+.event-status--live,
+.event-status--active {
+  border-color: rgb(159 29 47 / 0.48);
+  background: rgb(74 15 24 / 0.62);
+  color: #fff8ee;
+}
+
+.live-indicator,
+.live-dot,
+.gold-live-marquee svg {
+  color: #ef4444;
+}
+
+.site-footer {
+  border-color: rgb(244 239 229 / 0.13);
+  border-radius: 10px 10px 0 0;
+  background:
+    radial-gradient(circle at 12% 0%, rgb(159 29 47 / 0.17), transparent 22rem),
+    linear-gradient(145deg, rgb(13 13 18 / 0.98), rgb(5 5 7 / 0.99));
+}
+
+.site-footer::before {
+  background: linear-gradient(90deg, transparent, #4a0f18, #9f1d2f, #d7c7a1, transparent);
+}
+
+.command-center-v2,
+.gold-control-shell {
+  background:
+    radial-gradient(circle at 8% 0%, rgb(159 29 47 / 0.16), transparent 25rem),
+    radial-gradient(circle at 100% 18%, rgb(215 199 161 / 0.08), transparent 28rem),
+    #050507;
+}
+
+.command-center-v2 .control-sidebar,
+.gold-control-shell .control-sidebar {
+  border-color: rgb(244 239 229 / 0.13);
+  background: rgb(5 5 7 / 0.92);
+}
+
+.control-brand {
+  border-color: rgb(244 239 229 / 0.13);
+  border-radius: 10px;
+  background: rgb(13 13 18 / 0.72);
+}
+
+.control-brand small,
+.maintenance-page__content p,
+.site-footer a:hover,
+.control-sidebar nav button.active,
+.control-sidebar nav a.active {
+  color: #d7c7a1;
+}
+
+.control-sidebar nav button,
+.control-sidebar nav a,
+.control-logout,
+.admin-row-actions button,
+.admin-edit-drawer > header button {
+  border-radius: 8px;
+}
+
+.control-sidebar nav button:hover,
+.control-sidebar nav a:hover,
+.control-sidebar nav button.active,
+.control-sidebar nav a.active {
+  border-color: rgb(159 29 47 / 0.44);
+  background: linear-gradient(90deg, rgb(74 15 24 / 0.72), rgb(13 13 18 / 0.4));
+}
+
+input,
+select,
+textarea,
+.filter-rail input,
+.filter-rail select,
+.admin-form-grid input,
+.admin-form-grid select,
+.admin-form-grid textarea,
+.admin-table-toolbar input,
+.admin-drawer-form input,
+.admin-drawer-form select,
+.admin-drawer-form textarea,
+.admin-account-form input,
+.admin-account-form select,
+.bracket-admin-workspace input,
+.bracket-admin-workspace select,
+.admin-login-panel input {
+  border-color: rgb(244 239 229 / 0.15);
+  border-radius: 8px;
+  background: rgb(5 5 7 / 0.74);
+  color: #f4efe5;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.filter-rail input:focus,
+.filter-rail select:focus,
+.admin-form-grid input:focus,
+.admin-form-grid select:focus,
+.admin-form-grid textarea:focus,
+.admin-table-toolbar input:focus,
+.admin-drawer-form input:focus,
+.admin-drawer-form select:focus,
+.admin-drawer-form textarea:focus,
+.admin-login-panel input:focus {
+  border-color: #9f1d2f;
+  outline: 2px solid rgb(159 29 47 / 0.22);
+}
+
+.admin-row-actions button.danger,
+.admin-confirm-dialog [data-variant="destructive"] {
+  border-color: rgb(239 68 68 / 0.34);
+  background: rgb(127 29 29 / 0.42);
+  color: #fecaca;
+}
+
+.registry-dossier::before,
+.tournament-ledger-list article::before,
+.admin-dataset::before,
+.admin-manager-panel::before {
+  background: linear-gradient(135deg, rgb(159 29 47 / 0.12), transparent 42%, rgb(215 199 161 / 0.055));
+}
+
+.gold-live-strip,
+.live-title {
+  background:
+    radial-gradient(circle at 92% 12%, rgb(159 29 47 / 0.2), transparent 22rem),
+    linear-gradient(135deg, rgb(13 13 18 / 0.95), rgb(5 5 7 / 0.98));
+}
+
+.maintenance-page__shade {
+  background:
+    radial-gradient(circle at 72% 30%, rgb(159 29 47 / 0.16), transparent 28rem),
+    linear-gradient(90deg, #050507 0%, rgb(5 5 7 / 0.92) 42%, transparent 78%),
+    linear-gradient(0deg, #050507 0%, transparent 44%);
+}
+
+.page-heading h1,
+.gold-page-hero h1,
+.tournament-ledger-heading h1,
+.tournament-gold-header h1,
+.live-title h1,
+.information-page h1,
+.control-heading h1,
+.admin-dataset-heading h2,
+.admin-manager-panel h2 {
+  color: #fff8ee;
+}
+
 .dark {
   --color-1: oklch(66.2% 0.225 25.9);
   --color-2: oklch(60.4% 0.26 302);
@@ -5611,42 +6116,42 @@ textarea:focus-visible {
     mix-blend-mode: normal;
 }
 
-/* 2026 full interface rebuild: modern competitive registry. */
+/* 2026 full interface rebuild: modern mafia registry. */
 :root {
   color-scheme: dark;
-  --background: #020617;
-  --foreground: #f8fafc;
-  --card: #07111f;
-  --card-foreground: #f8fafc;
-  --popover: #07111f;
-  --popover-foreground: #f8fafc;
-  --primary: #22d3ee;
-  --primary-foreground: #001018;
-  --secondary: #101827;
-  --secondary-foreground: #f8fafc;
-  --muted: #0f172a;
-  --muted-foreground: #94a3b8;
-  --accent: #7c3aed;
-  --accent-foreground: #ffffff;
-  --border: rgb(148 163 184 / 0.18);
-  --input: rgb(148 163 184 / 0.18);
-  --ring: #22d3ee;
-  --destructive: #fb7185;
+  --background: #050507;
+  --foreground: #f4efe5;
+  --card: #0d0d12;
+  --card-foreground: #f4efe5;
+  --popover: #0d0d12;
+  --popover-foreground: #f4efe5;
+  --primary: #9f1d2f;
+  --primary-foreground: #fff8ee;
+  --secondary: #171217;
+  --secondary-foreground: #f4efe5;
+  --muted: #151318;
+  --muted-foreground: #a3a3a3;
+  --accent: #d7c7a1;
+  --accent-foreground: #050507;
+  --border: rgb(244 239 229 / 0.14);
+  --input: rgb(244 239 229 / 0.14);
+  --ring: #9f1d2f;
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --neo-bg: #020617;
-  --neo-bg-2: #040b18;
-  --neo-panel: rgb(8 17 32 / 0.86);
-  --neo-panel-strong: rgb(12 24 44 / 0.94);
-  --neo-line: rgb(148 163 184 / 0.18);
-  --neo-line-strong: rgb(34 211 238 / 0.42);
-  --neo-cyan: #22d3ee;
-  --neo-cyan-strong: #06b6d4;
-  --neo-violet: #8b5cf6;
-  --neo-emerald: #2dd4bf;
-  --neo-rose: #fb7185;
-  --neo-text: #f8fafc;
-  --neo-muted: #94a3b8;
-  --neo-faint: #64748b;
+  --neo-bg: #050507;
+  --neo-bg-2: #0d0d12;
+  --neo-panel: rgb(13 13 18 / 0.9);
+  --neo-panel-strong: rgb(18 16 20 / 0.96);
+  --neo-line: rgb(244 239 229 / 0.14);
+  --neo-line-strong: rgb(159 29 47 / 0.5);
+  --neo-cyan: #9f1d2f;
+  --neo-cyan-strong: #b32636;
+  --neo-violet: #d7c7a1;
+  --neo-emerald: #7f1d1d;
+  --neo-rose: #ef4444;
+  --neo-text: #f4efe5;
+  --neo-muted: #a3a3a3;
+  --neo-faint: #71717a;
   --radius: 18px;
   --display: "Space Grotesk", "Inter", "Segoe UI", system-ui, sans-serif;
   --ui: "Inter", "Segoe UI", system-ui, sans-serif;
@@ -6619,4 +7124,474 @@ textarea:focus,
     grid-template-columns: 1fr;
     padding-inline: 22px;
   }
+}
+
+/* Final cascade lock: modern mafia noir wins over every older gold/cyan rule. */
+:root {
+  --background: #050507;
+  --foreground: #f4efe5;
+  --card: #0d0d12;
+  --card-foreground: #f4efe5;
+  --popover: #0d0d12;
+  --popover-foreground: #f4efe5;
+  --primary: #9f1d2f;
+  --primary-foreground: #fff8ee;
+  --secondary: #171217;
+  --secondary-foreground: #f4efe5;
+  --muted: #151318;
+  --muted-foreground: #a3a3a3;
+  --accent: #d7c7a1;
+  --accent-foreground: #050507;
+  --border: rgb(244 239 229 / 0.14);
+  --input: rgb(244 239 229 / 0.14);
+  --ring: #9f1d2f;
+  --cyan: #9f1d2f;
+  --cyan-strong: #b32636;
+  --cyan-dim: #4a0f18;
+  --neo-bg: #050507;
+  --neo-bg-2: #0d0d12;
+  --neo-panel: rgb(13 13 18 / 0.9);
+  --neo-panel-strong: rgb(18 16 20 / 0.96);
+  --neo-line: rgb(244 239 229 / 0.14);
+  --neo-line-strong: rgb(159 29 47 / 0.5);
+  --neo-cyan: #9f1d2f;
+  --neo-cyan-strong: #b32636;
+  --neo-violet: #d7c7a1;
+  --neo-emerald: #7f1d1d;
+  --neo-rose: #ef4444;
+  --neo-text: #f4efe5;
+  --neo-muted: #a3a3a3;
+  --neo-faint: #71717a;
+  --display: "Bebas Neue", "Inter", "Segoe UI", system-ui, sans-serif;
+  --ui: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+body,
+.site-frame,
+.gold-home,
+.gold-content-page,
+.page-shell,
+.registry-page,
+.directory-page,
+.information-page,
+.gang-detail-page,
+.tournaments-page,
+.command-center-v2,
+.gold-control-shell {
+  background:
+    radial-gradient(circle at 16% 0%, rgb(159 29 47 / 0.2), transparent 30rem),
+    radial-gradient(circle at 84% 6%, rgb(215 199 161 / 0.09), transparent 28rem),
+    linear-gradient(180deg, #050507 0%, #09090d 48%, #050507 100%) !important;
+  color: #f4efe5;
+}
+
+body::before {
+  background-image:
+    linear-gradient(rgb(244 239 229 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(244 239 229 / 0.035) 1px, transparent 1px);
+}
+
+h1,
+h2,
+h3,
+.wst-brand,
+.control-brand,
+.page-heading h1,
+.gold-hero h1,
+.gold-section-heading h2,
+.tournament-gold-header h1,
+.admin-dataset-heading h2,
+.admin-manager-panel h2,
+.control-heading h1 {
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: 0.015em;
+}
+
+[data-slot="button"],
+.admin-form-grid > button,
+.admin-drawer-actions button,
+.bracket-admin-toolbar button {
+  border-color: rgb(215 199 161 / 0.22) !important;
+  background: linear-gradient(135deg, #4a0f18, #9f1d2f) !important;
+  color: #fff8ee !important;
+  box-shadow: none !important;
+}
+
+[data-slot="button"][data-variant="outline"],
+[data-slot="button"][data-variant="ghost"],
+.login-button,
+.mobile-menu-trigger {
+  border-color: rgb(215 199 161 / 0.18) !important;
+  background: rgb(13 13 18 / 0.72) !important;
+  color: #f4efe5 !important;
+}
+
+[data-slot="button"]:hover,
+[data-slot="button"][data-variant="outline"]:hover,
+[data-slot="button"][data-variant="ghost"]:hover {
+  border-color: rgb(215 199 161 / 0.45) !important;
+  background: linear-gradient(135deg, #7f1d1d, #b32636) !important;
+  color: #fff8ee !important;
+}
+
+.site-scroll-progress {
+  background: linear-gradient(90deg, #4a0f18, #9f1d2f, #d7c7a1) !important;
+}
+
+.site-header,
+.site-announcement,
+.nav-more-menu,
+.mobile-navigation,
+.filter-rail,
+.results-toolbar,
+.bracket-toolbar,
+.bracket-round-tabs,
+.admin-table-toolbar,
+.bracket-admin-toolbar,
+.gold-stat-rail,
+.gold-feature-panel,
+.gold-events-panel,
+.gold-table,
+.gold-live-strip,
+.gold-page-section,
+.live-stage,
+.live-events-preview,
+.tournament-gold-header,
+.tournament-info-rail,
+.bracket-empty-gold,
+.registry-panel,
+.directory-card,
+.information-card,
+.tournament-card,
+.gang-card,
+.registry-dossier,
+.tournament-ledger-list article,
+.ranking-table,
+.gang-profile,
+.tournament-page,
+.bracket-workspace,
+.bracket-canvas,
+.admin-manager-panel,
+.admin-dataset,
+.bracket-admin-workspace,
+.admin-card,
+.admin-empty-state,
+.admin-confirm-dialog,
+.admin-edit-drawer,
+.admin-attention-panel,
+.recent-content,
+.admin-art-panel,
+.page-heading,
+.information-page,
+.admin-login-panel,
+.control-heading,
+.control-brand,
+.administrator-chip,
+.control-metrics article {
+  border-color: rgb(244 239 229 / 0.13) !important;
+  border-radius: 10px !important;
+  background:
+    radial-gradient(circle at 0% 0%, rgb(159 29 47 / 0.13), transparent 18rem),
+    linear-gradient(180deg, rgb(13 13 18 / 0.92), rgb(8 8 11 / 0.96)) !important;
+  box-shadow: none !important;
+}
+
+.gold-hero,
+.gold-page-hero,
+.tournament-ledger-heading,
+.tournament-gold-header,
+.live-title {
+  background:
+    radial-gradient(circle at 72% 24%, rgb(159 29 47 / 0.22), transparent 26rem),
+    radial-gradient(circle at 28% 80%, rgb(215 199 161 / 0.08), transparent 20rem),
+    linear-gradient(135deg, #050507 0%, #0d0d12 54%, #050507 100%) !important;
+  border-color: rgb(244 239 229 / 0.13) !important;
+}
+
+.gold-hero-image,
+.admin-login-media img,
+.admin-art-panel > img,
+.maintenance-page__image,
+.live-player-empty > img,
+.gold-feature-media img,
+.tournament-ledger-media img,
+.event-directory li > img {
+  filter: saturate(0.62) sepia(0.2) hue-rotate(310deg) contrast(1.12) brightness(0.58) !important;
+}
+
+.gold-hero-shade,
+.maintenance-page__shade {
+  background:
+    radial-gradient(circle at 70% 28%, rgb(159 29 47 / 0.16), transparent 23rem),
+    linear-gradient(90deg, #050507 0%, rgb(5 5 7 / 0.92) 42%, transparent 80%) !important;
+}
+
+.gold-hero h1,
+.maintenance-page__content h1 {
+  background: linear-gradient(180deg, #fff8ee 0%, #d7c7a1 56%, #9f1d2f 100%) !important;
+  background-clip: text !important;
+  color: transparent !important;
+  text-shadow: 0 18px 60px rgb(0 0 0 / 0.56) !important;
+}
+
+.page-heading h1,
+.gold-page-hero h1,
+.tournament-ledger-heading h1,
+.tournament-gold-header h1,
+.live-title h1,
+.information-page h1,
+.control-heading h1,
+.admin-dataset-heading h2,
+.admin-manager-panel h2,
+.gold-section-heading h2,
+.site-footer strong {
+  color: #fff8ee !important;
+}
+
+.gold-hero-content > p,
+.gold-stat-rail span,
+.gold-event-list p,
+.gold-live-strip p,
+.page-heading p,
+.tournament-ledger-copy > p,
+.information-page p,
+.live-title p,
+.tournament-gold-header p,
+.site-footer a,
+.site-footer p,
+.site-footer small,
+.nav-link,
+.wst-brand small,
+.control-heading p,
+.administrator-chip small,
+.admin-dataset-heading p,
+.admin-manager-header p,
+.admin-data-table th,
+.ranking-table-head,
+.filter-rail label > span {
+  color: #c9c2b8 !important;
+}
+
+.gold-stat-rail svg,
+.gold-section-heading > svg,
+.page-heading-icon,
+.live-title > svg,
+.admin-manager-panel > header > svg,
+.admin-manager-header > svg,
+.gold-empty-copy svg,
+.information-page > svg,
+.tournament-gold-meta svg,
+.tournament-info-rail svg,
+.event-meta svg,
+.gold-gang-name img,
+.gold-gang-name svg,
+.gang-crest,
+.event-date-block,
+.registry-rank,
+.record-status,
+.event-status {
+  color: #d7c7a1 !important;
+}
+
+.nav-link:hover,
+.nav-link--active,
+.nav-more[open] > summary,
+.control-sidebar nav button:hover,
+.control-sidebar nav a:hover,
+.control-sidebar nav button.active,
+.control-sidebar nav a.active,
+.gold-table-row:not(.gold-table-head):hover,
+.ranking-table-row:hover,
+.admin-data-table tbody tr:hover,
+.registry-dossier:hover,
+.tournament-ledger-list article:hover,
+.event-directory li:hover,
+.live-events-preview li:hover {
+  border-color: rgb(159 29 47 / 0.44) !important;
+  background: rgb(74 15 24 / 0.46) !important;
+  color: #fff8ee !important;
+}
+
+input,
+select,
+textarea,
+.filter-rail input,
+.filter-rail select,
+.admin-form-grid input,
+.admin-form-grid select,
+.admin-form-grid textarea,
+.admin-table-toolbar input,
+.admin-drawer-form input,
+.admin-drawer-form select,
+.admin-drawer-form textarea,
+.admin-account-form input,
+.admin-account-form select,
+.bracket-admin-workspace input,
+.bracket-admin-workspace select,
+.admin-login-panel input {
+  border-color: rgb(244 239 229 / 0.15) !important;
+  border-radius: 8px !important;
+  background: rgb(5 5 7 / 0.74) !important;
+  color: #f4efe5 !important;
+  box-shadow: none !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.filter-rail input:focus,
+.filter-rail select:focus,
+.admin-form-grid input:focus,
+.admin-form-grid select:focus,
+.admin-form-grid textarea:focus,
+.admin-table-toolbar input:focus,
+.admin-drawer-form input:focus,
+.admin-drawer-form select:focus,
+.admin-drawer-form textarea:focus,
+.admin-login-panel input:focus {
+  border-color: #9f1d2f !important;
+  outline: 2px solid rgb(159 29 47 / 0.22) !important;
+}
+
+.gold-event-list li {
+  border-left-color: rgb(159 29 47 / 0.45) !important;
+}
+
+.gold-event-list li::before {
+  background: #9f1d2f !important;
+  box-shadow: 0 0 0 4px rgb(159 29 47 / 0.18) !important;
+}
+
+.gold-table-row,
+.ranking-table-row,
+.ranking-table-head,
+.admin-data-table th,
+.admin-data-table td,
+.admin-record-list article,
+.event-directory li,
+.live-events-preview li,
+.bracket-team,
+.football-match {
+  border-color: rgb(244 239 229 / 0.12) !important;
+}
+
+.record-status,
+.event-status,
+.registry-rank,
+.gold-gang-name img,
+.gold-gang-name svg,
+.gang-crest,
+.event-date-block {
+  border-color: rgb(159 29 47 / 0.34) !important;
+  background: linear-gradient(135deg, rgb(74 15 24 / 0.55), rgb(13 13 18 / 0.78)) !important;
+}
+
+.record-status.active,
+.event-status--live,
+.event-status--active,
+.live-indicator {
+  border-color: rgb(159 29 47 / 0.48) !important;
+  background: rgb(74 15 24 / 0.62) !important;
+  color: #fff8ee !important;
+}
+
+.site-footer {
+  border-radius: 10px 10px 0 0 !important;
+  background:
+    radial-gradient(circle at 12% 0%, rgb(159 29 47 / 0.17), transparent 22rem),
+    linear-gradient(145deg, rgb(13 13 18 / 0.98), rgb(5 5 7 / 0.99)) !important;
+}
+
+.site-footer::before {
+  background: linear-gradient(90deg, transparent, #4a0f18, #9f1d2f, #d7c7a1, transparent) !important;
+}
+
+@media (max-width: 760px) {
+  .gold-hero-shade {
+    background:
+      linear-gradient(0deg, #050507 0%, rgb(5 5 7 / 0.82) 54%, transparent),
+      linear-gradient(90deg, rgb(5 5 7 / 0.96), rgb(5 5 7 / 0.24)) !important;
+  }
+}
+
+/* Final bug polish for remaining inherited states. */
+.wst-brand img,
+.control-brand img,
+.gold-hero-mark,
+.registry-seal,
+.admin-login-logo,
+.maintenance-page__content img,
+.footer-brand img,
+.tournament-gold-header > img,
+.live-stage-info > img {
+  border: 1px solid rgb(159 29 47 / 0.42) !important;
+  background:
+    linear-gradient(135deg, rgb(74 15 24 / 0.66), rgb(13 13 18 / 0.9)),
+    #050507 !important;
+  filter: drop-shadow(0 0 20px rgb(159 29 47 / 0.22)) !important;
+}
+
+.status-state,
+.wst-empty-state,
+.control-empty,
+.admin-empty-state,
+.gold-empty-copy {
+  border: 1px solid rgb(159 29 47 / 0.28) !important;
+  border-radius: 10px !important;
+  background:
+    radial-gradient(circle at 50% 0%, rgb(74 15 24 / 0.18), transparent 18rem),
+    linear-gradient(180deg, rgb(8 8 11 / 0.94), rgb(5 5 7 / 0.98)) !important;
+  color: #f4efe5 !important;
+  box-shadow: none !important;
+}
+
+.status-state strong,
+.wst-empty-state strong,
+.control-empty strong,
+.admin-empty-state h2,
+.gold-empty-copy strong {
+  color: #fff8ee !important;
+}
+
+.status-state p,
+.wst-empty-state p,
+.control-empty p,
+.admin-empty-state p,
+.gold-empty-copy p,
+.admin-login-panel p,
+.admin-login-panel label,
+.form-error,
+.stream-check-error {
+  color: #c9c2b8 !important;
+}
+
+.status-state svg,
+.wst-empty-state svg,
+.control-empty svg,
+.admin-empty-state svg,
+.gold-empty-copy svg {
+  color: #d7c7a1 !important;
+}
+
+.admin-login-panel h1,
+.admin-login-panel strong,
+.login-back,
+.login-back svg {
+  color: #d7c7a1 !important;
+}
+
+.admin-login-panel label,
+.admin-form-grid label,
+.admin-drawer-form label,
+.admin-account-form label,
+.filter-rail label,
+.admin-table-toolbar label {
+  color: #c9c2b8 !important;
+}
+
+.search-control svg,
+.filter-rail svg,
+.admin-table-toolbar svg {
+  color: #d7c7a1 !important;
 }

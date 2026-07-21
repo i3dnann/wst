@@ -101,7 +101,7 @@ export default function LivePage() {
             )}
           </div>
           <div className="live-stage-info">
-            <img src="/assets/wst-gold/wst-gold.png" alt="" />
+            <img src="/assets/wst/wst-mafia-mark.svg" alt="" />
             <div>
               <span
                 className={

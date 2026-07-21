@@ -48,7 +48,7 @@ export default function GangsPage() {
         </div>
         <img
           className="registry-seal"
-          src="/assets/wst-gold/wst-gold.png"
+          src="/assets/wst/wst-mafia-mark.svg"
           alt=""
         />
       </header>
@@ -120,8 +120,8 @@ export default function GangsPage() {
             <article className="registry-dossier" key={gang.id}>
               {index === 0 ? (
                 <BorderBeam
-                  colorFrom="#E0B86F"
-                  colorTo="#72502B"
+                  colorFrom="#9f1d2f"
+                  colorTo="#d7c7a1"
                   duration={10}
                   size={100}
                 />

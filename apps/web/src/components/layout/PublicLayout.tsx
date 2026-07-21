@@ -36,7 +36,7 @@ function Brand({
 }) {
   return (
     <Link to="/" className="wst-brand" aria-label="World Star home">
-      <img src={logoUrl || "/assets/wst-gold/wst-gold.png"} alt="" />
+      <img src={logoUrl || "/assets/wst/wst-mafia-mark.svg"} alt="" />
       <span>
         {name}
         <small>Competitive Gang Registry</small>
@@ -134,7 +134,7 @@ function MaintenancePage({
       />
       <div className="maintenance-page__shade" aria-hidden="true" />
       <section className="maintenance-page__content">
-        <img src={logoUrl || "/assets/wst-gold/wst-gold.png"} alt="" />
+        <img src={logoUrl || "/assets/wst/wst-mafia-mark.svg"} alt="" />
         <p>{shortName}</p>
         <h1 id="maintenance-title">Maintenance in progress</h1>
         <span>
@@ -222,7 +222,7 @@ export function PublicLayout() {
       <footer className="site-footer">
         <div className="footer-brand">
           <img
-            src={logoUrl || "/assets/wst-gold/wst-gold.png"}
+            src={logoUrl || "/assets/wst/wst-mafia-mark.svg"}
             alt={shortName}
           />
           <p>

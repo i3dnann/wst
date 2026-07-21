@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="World Star">
+  <defs>
+    <linearGradient id="oxblood" x1="16" x2="78" y1="8" y2="90" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#d7c7a1"/>
+      <stop offset=".18" stop-color="#9f1d2f"/>
+      <stop offset=".74" stop-color="#4a0f18"/>
+      <stop offset="1" stop-color="#0d0d12"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="48" x2="48" y1="6" y2="90" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f4efe5"/>
+      <stop offset=".34" stop-color="#b32636"/>
+      <stop offset="1" stop-color="#4a0f18"/>
+    </linearGradient>
+  </defs>
+  <path d="M48 5 84 18v25c0 23.6-14.6 39.8-36 48C26.6 82.8 12 66.6 12 43V18L48 5Z" fill="#050507" stroke="url(#edge)" stroke-width="4"/>
+  <path d="M28 30h11l5 28 4-19h8l4 19 5-28h11L66 71H55l-3-15-3 15H38L28 30Z" fill="url(#oxblood)"/>
+  <path d="M34 23 42 28l6-11 6 11 8-5-3 14H37l-3-14Z" fill="#d7c7a1" opacity=".82"/>
+  <path d="M48 11 76 21v21c0 17.8-10.4 31.5-28 39.2C30.4 73.5 20 59.8 20 42V21l28-10Z" fill="none" stroke="#7f1d1d" stroke-width="1.5" opacity=".55"/>
+</svg>

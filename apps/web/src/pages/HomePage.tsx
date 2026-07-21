@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { BlurFade } from "@/components/ui/blur-fade";
 import { MagicCard } from "@/components/ui/magic-card";
 import { Marquee } from "@/components/ui/marquee";
 import { NumberTicker } from "@/components/ui/number-ticker";
@@ -65,7 +64,7 @@ export default function HomePage() {
       <section className="gold-hero">
         <Particles
           className="gold-hero-particles"
-          color="#22d3ee"
+          color="#9f1d2f"
           quantity={62}
           staticity={80}
           size={0.35}
@@ -79,10 +78,10 @@ export default function HomePage() {
           alt="A World Star figure overlooking the city at night"
         />
         <div className="gold-hero-shade" />
-        <BlurFade className="gold-hero-content" delay={0.08} duration={0.8}>
+        <div className="gold-hero-content">
           <img
             className="gold-hero-mark"
-            src="/assets/wst-gold/wst-gold.png"
+            src="/assets/wst/wst-mafia-mark.svg"
             alt="World Star"
           />
           <h1>
@@ -105,7 +104,7 @@ export default function HomePage() {
               </Link>
             </Button>
           </div>
-        </BlurFade>
+        </div>
       </section>
 
       <section className="gold-stat-rail" aria-label="World Star overview">
@@ -123,13 +122,13 @@ export default function HomePage() {
       <section className="gold-split-section">
         <MagicCard
           className="gold-feature-panel"
-          gradientColor="#0891b2"
-          gradientFrom="#22d3ee"
-          gradientTo="#7c3aed"
+          gradientColor="#4a0f18"
+          gradientFrom="#9f1d2f"
+          gradientTo="#d7c7a1"
           gradientOpacity={0.16}
         >
           <ShineBorder
-            shineColor={["#22d3ee", "#8b5cf6", "#14b8a6"]}
+            shineColor={["#4a0f18", "#9f1d2f", "#d7c7a1"]}
             duration={18}
           />
           <header className="gold-section-heading">

@@ -2476,7 +2476,7 @@ export default function AdminCommandCenterPage() {
     <div className="control-shell gold-control-shell command-center-v2">
       <aside className="control-sidebar">
         <div className="control-brand">
-          <img src="/assets/wst-gold/wst-gold.png" alt="World Star" />
+          <img src="/assets/wst/wst-mafia-mark.svg" alt="World Star" />
           <span>
             <strong>WORLD STAR</strong>
             <small>ADMIN COMMAND CENTER</small>

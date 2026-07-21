@@ -141,7 +141,7 @@ export default function TournamentDetailPage() {
             </span>
           </div>
         </div>
-        <img src="/assets/wst-gold/wst-gold.png" alt="World Star" />
+        <img src="/assets/wst/wst-mafia-mark.svg" alt="World Star" />
       </header>
 
       {rounds.length ? (
