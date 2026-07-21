@@ -40,10 +40,13 @@ export async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
     };
   }
   const target = new URL(configuredTarget);
+  const allowInsecureProxy =
+    process.env.API_PROXY_ALLOW_INSECURE?.trim().toLowerCase() === "true";
   if (
     target.protocol !== "https:" &&
     target.hostname !== "127.0.0.1" &&
-    target.hostname !== "localhost"
+    target.hostname !== "localhost" &&
+    !allowInsecureProxy
   ) {
     return {
       statusCode: 503,
