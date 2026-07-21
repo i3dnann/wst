@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Component, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
@@ -65,6 +65,39 @@ type AdminSection =
   | "discord"
   | "settings"
   | "health";
+
+class AdminSectionBoundary extends Component<
+  { children: ReactNode; section: AdminSection | null },
+  { error: Error | null }
+> {
+  override state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  override componentDidUpdate(previous: { section: AdminSection | null }) {
+    if (previous.section !== this.props.section && this.state.error) {
+      this.setState({ error: null });
+    }
+  }
+
+  override render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <section className="admin-empty-state">
+        <Shield />
+        <h2>Admin section could not load</h2>
+        <p>
+          This section hit a data-format error instead of loading. Try
+          refreshing; if it stays broken, check the API logs for the matching
+          admin endpoint.
+        </p>
+        <code>{this.state.error.message}</code>
+      </section>
+    );
+  }
+}
 type RecordKind = "gang" | "player" | "tournament" | "match" | "event";
 type AdminRecord = Record<string, unknown> & { id: string };
 type FormValues = Record<string, string | boolean>;
@@ -1171,6 +1204,9 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
       setEditorOpen(false);
       void queryClient.invalidateQueries();
     },
+    onError: (error) => {
+      toast.error(error.message);
+    },
   });
   const openNew = () => {
     setSelected(null);
@@ -1335,6 +1371,11 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
               This action will hide or delete the record. The audit log will
               record who performed it.
             </p>
+            {remove.isError ? (
+              <p className="form-error" role="alert">
+                {remove.error.message}
+              </p>
+            ) : null}
             <div>
               <Button variant="outline" onClick={() => setConfirming(null)}>
                 Cancel
@@ -2437,50 +2478,52 @@ export default function AdminCommandCenterPage() {
             </span>
           </div>
         </header>
-        {!effectiveSection ? (
-          <section className="admin-empty-state">
-            <h2>Admin section unavailable</h2>
-            <p>
-              This command-center route does not exist, or your administrator
-              account does not have permission to open it.
-            </p>
-            <Button asChild>
-              <Link to="/admin/overview">Return to overview</Link>
-            </Button>
-          </section>
-        ) : null}
-        {effectiveSection === "overview" ? <Overview /> : null}
-        {effectiveSection === "gang" ||
-        effectiveSection === "player" ||
-        effectiveSection === "tournament" ||
-        effectiveSection === "match" ||
-        effectiveSection === "event" ? (
-          <RecordsManager kind={effectiveSection} />
-        ) : null}
-        {effectiveSection === "gang-organization" ? (
-          <GangOrganizationManager />
-        ) : null}
-        {effectiveSection === "bracket" ||
-        effectiveSection === "participant" ? (
-          <BracketManager />
-        ) : null}
-        {effectiveSection === "result" ? <ResultsDisputesManager /> : null}
-        {effectiveSection === "stream" ? <StreamManager /> : null}
-        {effectiveSection === "ranking" || effectiveSection === "season" ? (
-          <SeasonsManager />
-        ) : null}
-        {effectiveSection === "media" ? <MediaManager /> : null}
-        {effectiveSection === "administrator" ? (
-          <AdministratorManager
-            currentUserId={me.data.data.id}
-            canManageRoles={me.data.data.permissions.includes("role.manage")}
-          />
-        ) : null}
-        {effectiveSection === "roles" ? <RolesPermissionsManager /> : null}
-        {effectiveSection === "settings" ? <WebsiteSettingsManager /> : null}
-        {effectiveSection === "discord" ? <AuditManager integration /> : null}
-        {effectiveSection === "audit" ? <AuditManager /> : null}
-        {effectiveSection === "health" ? <SystemHealthManager /> : null}
+        <AdminSectionBoundary section={effectiveSection}>
+          {!effectiveSection ? (
+            <section className="admin-empty-state">
+              <h2>Admin section unavailable</h2>
+              <p>
+                This command-center route does not exist, or your administrator
+                account does not have permission to open it.
+              </p>
+              <Button asChild>
+                <Link to="/admin/overview">Return to overview</Link>
+              </Button>
+            </section>
+          ) : null}
+          {effectiveSection === "overview" ? <Overview /> : null}
+          {effectiveSection === "gang" ||
+          effectiveSection === "player" ||
+          effectiveSection === "tournament" ||
+          effectiveSection === "match" ||
+          effectiveSection === "event" ? (
+            <RecordsManager kind={effectiveSection} />
+          ) : null}
+          {effectiveSection === "gang-organization" ? (
+            <GangOrganizationManager />
+          ) : null}
+          {effectiveSection === "bracket" ||
+          effectiveSection === "participant" ? (
+            <BracketManager />
+          ) : null}
+          {effectiveSection === "result" ? <ResultsDisputesManager /> : null}
+          {effectiveSection === "stream" ? <StreamManager /> : null}
+          {effectiveSection === "ranking" || effectiveSection === "season" ? (
+            <SeasonsManager />
+          ) : null}
+          {effectiveSection === "media" ? <MediaManager /> : null}
+          {effectiveSection === "administrator" ? (
+            <AdministratorManager
+              currentUserId={me.data.data.id}
+              canManageRoles={me.data.data.permissions.includes("role.manage")}
+            />
+          ) : null}
+          {effectiveSection === "roles" ? <RolesPermissionsManager /> : null}
+          {effectiveSection === "settings" ? <WebsiteSettingsManager /> : null}
+          {effectiveSection === "discord" ? <AuditManager integration /> : null}
+          {effectiveSection === "audit" ? <AuditManager /> : null}
+          {effectiveSection === "health" ? <SystemHealthManager /> : null}
+        </AdminSectionBoundary>
       </main>
     </div>
   );
