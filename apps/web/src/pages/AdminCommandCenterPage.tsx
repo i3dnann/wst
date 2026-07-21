@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/data/StatusState";
 import { api, type AuditRecord } from "@/lib/api";
 import { BracketManager } from "./AdminPage";
+import LoginPage from "./LoginPage";
 import {
   GangOrganizationManager,
   MediaManager,
@@ -2266,6 +2267,11 @@ function Overview() {
     queryFn: api.adminOverview,
     retry: false,
   });
+  const summary = overview.data?.data.summary;
+  const activity = overview.data?.data.activity ?? [];
+  const attention = overview.data?.data.attention;
+  const nextMatches = attention?.nextMatches ?? [];
+  const streamsWithErrors = attention?.streamsWithErrors ?? [];
   const labels = {
     totalGangs: "Total gangs",
     activeGangs: "Active gangs",
@@ -2283,9 +2289,7 @@ function Overview() {
           <article key={key}>
             <span>{label}</span>
             <strong>
-              {overview.data?.data.summary[
-                key as keyof typeof overview.data.data.summary
-              ] ?? "—"}
+              {summary?.[key as keyof typeof summary] ?? "—"}
             </strong>
           </article>
         ))}
@@ -2294,7 +2298,7 @@ function Overview() {
         <section className="recent-content">
           <h2>Recent Activity</h2>
           <ol>
-            {(overview.data?.data.activity ?? []).map((item) => (
+            {activity.map((item) => (
               <li key={item.id}>
                 <span>{item.entityType}</span>
                 <strong>{item.action}</strong>
@@ -2315,14 +2319,14 @@ function Overview() {
           <article>
             <span>Approved entrants without seeds</span>
             <strong>
-              {overview.data?.data.attention.unseededParticipants ?? "—"}
+              {attention?.unseededParticipants ?? "—"}
             </strong>
           </article>
           <section>
             <h3>Next scheduled matches</h3>
-            {overview.data?.data.attention.nextMatches.length ? (
+            {nextMatches.length ? (
               <ol>
-                {overview.data.data.attention.nextMatches.map((match) => (
+                {nextMatches.map((match) => (
                   <li key={match.id}>
                     <strong>
                       {match.gangA?.name ?? "TBD"} vs{" "}
@@ -2343,17 +2347,15 @@ function Overview() {
           </section>
           <section>
             <h3>Stream detection errors</h3>
-            {overview.data?.data.attention.streamsWithErrors.length ? (
+            {streamsWithErrors.length ? (
               <ol>
-                {overview.data.data.attention.streamsWithErrors.map(
-                  (stream) => (
-                    <li key={stream.id}>
-                      <strong>{stream.streamerName}</strong>
-                      <span>{stream.platform}</span>
-                      <p>{stream.lastStatusError}</p>
-                    </li>
-                  ),
-                )}
+                {streamsWithErrors.map((stream) => (
+                  <li key={stream.id}>
+                    <strong>{stream.streamerName}</strong>
+                    <span>{stream.platform}</span>
+                    <p>{stream.lastStatusError}</p>
+                  </li>
+                ))}
               </ol>
             ) : (
               <p>No stream-provider errors.</p>
@@ -2379,7 +2381,7 @@ export default function AdminCommandCenterPage() {
     onSettled: () => void navigate("/admin/login"),
   });
   if (me.isPending) return <PageSkeleton />;
-  if (me.isError) return <Navigate to="/admin/login" replace />;
+  if (me.isError) return <LoginPage />;
   if (location.pathname === "/admin" || location.pathname === "/admin/") {
     return <Navigate to="/admin/overview" replace />;
   }
