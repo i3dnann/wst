@@ -3,6 +3,7 @@ import {
   assertValidWinner,
   generateOpeningRound,
   nextPowerOfTwo,
+  openingRoundSeedOrder,
 } from "./bracket.js";
 import { canManageGang, type AuthorizationContext } from "./permissions.js";
 import { calculatePoints, rankMovement } from "./ranking.js";
@@ -33,6 +34,31 @@ describe("ranking", () => {
 describe("bracket generation", () => {
   it("rounds a field up to a power of two", () => {
     expect(nextPowerOfTwo(6)).toBe(8);
+  });
+
+  it("exposes the physical slot seed order used by a 16-gang draw", () => {
+    expect(openingRoundSeedOrder(16)).toEqual([
+      1, 16, 8, 9, 4, 13, 5, 12, 2, 15, 7, 10, 3, 14, 6, 11,
+    ]);
+  });
+
+  it("preserves sequential wheel selections as exact opening matchups", () => {
+    const drawOrder = Array.from(
+      { length: 16 },
+      (_, index) => `gang-${String(index + 1)}`,
+    );
+    const seedOrder = openingRoundSeedOrder(drawOrder.length);
+    const openingRound = generateOpeningRound(
+      drawOrder.map((id, index) => ({ id, seed: seedOrder[index] ?? 0 })),
+    );
+    expect(
+      openingRound.map((match) => [match.participantAId, match.participantBId]),
+    ).toEqual(
+      Array.from({ length: 8 }, (_, index) => [
+        `gang-${String(index * 2 + 1)}`,
+        `gang-${String(index * 2 + 2)}`,
+      ]),
+    );
   });
 
   it("generates byes without duplicating participants", () => {

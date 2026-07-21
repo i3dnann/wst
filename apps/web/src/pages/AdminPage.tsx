@@ -8,6 +8,7 @@ import {
 import {
   CalendarDays,
   ChevronDown,
+  Dices,
   FileText,
   Gavel,
   LayoutDashboard,
@@ -26,6 +27,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ErrorState, PageSkeleton } from "@/components/data/StatusState";
+import { TournamentDrawWheel } from "@/components/admin/TournamentDrawWheel";
 import { api } from "@/lib/api";
 
 type AdminSection =
@@ -417,6 +419,10 @@ export function BracketManager() {
   const [zoom, setZoom] = useState(1);
   const [view, setView] = useState<"canvas" | "list">("canvas");
   const [resetOpen, setResetOpen] = useState(false);
+  const [drawOpen, setDrawOpen] = useState(false);
+  const [pendingDrawOrder, setPendingDrawOrder] = useState<string[] | null>(
+    null,
+  );
   const [removeTarget, setRemoveTarget] = useState<
     TournamentDetail["participants"][number] | null
   >(null);
@@ -558,11 +564,14 @@ export function BracketManager() {
     mutationFn: (input: {
       confirmReset?: boolean;
       confirmationName?: string;
-      placement?: "SEEDED" | "RANDOM";
+      placement?: "SEEDED" | "RANDOM" | "DRAW";
+      drawParticipantIds?: string[];
     }) => api.generateBracket(selectedId, input),
     onSuccess: (result) => {
       toast.success(`${String(result.data.slotCount)}-slot bracket generated.`);
       setResetOpen(false);
+      setDrawOpen(false);
+      setPendingDrawOrder(null);
       setConfirmationName("");
       void refresh();
     },
@@ -577,6 +586,9 @@ export function BracketManager() {
   const completedMatches = rounds
     .flatMap((round) => round.matches)
     .filter((match) => match.status === "COMPLETED").length;
+  const approvedParticipants = (tournament?.participants ?? []).filter(
+    (participant) => participant.status === "APPROVED",
+  );
   return (
     <section className="bracket-admin-workspace">
       <header className="admin-manager-header">
@@ -635,7 +647,32 @@ export function BracketManager() {
           <RefreshCw />{" "}
           {rounds.length ? "Regenerate Bracket" : "Generate Bracket"}
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!selectedId || generate.isPending}
+          onClick={() => setDrawOpen((open) => !open)}
+        >
+          <Dices /> {drawOpen ? "Close Draw" : "Champions Draw"}
+        </Button>
       </div>
+      {drawOpen && tournament ? (
+        <TournamentDrawWheel
+          hasBracket={Boolean(rounds.length)}
+          isSaving={generate.isPending}
+          participants={approvedParticipants}
+          tournamentName={tournament.name}
+          onClose={() => setDrawOpen(false)}
+          onConfirm={(drawParticipantIds) => {
+            if (rounds.length) {
+              setPendingDrawOrder(drawParticipantIds);
+              setResetOpen(true);
+              return;
+            }
+            generate.mutate({ placement: "DRAW", drawParticipantIds });
+          }}
+        />
+      ) : null}
       <div className="bracket-admin-columns">
         <section className="seed-manager">
           <header>
@@ -824,11 +861,18 @@ export function BracketManager() {
               generate.mutate({
                 confirmReset: true,
                 ...(completedMatches ? { confirmationName } : {}),
-                placement,
+                placement: pendingDrawOrder ? "DRAW" : placement,
+                ...(pendingDrawOrder
+                  ? { drawParticipantIds: pendingDrawOrder }
+                  : {}),
               });
             }}
           >
-            <h3 id="reset-bracket-title">Regenerate & Reset Bracket</h3>
+            <h3 id="reset-bracket-title">
+              {pendingDrawOrder
+                ? "Confirm Champions Draw"
+                : "Regenerate & Reset Bracket"}
+            </h3>
             <p>
               This resets every bracket match, score, player statistic, and
               winner progression.{" "}
@@ -836,18 +880,25 @@ export function BracketManager() {
                 ? `${String(completedMatches)} completed match result(s) will be removed.`
                 : "The current opening slots will be replaced."}
             </p>
-            <label>
-              Placement
-              <select
-                value={placement}
-                onChange={(event) =>
-                  setPlacement(event.target.value as "SEEDED" | "RANDOM")
-                }
-              >
-                <option value="SEEDED">Deterministic seeded placement</option>
-                <option value="RANDOM">Randomize participants</option>
-              </select>
-            </label>
+            {pendingDrawOrder ? (
+              <p>
+                The completed wheel draw will become the exact opening-round
+                matchup order.
+              </p>
+            ) : (
+              <label>
+                Placement
+                <select
+                  value={placement}
+                  onChange={(event) =>
+                    setPlacement(event.target.value as "SEEDED" | "RANDOM")
+                  }
+                >
+                  <option value="SEEDED">Deterministic seeded placement</option>
+                  <option value="RANDOM">Randomize participants</option>
+                </select>
+              </label>
+            )}
             {completedMatches ? (
               <label>
                 Type <strong>{selected?.name}</strong> to confirm
@@ -862,7 +913,10 @@ export function BracketManager() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setResetOpen(false)}
+                onClick={() => {
+                  setResetOpen(false);
+                  setPendingDrawOrder(null);
+                }}
               >
                 Cancel
               </Button>
@@ -876,7 +930,9 @@ export function BracketManager() {
                   )
                 }
               >
-                Yes, Reset Bracket
+                {pendingDrawOrder
+                  ? "Confirm Draw & Reset Bracket"
+                  : "Yes, Reset Bracket"}
               </Button>
             </div>
           </form>

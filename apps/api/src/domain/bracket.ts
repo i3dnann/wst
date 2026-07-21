@@ -17,6 +17,16 @@ export function nextPowerOfTwo(value: number): number {
   return 2 ** Math.ceil(Math.log2(value));
 }
 
+export function openingRoundSeedOrder(participantCount: number): number[] {
+  const size = nextPowerOfTwo(participantCount);
+  let seedOrder = [1, 2];
+  while (seedOrder.length < size) {
+    const nextSize = seedOrder.length * 2;
+    seedOrder = seedOrder.flatMap((seed) => [seed, nextSize + 1 - seed]);
+  }
+  return seedOrder;
+}
+
 export function generateOpeningRound(
   participants: SeededParticipant[],
 ): GeneratedMatch[] {
@@ -56,11 +66,7 @@ export function generateOpeningRound(
   }
 
   const size = nextPowerOfTwo(participants.length);
-  let seedOrder = [1, 2];
-  while (seedOrder.length < size) {
-    const nextSize = seedOrder.length * 2;
-    seedOrder = seedOrder.flatMap((seed) => [seed, nextSize + 1 - seed]);
-  }
+  const seedOrder = openingRoundSeedOrder(participants.length);
   const bySeed = new Map(
     participants.map((participant) => [participant.seed, participant]),
   );

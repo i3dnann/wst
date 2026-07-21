@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useQueries } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -11,6 +11,7 @@ import {
 import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ErrorState, PageSkeleton } from "@/components/data/StatusState";
+import { ChampionCelebration } from "@/components/effects/ChampionCelebration";
 import { api } from "@/lib/api";
 
 interface GangRef {
@@ -104,6 +105,15 @@ export default function TournamentDetailPage() {
 
   const data = tournament.data.data as unknown as TournamentRecord;
   const rounds = bracket.data.data.rounds as BracketRoundRecord[];
+  const finalRound = rounds[rounds.length - 1];
+  const finalMatch = finalRound?.matches[0];
+  const champion = finalMatch
+    ? finalMatch.winnerGangId === finalMatch.gangA?.id
+      ? finalMatch.gangA
+      : finalMatch.winnerGangId === finalMatch.gangB?.id
+        ? finalMatch.gangB
+        : null
+    : null;
   const start = new Date(data.startAt).toLocaleDateString(undefined, {
     dateStyle: "medium",
   });
@@ -115,6 +125,13 @@ export default function TournamentDetailPage() {
 
   return (
     <main className="gold-content-page tournament-detail-gold">
+      {champion && finalMatch ? (
+        <ChampionCelebration
+          celebrationId={`${slug}:${finalMatch.id}:${champion.id}`}
+          tournamentName={data.name}
+          winnerName={champion.name}
+        />
+      ) : null}
       <header className="tournament-gold-header">
         <div>
           <Button asChild variant="ghost">
@@ -157,6 +174,13 @@ export default function TournamentDetailPage() {
                 {round.name}
               </button>
             ))}
+            <button
+              type="button"
+              className={activeRound === rounds.length ? "active" : ""}
+              onClick={() => setActiveRound(rounds.length)}
+            >
+              Winner
+            </button>
           </nav>
           <section
             className="football-bracket"
@@ -172,6 +196,11 @@ export default function TournamentDetailPage() {
                   }
                   key={round.id}
                   aria-labelledby={`round-${round.id}`}
+                  style={
+                    {
+                      "--round-match-count": round.matches.length,
+                    } as CSSProperties
+                  }
                 >
                   <header>
                     <span>Round {round.roundNumber}</span>
@@ -179,34 +208,61 @@ export default function TournamentDetailPage() {
                   </header>
                   <div className="bracket-match-stack">
                     {round.matches.map((match) => (
-                      <article
-                        className={`football-match football-match--${match.status.toLowerCase()}`}
-                        key={match.id}
-                      >
-                        <div className="football-match-status">
-                          <span>{match.position ?? "—"}</span>
-                          <strong>{match.status.replaceAll("_", " ")}</strong>
-                        </div>
-                        <TeamRow
-                          gang={match.gangA}
-                          score={match.gangAScore}
-                          winner={match.winnerGangId === match.gangA?.id}
-                        />
-                        <TeamRow
-                          gang={match.gangB}
-                          score={match.gangBScore}
-                          winner={match.winnerGangId === match.gangB?.id}
-                        />
-                        {match.scheduledAt ? (
-                          <time dateTime={match.scheduledAt}>
-                            {new Date(match.scheduledAt).toLocaleString()}
-                          </time>
-                        ) : null}
-                      </article>
+                      <div className="bracket-match-cell" key={match.id}>
+                        <article
+                          className={`football-match football-match--${match.status.toLowerCase()}`}
+                        >
+                          <div className="football-match-status">
+                            <span>{match.position ?? "—"}</span>
+                            <strong>{match.status.replaceAll("_", " ")}</strong>
+                          </div>
+                          <TeamRow
+                            gang={match.gangA}
+                            score={match.gangAScore}
+                            winner={match.winnerGangId === match.gangA?.id}
+                          />
+                          <TeamRow
+                            gang={match.gangB}
+                            score={match.gangBScore}
+                            winner={match.winnerGangId === match.gangB?.id}
+                          />
+                          {match.scheduledAt ? (
+                            <time dateTime={match.scheduledAt}>
+                              {new Date(match.scheduledAt).toLocaleString()}
+                            </time>
+                          ) : null}
+                        </article>
+                      </div>
                     ))}
                   </div>
                 </section>
               ))}
+              <section
+                className={
+                  activeRound === rounds.length
+                    ? "bracket-champion-lane active"
+                    : "bracket-champion-lane"
+                }
+                aria-labelledby="bracket-winner-heading"
+              >
+                <header>
+                  <span>Tournament</span>
+                  <h2 id="bracket-winner-heading">Winner</h2>
+                </header>
+                <div className="bracket-champion-track">
+                  <article
+                    className={
+                      champion
+                        ? "bracket-champion-card bracket-champion-card--decided"
+                        : "bracket-champion-card"
+                    }
+                  >
+                    <Trophy aria-hidden="true" />
+                    <span>{champion ? "Champion" : "Final winner"}</span>
+                    <strong>{champion?.name ?? "Awaiting final"}</strong>
+                  </article>
+                </div>
+              </section>
             </div>
             <p className="bracket-scroll-cue">
               Swipe or scroll horizontally to follow the road to the final.

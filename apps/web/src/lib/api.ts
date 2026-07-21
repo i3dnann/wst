@@ -346,7 +346,8 @@ export const api = {
     input: {
       confirmReset?: boolean;
       confirmationName?: string;
-      placement?: "SEEDED" | "RANDOM";
+      placement?: "SEEDED" | "RANDOM" | "DRAW";
+      drawParticipantIds?: string[];
     } = {},
   ) =>
     apiRequest<

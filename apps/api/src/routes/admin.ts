@@ -2,7 +2,11 @@ import type { FastifyInstance } from "fastify";
 import { matchResultSchema } from "@mafia/shared";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { assertValidWinner, generateOpeningRound } from "../domain/bracket.js";
+import {
+  assertValidWinner,
+  generateOpeningRound,
+  openingRoundSeedOrder,
+} from "../domain/bracket.js";
 import { envelope } from "../lib/envelope.js";
 import {
   discordAuditCategories,
@@ -259,11 +263,26 @@ const matchUpdateSchema = z.object({
     ])
     .optional(),
 });
-const bracketGenerateSchema = z.object({
-  confirmReset: z.boolean().default(false),
-  confirmationName: z.string().trim().max(140).optional(),
-  placement: z.enum(["SEEDED", "RANDOM"]).default("SEEDED"),
-});
+const bracketGenerateSchema = z
+  .object({
+    confirmReset: z.boolean().default(false),
+    confirmationName: z.string().trim().max(140).optional(),
+    placement: z.enum(["SEEDED", "RANDOM", "DRAW"]).default("SEEDED"),
+    drawParticipantIds: z
+      .array(z.string().min(20).max(40))
+      .min(2)
+      .max(256)
+      .optional(),
+  })
+  .superRefine((input, context) => {
+    if (input.placement === "DRAW" && !input.drawParticipantIds) {
+      context.addIssue({
+        code: "custom",
+        path: ["drawParticipantIds"],
+        message: "A completed draw order is required.",
+      });
+    }
+  });
 const matchReopenSchema = z.object({
   version: z.number().int().min(0),
   reason: z.string().trim().min(5).max(4_000),
@@ -1172,19 +1191,60 @@ export function adminRoutes(app: FastifyInstance): void {
               { tournamentName: tournament.name, completedMatches },
             );
 
+          const participantById = new Map(
+            tournament.participants.map((participant) => [
+              participant.id,
+              participant,
+            ]),
+          );
+          const drawParticipantIds = input.drawParticipantIds ?? [];
+          if (input.placement === "DRAW") {
+            const uniqueDrawIds = new Set(drawParticipantIds);
+            const isPowerOfTwo =
+              tournament.participants.length > 1 &&
+              (tournament.participants.length &
+                (tournament.participants.length - 1)) ===
+                0;
+            if (
+              !isPowerOfTwo ||
+              drawParticipantIds.length !== tournament.participants.length ||
+              uniqueDrawIds.size !== tournament.participants.length ||
+              drawParticipantIds.some((id) => !participantById.has(id))
+            )
+              throw new HttpError(
+                422,
+                "DRAW_PARTICIPANTS_INVALID",
+                "The draw must contain every approved gang exactly once, and the entrant count must be a power of two.",
+              );
+          }
           const participantOrder =
-            input.placement === "RANDOM"
-              ? tournament.participants
-                  .map((participant) => ({
-                    participant,
-                    random: crypto.getRandomValues(new Uint32Array(1))[0] ?? 0,
-                  }))
-                  .sort((left, right) => left.random - right.random)
-                  .map(({ participant }) => participant)
-              : tournament.participants;
+            input.placement === "DRAW"
+              ? drawParticipantIds.flatMap((participantId) => {
+                  const participant = participantById.get(participantId);
+                  return participant ? [participant] : [];
+                })
+              : input.placement === "RANDOM"
+                ? tournament.participants
+                    .map((participant) => ({
+                      participant,
+                      random:
+                        crypto.getRandomValues(new Uint32Array(1))[0] ?? 0,
+                    }))
+                    .sort((left, right) => left.random - right.random)
+                    .map(({ participant }) => participant)
+                : tournament.participants;
+          const drawnSeedOrder =
+            input.placement === "DRAW"
+              ? openingRoundSeedOrder(tournament.participants.length)
+              : [];
           const seeded = participantOrder.map((participant, index) => ({
             participant,
-            seed: input.placement === "RANDOM" ? index + 1 : participant.seed,
+            seed:
+              input.placement === "DRAW"
+                ? (drawnSeedOrder[index] ?? null)
+                : input.placement === "RANDOM"
+                  ? index + 1
+                  : participant.seed,
           }));
           if (seeded.some((entry) => entry.seed === null))
             throw new HttpError(
@@ -1192,7 +1252,7 @@ export function adminRoutes(app: FastifyInstance): void {
               "MISSING_SEEDS",
               "Every approved participant needs a seed before bracket generation.",
             );
-          if (input.placement === "RANDOM") {
+          if (input.placement === "RANDOM" || input.placement === "DRAW") {
             await tx.tournamentParticipant.updateMany({
               where: { tournamentId: tournament.id, status: "APPROVED" },
               data: { seed: null },
