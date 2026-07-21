@@ -111,6 +111,11 @@ function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
+function isRemovedRecord(kind: RecordKind, record: AdminRecord): boolean {
+  const status = String(record.status ?? "").toUpperCase();
+  return status === "ARCHIVED" || (kind === "match" && status === "CANCELLED");
+}
+
 const adminRouteAliases: Record<string, AdminSection> = {
   gangs: "gang",
   players: "player",
@@ -1149,15 +1154,21 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
     retry: false,
   });
   const rows = useMemo(() => asArray<AdminRecord>(records.data), [records.data]);
+  const activeRows = useMemo(
+    () => rows.filter((record) => !isRemovedRecord(kind, record)),
+    [kind, rows],
+  );
   const gangRows = asArray<AdminRecord>(gangs.data?.data);
   const tournamentRows = asArray<AdminRecord>(tournaments.data?.data);
   const seasonRows = asArray<AdminRecord>(seasons.data?.data);
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return term
-      ? rows.filter((row) => JSON.stringify(row).toLowerCase().includes(term))
-      : rows;
-  }, [rows, search]);
+      ? activeRows.filter((row) =>
+          JSON.stringify(row).toLowerCase().includes(term),
+        )
+      : activeRows;
+  }, [activeRows, search]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -1243,8 +1254,8 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
         <div>
           <h2>{labels.plural}</h2>
           <p>
-            Create, edit, restore, and remove every{" "}
-            {labels.singular.toLowerCase()} record.
+            Create, edit, and remove every {labels.singular.toLowerCase()}{" "}
+            record. Removed records are hidden after refresh.
           </p>
         </div>
         <Button onClick={openNew}>
