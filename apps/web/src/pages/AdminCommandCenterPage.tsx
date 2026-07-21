@@ -31,7 +31,12 @@ import {
 } from "@mafia/shared";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/data/StatusState";
-import { api, type AuditRecord } from "@/lib/api";
+import {
+  api,
+  type AdminOverviewData,
+  type AdministratorRecord,
+  type AuditRecord,
+} from "@/lib/api";
 import { BracketManager } from "./AdminPage";
 import LoginPage from "./LoginPage";
 import {
@@ -101,6 +106,10 @@ class AdminSectionBoundary extends Component<
 type RecordKind = "gang" | "player" | "tournament" | "match" | "event";
 type AdminRecord = Record<string, unknown> & { id: string };
 type FormValues = Record<string, string | boolean>;
+
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
 
 const adminRouteAliases: Record<string, AdminSection> = {
   gangs: "gang",
@@ -1110,14 +1119,14 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
     queryKey: ["admin-records", kind],
     queryFn: async (): Promise<AdminRecord[]> => {
       if (kind === "gang")
-        return (await api.adminGangs()).data as unknown as AdminRecord[];
+        return asArray<AdminRecord>((await api.adminGangs()).data);
       if (kind === "player")
-        return (await api.adminPlayers()).data as unknown as AdminRecord[];
+        return asArray<AdminRecord>((await api.adminPlayers()).data);
       if (kind === "tournament")
-        return (await api.adminTournaments()).data as unknown as AdminRecord[];
+        return asArray<AdminRecord>((await api.adminTournaments()).data);
       if (kind === "match")
-        return (await api.adminMatches()).data as unknown as AdminRecord[];
-      return (await api.adminEvents()).data as unknown as AdminRecord[];
+        return asArray<AdminRecord>((await api.adminMatches()).data);
+      return asArray<AdminRecord>((await api.adminEvents()).data);
     },
     retry: false,
   });
@@ -1139,11 +1148,10 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
     enabled: kind === "tournament",
     retry: false,
   });
-  const rows = useMemo(() => records.data ?? [], [records.data]);
-  const gangRows = (gangs.data?.data ?? []) as unknown as AdminRecord[];
-  const tournamentRows = (tournaments.data?.data ??
-    []) as unknown as AdminRecord[];
-  const seasonRows = (seasons.data?.data ?? []) as AdminRecord[];
+  const rows = useMemo(() => asArray<AdminRecord>(records.data), [records.data]);
+  const gangRows = asArray<AdminRecord>(gangs.data?.data);
+  const tournamentRows = asArray<AdminRecord>(tournaments.data?.data);
+  const seasonRows = asArray<AdminRecord>(seasons.data?.data);
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return term
@@ -1431,9 +1439,8 @@ function StreamManager() {
     queryFn: api.adminTournaments,
     retry: false,
   });
-  const rows = streams.data?.data ?? [];
-  const tournamentRows = (tournaments.data?.data ??
-    []) as unknown as AdminRecord[];
+  const rows = asArray<PublicLiveStream>(streams.data?.data);
+  const tournamentRows = asArray<AdminRecord>(tournaments.data?.data);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected =
     rows.find((item) => item.id === selectedId) ?? rows[0] ?? null;
@@ -1771,8 +1778,14 @@ function AdministratorManager({
   });
   const [values, setValues] = useState<FormValues>({ status: "ACTIVE" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const administratorRows = asArray<AdministratorRecord>(
+    administrators.data?.data,
+  );
+  const roleRows = asArray<AdminRecord>(
+    (roles.data?.data as { roles?: unknown } | undefined)?.roles,
+  );
   const selected =
-    administrators.data?.data.find((item) => item.id === selectedId) ?? null;
+    administratorRows.find((item) => item.id === selectedId) ?? null;
   const setValue = (name: string, value: string | boolean) =>
     setValues((current) => ({ ...current, [name]: value }));
   const save = useMutation({
@@ -1815,7 +1828,7 @@ function AdministratorManager({
     },
   });
   const edit = (id: string) => {
-    const item = administrators.data?.data.find((entry) => entry.id === id);
+    const item = administratorRows.find((entry) => entry.id === id);
     if (!item) return;
     setSelectedId(id);
     setValues({
@@ -1856,7 +1869,7 @@ function AdministratorManager({
               </tr>
             </thead>
             <tbody>
-              {(administrators.data?.data ?? []).map((item) => (
+              {administratorRows.map((item) => (
                 <tr key={item.id}>
                   <td>
                     <strong>{item.displayName}</strong>
@@ -1948,7 +1961,7 @@ function AdministratorManager({
               setValue={setValue}
               options={[
                 { value: "", label: "Select role" },
-                ...((roles.data?.data.roles ?? []) as AdminRecord[])
+                ...roleRows
                   .filter((role) => role.status === "ACTIVE")
                   .map((role) => ({
                     value: role.id,
@@ -2013,7 +2026,7 @@ function AuditManager({ integration = false }: { integration?: boolean }) {
   useEffect(() => {
     if (!settings.data?.data) return;
     setEnabled(settings.data.data.enabled);
-    setCategories(settings.data.data.categories);
+    setCategories(asArray<string>(settings.data.data.categories));
   }, [settings.data]);
   const save = useMutation({
     mutationFn: () =>
@@ -2032,6 +2045,7 @@ function AuditManager({ integration = false }: { integration?: boolean }) {
     mutationFn: () => api.testDiscordAuditWebhook(optional(webhookUrl)),
     onSuccess: () => toast.success("Test log delivered to Discord."),
   });
+  const auditRows = asArray<AuditRecord>(logs.data?.data);
   const toggleCategory = (category: string) =>
     setCategories((current) =>
       current.includes(category)
@@ -2148,7 +2162,7 @@ function AuditManager({ integration = false }: { integration?: boolean }) {
                 </tr>
               </thead>
               <tbody>
-                {(logs.data?.data ?? []).map((log) => (
+                {auditRows.map((log) => (
                   <tr key={log.id}>
                     <td>
                       <strong>{log.actor?.displayName ?? "System"}</strong>
@@ -2309,10 +2323,16 @@ function Overview() {
     retry: false,
   });
   const summary = overview.data?.data.summary;
-  const activity = overview.data?.data.activity ?? [];
+  const activity = asArray<AdminOverviewData["activity"][number]>(
+    overview.data?.data.activity,
+  );
   const attention = overview.data?.data.attention;
-  const nextMatches = attention?.nextMatches ?? [];
-  const streamsWithErrors = attention?.streamsWithErrors ?? [];
+  const nextMatches = asArray<AdminOverviewData["attention"]["nextMatches"][number]>(
+    attention?.nextMatches,
+  );
+  const streamsWithErrors = asArray<
+    AdminOverviewData["attention"]["streamsWithErrors"][number]
+  >(attention?.streamsWithErrors);
   const labels = {
     totalGangs: "Total gangs",
     activeGangs: "Active gangs",
@@ -2426,8 +2446,9 @@ export default function AdminCommandCenterPage() {
   if (location.pathname === "/admin" || location.pathname === "/admin/") {
     return <Navigate to="/admin/overview" replace />;
   }
+  const grantedPermissions = asArray<string>(me.data.data.permissions);
   const visibleNavigation = navigation.filter((item) =>
-    me.data.data.permissions.includes(item[3]),
+    grantedPermissions.includes(item[3]),
   );
   const authorizedSection =
     requestedSection &&
@@ -2515,7 +2536,7 @@ export default function AdminCommandCenterPage() {
           {effectiveSection === "administrator" ? (
             <AdministratorManager
               currentUserId={me.data.data.id}
-              canManageRoles={me.data.data.permissions.includes("role.manage")}
+              canManageRoles={grantedPermissions.includes("role.manage")}
             />
           ) : null}
           {effectiveSection === "roles" ? <RolesPermissionsManager /> : null}
