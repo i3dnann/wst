@@ -81,6 +81,20 @@ describe("API session reliability", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
+  it("does not send JSON content-type for empty-body mutations", async () => {
+    const fetchMock = vi.fn(
+      (_input: string | URL | Request, init?: RequestInit) => {
+        const headers = new Headers(init?.headers);
+        expect(headers.has("content-type")).toBe(false);
+        return Promise.resolve(new Response(null, { status: 204 }));
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await apiRequest("/api/v1/admin/gangs/gang-id", { method: "DELETE" });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   it("preserves the backend error code, request ID, and details", async () => {
     vi.stubGlobal(
       "fetch",

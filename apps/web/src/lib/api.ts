@@ -33,8 +33,9 @@ export async function apiRequest<T>(
   const headers = new Headers(init?.headers);
   const isFormData =
     typeof FormData !== "undefined" && init?.body instanceof FormData;
+  const hasBody = init?.body !== undefined && init.body !== null;
 
-  if (!headers.has("content-type") && !isFormData) {
+  if (!headers.has("content-type") && hasBody && !isFormData) {
     headers.set("content-type", "application/json");
   }
   if (init?.method && !["GET", "HEAD"].includes(init.method.toUpperCase())) {
@@ -83,6 +84,7 @@ export async function apiRequest<T>(
       body?.error?.requestId,
       body?.error?.details,
     );
+  if (response.status === 204 || response.status === 205) return undefined as T;
   if (body === null)
     throw new ApiError(
       response.status,
