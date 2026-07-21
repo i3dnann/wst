@@ -8,12 +8,14 @@ import {
   Swords,
   Trophy,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { MagicCard } from "@/components/ui/magic-card";
 import { Marquee } from "@/components/ui/marquee";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { Particles } from "@/components/ui/particles";
+import { Ripple } from "@/components/ui/ripple";
+import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { ShineBorder } from "@/components/ui/shine-border";
 import { api } from "@/lib/api";
 import { usePublicWebsiteSettings } from "@/lib/website-settings";
@@ -24,7 +26,21 @@ const formatDate = (value: string) =>
     timeStyle: "short",
   }).format(new Date(value));
 
+const defaultHeroSubtitle =
+  "Where every rivalry becomes history. Follow verified matches, live tournaments, gang rankings, events, and streams from one official command center.";
+
+const defaultHeroTitle = "WORLD STAR CFW";
+
+const legacyHeroTitles = new Set([
+  "WORLD STAR",
+  "Where gangs compete. Legends rule.",
+]);
+
+const legacyHeroSubtitle =
+  "Live tournaments, verified match records, rankings, events, and streams—managed from one protected admin system.";
+
 export default function HomePage() {
+  const navigate = useNavigate();
   const website = usePublicWebsiteSettings();
   const [home, tournaments, events, streams] = useQueries({
     queries: [
@@ -50,6 +66,16 @@ export default function HomePage() {
   const liveStreams =
     streams.data?.data.filter((stream) => stream.status === "LIVE") ?? [];
   const settings = website.data;
+  const heroTitle =
+    !settings?.homepage.heroTitle ||
+    legacyHeroTitles.has(settings.homepage.heroTitle)
+      ? defaultHeroTitle
+      : settings.homepage.heroTitle;
+  const heroSubtitle =
+    !settings?.homepage.heroSubtitle ||
+    settings.homepage.heroSubtitle === legacyHeroSubtitle
+      ? defaultHeroSubtitle
+      : settings.homepage.heroSubtitle;
 
   const stats = [
     [Trophy, "Tournaments", tournamentList.length],
@@ -79,25 +105,31 @@ export default function HomePage() {
         />
         <div className="gold-hero-shade" />
         <div className="gold-hero-content">
-          <img
-            className="gold-hero-mark"
-            src="/assets/wst/wst-mafia-mark.svg"
-            alt="World Star"
-          />
-          <h1>
-            {settings?.homepage.heroTitle ||
-              "Where gangs compete. Legends rule."}
-          </h1>
-          <p>
-            {settings?.homepage.heroSubtitle ||
-              "Live tournaments, verified match records, rankings, events, and streams—managed from one protected admin system."}
-          </p>
+          <div className="gold-hero-emblem">
+            <Ripple
+              className="gold-hero-ripple"
+              mainCircleSize={240}
+              mainCircleOpacity={0.18}
+              numCircles={9}
+            />
+            <img
+              className="gold-hero-mark"
+              src="/assets/wst/wst-logo.png"
+              alt="World Star"
+            />
+          </div>
+          <h1>{heroTitle}</h1>
+          <p>{heroSubtitle}</p>
           <div className="gold-hero-actions">
-            <Button asChild size="lg">
-              <Link to="/gangs">
-                <Shield /> Explore the Gangs
-              </Link>
-            </Button>
+            <ShimmerButton
+              className="hero-shimmer-button"
+              background="linear-gradient(135deg, #6f0d1c, #d2273f)"
+              borderRadius="6px"
+              shimmerColor="#ffb3bd"
+              onClick={() => void navigate("/gangs")}
+            >
+              <Shield /> Explore the Gangs <ArrowRight />
+            </ShimmerButton>
             <Button asChild size="lg" variant="outline">
               <Link to="/tournaments">
                 <Trophy /> View Tournaments
@@ -113,7 +145,13 @@ export default function HomePage() {
             <Icon />
             <div>
               <strong>{label}</strong>
-              <span>{value > 0 ? <NumberTicker value={value} /> : "Awaiting records"}</span>
+              <span>
+                {value > 0 ? (
+                  <NumberTicker value={value} />
+                ) : (
+                  "Awaiting records"
+                )}
+              </span>
             </div>
           </article>
         ))}
@@ -124,11 +162,11 @@ export default function HomePage() {
           className="gold-feature-panel"
           gradientColor="#4a0f18"
           gradientFrom="#9f1d2f"
-          gradientTo="#d7c7a1"
+          gradientTo="#ef4058"
           gradientOpacity={0.16}
         >
           <ShineBorder
-            shineColor={["#4a0f18", "#9f1d2f", "#d7c7a1"]}
+            shineColor={["#6f0d1c", "#c51f38", "#ef4058"]}
             duration={18}
           />
           <header className="gold-section-heading">

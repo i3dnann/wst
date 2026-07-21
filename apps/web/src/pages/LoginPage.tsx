@@ -27,7 +27,7 @@ export default function LoginPage() {
         </Link>
         <img
           className="admin-login-logo"
-          src="/assets/wst/wst-mafia-mark.svg"
+          src="/assets/wst/wst-logo.png"
           alt="World Star"
         />
         <div>

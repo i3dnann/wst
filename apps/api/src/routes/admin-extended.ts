@@ -92,10 +92,23 @@ const defaultWebsiteSettings = {
     maintenanceMode: false,
   },
   homepage: {
-    heroTitle: "WORLD STAR",
-    heroSubtitle: "Loyalty. Power. Respect.",
+    heroTitle: "WORLD STAR CFW",
+    heroSubtitle:
+      "Where every rivalry becomes history. Follow verified matches, live tournaments, gang rankings, events, and streams from one official command center.",
     heroMediaUrl: "",
     announcement: "",
+  },
+  pages: {
+    rulesTitle: "Rules of Engagement",
+    rulesIntro:
+      "Clear competition starts with one shared standard for rosters, evidence, disputes, and verified results.",
+    rulesContent:
+      "Every participant is responsible for following the published tournament and server rules. Rosters must be accurate before check-in, match evidence must be complete, and disputes must be submitted inside the allowed review window.\n\nAdministrator decisions are recorded through the protected command center so every result remains traceable and consistent.",
+    aboutTitle: "Built for the official record",
+    aboutIntro:
+      "World Star brings gangs, tournaments, rankings, events, streams, and verified match history into one trusted registry.",
+    aboutContent:
+      "The public website gives every player a clear view of competition while the protected administrator workspace controls publishing, permissions, brackets, results, and platform settings.\n\nEvery surface is connected to the same live records, creating a reliable home for rivalries, achievements, and tournament history.",
   },
   tournament: {
     defaultBestOf: 1,
@@ -105,9 +118,9 @@ const defaultWebsiteSettings = {
     resultSubmissionMinutes: 60,
   },
   branding: {
-    primaryColor: "#b88a44",
-    secondaryColor: "#5b3a20",
-    accentColor: "#d3ad68",
+    primaryColor: "#c51f38",
+    secondaryColor: "#6f0d1c",
+    accentColor: "#ef4058",
     backgroundMediaUrl: "",
     animationIntensity: "NORMAL" as const,
   },

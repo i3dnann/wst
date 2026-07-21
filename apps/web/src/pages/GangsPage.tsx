@@ -46,11 +46,7 @@ export default function GangsPage() {
             Star community.
           </p>
         </div>
-        <img
-          className="registry-seal"
-          src="/assets/wst/wst-mafia-mark.svg"
-          alt=""
-        />
+        <img className="registry-seal" src="/assets/wst/wst-logo.png" alt="" />
       </header>
       <section className="filter-rail" aria-label="Gang filters">
         <label className="search-control">
@@ -121,7 +117,7 @@ export default function GangsPage() {
               {index === 0 ? (
                 <BorderBeam
                   colorFrom="#9f1d2f"
-                  colorTo="#d7c7a1"
+                  colorTo="#ef4058"
                   duration={10}
                   size={100}
                 />

@@ -91,7 +91,12 @@ export const eventStatuses = [
   "CANCELLED",
   "ARCHIVED",
 ] as const;
-export const streamStatuses = ["SCHEDULED", "LIVE", "OFFLINE", "ARCHIVED"] as const;
+export const streamStatuses = [
+  "SCHEDULED",
+  "LIVE",
+  "OFFLINE",
+  "ARCHIVED",
+] as const;
 export const streamPlatforms = ["TWITCH", "YOUTUBE", "KICK", "OTHER"] as const;
 export const mediaStatuses = [
   "PENDING",
@@ -100,7 +105,12 @@ export const mediaStatuses = [
   "ARCHIVED",
   "DELETED",
 ] as const;
-export const seasonStatuses = ["DRAFT", "ACTIVE", "CLOSED", "ARCHIVED"] as const;
+export const seasonStatuses = [
+  "DRAFT",
+  "ACTIVE",
+  "CLOSED",
+  "ARCHIVED",
+] as const;
 export const rankingEntityTypes = ["GANG", "PLAYER"] as const;
 
 export type RecordStatus = (typeof recordStatuses)[number];
@@ -198,6 +208,16 @@ export const websiteSettingsSchema = z.object({
     heroMediaUrl: optionalHttpsUrl,
     announcement: z.string().trim().max(240),
   }),
+  pages: z
+    .object({
+      rulesTitle: z.string().trim().min(1).max(120),
+      rulesIntro: z.string().trim().max(500),
+      rulesContent: z.string().trim().max(20_000),
+      aboutTitle: z.string().trim().min(1).max(120),
+      aboutIntro: z.string().trim().max(500),
+      aboutContent: z.string().trim().max(20_000),
+    })
+    .optional(),
   tournament: z.object({
     defaultBestOf: z.number().int().min(1).max(99),
     defaultParticipantCapacity: z.number().int().min(2).max(256),

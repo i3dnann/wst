@@ -18,6 +18,8 @@ import {
   Trophy,
   UserCog,
   Users,
+  Activity,
+  Eye,
   X,
 } from "lucide-react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
@@ -193,6 +195,33 @@ const navigation = [
   [RefreshCw, "System Health", "health", "system.health.read"],
 ] as const;
 
+const navigationGroups: Array<{
+  label: string;
+  sections: AdminSection[];
+}> = [
+  { label: "Command", sections: ["overview"] },
+  {
+    label: "Registry",
+    sections: ["gang", "gang-organization", "player", "match", "result"],
+  },
+  {
+    label: "Competition",
+    sections: ["tournament", "participant", "bracket", "ranking", "season"],
+  },
+  { label: "Publishing", sections: ["event", "stream", "media"] },
+  {
+    label: "Access & System",
+    sections: [
+      "settings",
+      "administrator",
+      "roles",
+      "discord",
+      "audit",
+      "health",
+    ],
+  },
+];
+
 const kindLabels: Record<RecordKind, { singular: string; plural: string }> = {
   gang: { singular: "Gang", plural: "Gangs" },
   player: { singular: "Player", plural: "Players" },
@@ -331,7 +360,7 @@ function blankValues(kind: RecordKind): FormValues {
     return {
       status: "ACTIVE",
       recruitmentStatus: "CLOSED",
-      primaryColor: "#b88a44",
+      primaryColor: "#c51f38",
       secondaryColor: "#2f241a",
       verified: false,
       featured: false,
@@ -361,7 +390,7 @@ function valuesFromRecord(kind: RecordKind, record: AdminRecord): FormValues {
       logoUrl: valueOf(record, "logoUrl"),
       bannerUrl: valueOf(record, "bannerUrl"),
       territory: valueOf(record, "territory"),
-      primaryColor: valueOf(record, "primaryColor") || "#b88a44",
+      primaryColor: valueOf(record, "primaryColor") || "#c51f38",
       secondaryColor: valueOf(record, "secondaryColor") || "#2f241a",
       foundedAt: dateTimeInput(record.foundedAt).slice(0, 10),
       status: valueOf(record, "status"),
@@ -1157,7 +1186,10 @@ function RecordsManager({ kind }: { kind: RecordKind }) {
     enabled: kind === "tournament",
     retry: false,
   });
-  const rows = useMemo(() => asArray<AdminRecord>(records.data), [records.data]);
+  const rows = useMemo(
+    () => asArray<AdminRecord>(records.data),
+    [records.data],
+  );
   const activeRows = useMemo(
     () => rows.filter((record) => !isRemovedRecord(kind, record)),
     [kind, rows],
@@ -2342,31 +2374,32 @@ function Overview() {
     overview.data?.data.activity,
   );
   const attention = overview.data?.data.attention;
-  const nextMatches = asArray<AdminOverviewData["attention"]["nextMatches"][number]>(
-    attention?.nextMatches,
-  );
+  const nextMatches = asArray<
+    AdminOverviewData["attention"]["nextMatches"][number]
+  >(attention?.nextMatches);
   const streamsWithErrors = asArray<
     AdminOverviewData["attention"]["streamsWithErrors"][number]
   >(attention?.streamsWithErrors);
   const labels = {
-    totalGangs: "Total gangs",
-    activeGangs: "Active gangs",
-    totalPlayers: "Players",
-    activeTournaments: "Live tournaments",
-    upcomingMatches: "Upcoming matches",
-    awaitingResults: "Awaiting results",
-    disputedMatches: "Disputed matches",
-    pendingMedia: "Pending media",
+    totalGangs: [Shield, "Total gangs"],
+    activeGangs: [Activity, "Active gangs"],
+    totalPlayers: [Users, "Players"],
+    activeTournaments: [Trophy, "Live tournaments"],
+    upcomingMatches: [CalendarDays, "Upcoming matches"],
+    awaitingResults: [FileClock, "Awaiting results"],
+    disputedMatches: [Gavel, "Disputed matches"],
+    pendingMedia: [Eye, "Pending media"],
   } as const;
   return (
     <>
       <section className="control-metrics">
-        {Object.entries(labels).map(([key, label]) => (
+        {Object.entries(labels).map(([key, [Icon, label]]) => (
           <article key={key}>
-            <span>{label}</span>
-            <strong>
-              {summary?.[key as keyof typeof summary] ?? "—"}
-            </strong>
+            <Icon />
+            <div>
+              <span>{label}</span>
+              <strong>{summary?.[key as keyof typeof summary] ?? "—"}</strong>
+            </div>
           </article>
         ))}
       </section>
@@ -2394,9 +2427,7 @@ function Overview() {
           </header>
           <article>
             <span>Approved entrants without seeds</span>
-            <strong>
-              {attention?.unseededParticipants ?? "—"}
-            </strong>
+            <strong>{attention?.unseededParticipants ?? "—"}</strong>
           </article>
           <section>
             <h3>Next scheduled matches</h3>
@@ -2476,22 +2507,34 @@ export default function AdminCommandCenterPage() {
     <div className="control-shell gold-control-shell command-center-v2">
       <aside className="control-sidebar">
         <div className="control-brand">
-          <img src="/assets/wst/wst-mafia-mark.svg" alt="World Star" />
+          <img src="/assets/wst/wst-logo.png" alt="World Star" />
           <span>
             <strong>WORLD STAR</strong>
             <small>ADMIN COMMAND CENTER</small>
           </span>
         </div>
         <nav aria-label="Administrator navigation">
-          {visibleNavigation.map(([Icon, label, value]) => (
-            <Link
-              key={value}
-              className={effectiveSection === value ? "active" : ""}
-              to={`/admin/${adminSectionRoutes[value]}`}
-            >
-              <Icon /> {label}
-            </Link>
-          ))}
+          {navigationGroups.map((group) => {
+            const items = visibleNavigation.filter((item) =>
+              group.sections.includes(item[2]),
+            );
+            if (!items.length) return null;
+            return (
+              <section className="control-nav-group" key={group.label}>
+                <strong>{group.label}</strong>
+                {items.map(([Icon, label, value]) => (
+                  <Link
+                    key={value}
+                    className={effectiveSection === value ? "active" : ""}
+                    to={`/admin/${adminSectionRoutes[value]}`}
+                    title={label}
+                  >
+                    <Icon /> <span>{label}</span>
+                  </Link>
+                ))}
+              </section>
+            );
+          })}
         </nav>
         <button
           type="button"

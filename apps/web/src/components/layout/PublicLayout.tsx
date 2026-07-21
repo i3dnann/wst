@@ -27,6 +27,18 @@ const navigation = [
 const primaryNavigation = navigation.slice(0, 8);
 const moreNavigation = navigation.slice(8);
 
+const legacyBrandColors: Record<string, string> = {
+  "#b88a44": "#c51f38",
+  "#c89a52": "#c51f38",
+  "#d3ad68": "#ef4058",
+  "#d7c7a1": "#ef4058",
+  "#5b3a20": "#6f0d1c",
+};
+
+function currentBrandColor(value: string, fallback: string) {
+  return legacyBrandColors[value.toLowerCase()] || value || fallback;
+}
+
 function Brand({
   logoUrl,
   name = "WORLD STAR",
@@ -36,7 +48,7 @@ function Brand({
 }) {
   return (
     <Link to="/" className="wst-brand" aria-label="World Star home">
-      <img src={logoUrl || "/assets/wst/wst-mafia-mark.svg"} alt="" />
+      <img src={logoUrl || "/assets/wst/wst-logo.png"} alt="" />
       <span>
         {name}
         <small>Competitive Gang Registry</small>
@@ -134,7 +146,7 @@ function MaintenancePage({
       />
       <div className="maintenance-page__shade" aria-hidden="true" />
       <section className="maintenance-page__content">
-        <img src={logoUrl || "/assets/wst/wst-mafia-mark.svg"} alt="" />
+        <img src={logoUrl || "/assets/wst/wst-logo.png"} alt="" />
         <p>{shortName}</p>
         <h1 id="maintenance-title">Maintenance in progress</h1>
         <span>
@@ -154,9 +166,18 @@ export function PublicLayout() {
   const settings = website.data;
   const brandStyle = settings
     ? ({
-        "--brand-primary": settings.branding.primaryColor,
-        "--brand-secondary": settings.branding.secondaryColor,
-        "--brand-accent": settings.branding.accentColor,
+        "--brand-primary": currentBrandColor(
+          settings.branding.primaryColor,
+          "#c51f38",
+        ),
+        "--brand-secondary": currentBrandColor(
+          settings.branding.secondaryColor,
+          "#6f0d1c",
+        ),
+        "--brand-accent": currentBrandColor(
+          settings.branding.accentColor,
+          "#ef4058",
+        ),
       } as CSSProperties)
     : undefined;
   const logoUrl = settings?.general.logoUrl || undefined;
@@ -221,10 +242,7 @@ export function PublicLayout() {
 
       <footer className="site-footer">
         <div className="footer-brand">
-          <img
-            src={logoUrl || "/assets/wst/wst-mafia-mark.svg"}
-            alt={shortName}
-          />
+          <img src={logoUrl || "/assets/wst/wst-logo.png"} alt={shortName} />
           <p>
             {settings?.general.description ||
               "A modern competitive registry for gangs, tournaments, rankings, live streams, events, and verified match records."}

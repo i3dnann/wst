@@ -922,19 +922,29 @@ const defaultSettings = {
   defaultLanguage: "en",
   timeZone: "Europe/Berlin",
   maintenanceMode: false,
-  heroTitle: "WORLD STAR",
+  heroTitle: "WORLD STAR CFW",
   heroSubtitle:
-    "Live tournaments, verified match records, rankings, events, and streams—managed from one protected admin system.",
+    "Where every rivalry becomes history. Follow verified matches, live tournaments, gang rankings, events, and streams from one official command center.",
   heroMediaUrl: "",
   announcement: "",
+  rulesTitle: "Rules of Engagement",
+  rulesIntro:
+    "Clear competition starts with one shared standard for rosters, evidence, disputes, and verified results.",
+  rulesContent:
+    "Every participant is responsible for following the published tournament and server rules. Rosters must be accurate before check-in, match evidence must be complete, and disputes must be submitted inside the allowed review window.\n\nAdministrator decisions are recorded through the protected command center so every result remains traceable and consistent.",
+  aboutTitle: "Built for the official record",
+  aboutIntro:
+    "World Star brings gangs, tournaments, rankings, events, streams, and verified match history into one trusted registry.",
+  aboutContent:
+    "The public website gives every player a clear view of competition while the protected administrator workspace controls publishing, permissions, brackets, results, and platform settings.\n\nEvery surface is connected to the same live records, creating a reliable home for rivalries, achievements, and tournament history.",
   defaultBestOf: 1,
   defaultParticipantCapacity: 16,
   registrationRules: "",
   checkInDurationMinutes: 30,
   resultSubmissionMinutes: 60,
-  primaryColor: "#b88a44",
-  secondaryColor: "#5b3a20",
-  accentColor: "#d3ad68",
+  primaryColor: "#c51f38",
+  secondaryColor: "#6f0d1c",
+  accentColor: "#ef4058",
   backgroundMediaUrl: "",
   animationIntensity: "NORMAL",
   discord: "",
@@ -945,6 +955,19 @@ const defaultSettings = {
   twitter: "",
   instagram: "",
 };
+
+const legacySettingsColors: Record<string, string> = {
+  "#b88a44": "#c51f38",
+  "#c89a52": "#c51f38",
+  "#5b3a20": "#6f0d1c",
+  "#d3ad68": "#ef4058",
+  "#d7c7a1": "#ef4058",
+};
+
+function modernSettingsColor(value: unknown, fallback: string) {
+  if (typeof value !== "string") return fallback;
+  return legacySettingsColors[value.toLowerCase()] || value;
+}
 
 export function WebsiteSettingsManager() {
   const queryClient = useQueryClient();
@@ -958,6 +981,7 @@ export function WebsiteSettingsManager() {
     if (!value) return;
     const general = relation(value, "general");
     const homepage = relation(value, "homepage");
+    const pages = relation(value, "pages");
     const tournament = relation(value, "tournament");
     const branding = relation(value, "branding");
     const social = relation(value, "social");
@@ -965,9 +989,36 @@ export function WebsiteSettingsManager() {
       ...current,
       ...general,
       ...homepage,
+      ...pages,
       ...tournament,
       ...branding,
       ...social,
+      heroTitle:
+        typeof homepage?.heroTitle === "string"
+          ? homepage.heroTitle === "WORLD STAR" ||
+            homepage.heroTitle === "Where gangs compete. Legends rule."
+            ? defaultSettings.heroTitle
+            : homepage.heroTitle
+          : current.heroTitle,
+      heroSubtitle:
+        typeof homepage?.heroSubtitle === "string"
+          ? homepage.heroSubtitle ===
+            "Live tournaments, verified match records, rankings, events, and streams—managed from one protected admin system."
+            ? defaultSettings.heroSubtitle
+            : homepage.heroSubtitle
+          : current.heroSubtitle,
+      primaryColor: modernSettingsColor(
+        branding?.primaryColor,
+        current.primaryColor,
+      ),
+      secondaryColor: modernSettingsColor(
+        branding?.secondaryColor,
+        current.secondaryColor,
+      ),
+      accentColor: modernSettingsColor(
+        branding?.accentColor,
+        current.accentColor,
+      ),
     }));
   }, [settings.data]);
   const save = useMutation({
@@ -988,6 +1039,14 @@ export function WebsiteSettingsManager() {
           heroSubtitle: form.heroSubtitle,
           heroMediaUrl: form.heroMediaUrl,
           announcement: form.announcement,
+        },
+        pages: {
+          rulesTitle: form.rulesTitle,
+          rulesIntro: form.rulesIntro,
+          rulesContent: form.rulesContent,
+          aboutTitle: form.aboutTitle,
+          aboutIntro: form.aboutIntro,
+          aboutContent: form.aboutContent,
         },
         tournament: {
           defaultBestOf: form.defaultBestOf,
@@ -1128,6 +1187,64 @@ export function WebsiteSettingsManager() {
                 setForm((value) => ({
                   ...value,
                   registrationRules: event.target.value,
+                }))
+              }
+            />
+          </label>
+        </section>
+        <section className="admin-card admin-form-grid settings-content-pages">
+          <h3 className="full-width">Rules Page</h3>
+          {field("rulesTitle", "Page title")}
+          <label className="full-width">
+            Introduction
+            <textarea
+              value={form.rulesIntro}
+              onChange={(event) =>
+                setForm((value) => ({
+                  ...value,
+                  rulesIntro: event.target.value,
+                }))
+              }
+            />
+          </label>
+          <label className="full-width">
+            Page content
+            <textarea
+              rows={9}
+              value={form.rulesContent}
+              onChange={(event) =>
+                setForm((value) => ({
+                  ...value,
+                  rulesContent: event.target.value,
+                }))
+              }
+            />
+          </label>
+        </section>
+        <section className="admin-card admin-form-grid settings-content-pages">
+          <h3 className="full-width">About Page</h3>
+          {field("aboutTitle", "Page title")}
+          <label className="full-width">
+            Introduction
+            <textarea
+              value={form.aboutIntro}
+              onChange={(event) =>
+                setForm((value) => ({
+                  ...value,
+                  aboutIntro: event.target.value,
+                }))
+              }
+            />
+          </label>
+          <label className="full-width">
+            Page content
+            <textarea
+              rows={9}
+              value={form.aboutContent}
+              onChange={(event) =>
+                setForm((value) => ({
+                  ...value,
+                  aboutContent: event.target.value,
                 }))
               }
             />
