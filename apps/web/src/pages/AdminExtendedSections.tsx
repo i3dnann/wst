@@ -923,7 +923,8 @@ const defaultSettings = {
   timeZone: "Europe/Berlin",
   maintenanceMode: false,
   heroTitle: "WORLD STAR",
-  heroSubtitle: "Loyalty. Power. Respect.",
+  heroSubtitle:
+    "Live tournaments, verified match records, rankings, events, and streams—managed from one protected admin system.",
   heroMediaUrl: "",
   announcement: "",
   defaultBestOf: 1,

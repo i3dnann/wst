@@ -65,8 +65,8 @@ export default function HomePage() {
       <section className="gold-hero">
         <Particles
           className="gold-hero-particles"
-          color="#d5a354"
-          quantity={46}
+          color="#22d3ee"
+          quantity={62}
           staticity={80}
           size={0.35}
         />
@@ -85,8 +85,14 @@ export default function HomePage() {
             src="/assets/wst-gold/wst-gold.png"
             alt="World Star"
           />
-          <h1>{settings?.homepage.heroTitle || "WORLD STAR"}</h1>
-          <p>{settings?.homepage.heroSubtitle || "Loyalty. Power. Respect."}</p>
+          <h1>
+            {settings?.homepage.heroTitle ||
+              "Where gangs compete. Legends rule."}
+          </h1>
+          <p>
+            {settings?.homepage.heroSubtitle ||
+              "Live tournaments, verified match records, rankings, events, and streams—managed from one protected admin system."}
+          </p>
           <div className="gold-hero-actions">
             <Button asChild size="lg">
               <Link to="/gangs">
@@ -117,13 +123,13 @@ export default function HomePage() {
       <section className="gold-split-section">
         <MagicCard
           className="gold-feature-panel"
-          gradientColor="#7a5124"
-          gradientFrom="#efc97c"
-          gradientTo="#65411e"
-          gradientOpacity={0.18}
+          gradientColor="#0891b2"
+          gradientFrom="#22d3ee"
+          gradientTo="#7c3aed"
+          gradientOpacity={0.16}
         >
           <ShineBorder
-            shineColor={["#5f3b17", "#e5bd70", "#5f3b17"]}
+            shineColor={["#22d3ee", "#8b5cf6", "#14b8a6"]}
             duration={18}
           />
           <header className="gold-section-heading">
@@ -206,7 +212,7 @@ export default function HomePage() {
         <header className="gold-section-heading">
           <div>
             <span>Leading Gangs</span>
-            <h2>The families building their legacy</h2>
+            <h2>The gangs climbing the board</h2>
           </div>
           <Button asChild variant="outline">
             <Link to="/gangs">
@@ -251,7 +257,7 @@ export default function HomePage() {
               <strong>No gangs registered</strong>
               <p>
                 Rankings will begin after the administrator publishes the first
-                families.
+                gangs.
               </p>
             </div>
           )}

@@ -112,7 +112,11 @@ function asArray<T>(value: unknown): T[] {
 }
 
 function isRemovedRecord(kind: RecordKind, record: AdminRecord): boolean {
-  const status = String(record.status ?? "").toUpperCase();
+  const rawStatus = record.status;
+  const status =
+    typeof rawStatus === "string" || typeof rawStatus === "number"
+      ? String(rawStatus).toUpperCase()
+      : "";
   return status === "ARCHIVED" || (kind === "match" && status === "CANCELLED");
 }
 

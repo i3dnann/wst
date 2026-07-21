@@ -49,7 +49,7 @@ export default function TournamentsPage() {
         <div>
           <h1>Tournament Ledger</h1>
           <p>
-            Every bracket is a proving ground: crews enter, rivalries are
+            Every bracket is a proving ground: gangs enter, rivalries are
             settled, and only one name leaves with the crown.
           </p>
         </div>

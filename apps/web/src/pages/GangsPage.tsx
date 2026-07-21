@@ -40,10 +40,10 @@ export default function GangsPage() {
     <main className="page-shell registry-page">
       <header className="page-heading">
         <div>
-          <h1>The Syndicate Registry</h1>
+          <h1>Gang Registry</h1>
           <p>
-            The sanctioned directory of approved criminal organizations
-            operating across the World Star community.
+            The official directory of approved gangs competing across the World
+            Star community.
           </p>
         </div>
         <img

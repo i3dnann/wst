@@ -11,13 +11,13 @@ export default function InformationPage({
     kind === "rules"
       ? {
           title: "Rules of Engagement",
-          text: "Competition remains fair only when rosters, evidence, disputes, and results follow the published server policy.",
+          text: "Competition stays fair when rosters, evidence, disputes, and results follow the published server policy.",
           Icon: Scale,
         }
       : kind === "about"
         ? {
             title: "The official record",
-            text: "Mafia is a secure public registry and operations platform for the server’s criminal organizations, players, tournaments, rankings, and matches.",
+            text: "World Star is a secure public registry and operations platform for gangs, players, tournaments, rankings, and verified matches.",
             Icon: Shield,
           }
         : {

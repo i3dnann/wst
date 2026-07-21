@@ -46,7 +46,7 @@ export default function RankingsPage() {
     <main className="page-shell">
       <header className="page-heading">
         <div>
-          <h1>Order of Power</h1>
+          <h1>Competitive Rankings</h1>
           <p>
             Authoritative seasonal standings calculated from finalized match
             results and auditable ranking events.

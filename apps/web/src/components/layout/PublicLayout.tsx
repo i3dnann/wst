@@ -39,7 +39,7 @@ function Brand({
       <img src={logoUrl || "/assets/wst-gold/wst-gold.png"} alt="" />
       <span>
         {name}
-        <small>Loyalty · Power · Respect</small>
+        <small>Competitive Gang Registry</small>
       </span>
     </Link>
   );
@@ -138,8 +138,8 @@ function MaintenancePage({
         <p>{shortName}</p>
         <h1 id="maintenance-title">Maintenance in progress</h1>
         <span>
-          The registry is being tuned behind closed doors. Public pages will
-          return when the work is complete.
+          The registry is being upgraded behind the scenes. Public pages will
+          return as soon as the next build is ready.
         </span>
         <Button asChild className="maintenance-page__login">
           <Link to="/admin/login">Administrator login</Link>
@@ -154,9 +154,9 @@ export function PublicLayout() {
   const settings = website.data;
   const brandStyle = settings
     ? ({
-        "--primary": settings.branding.primaryColor,
-        "--secondary": settings.branding.secondaryColor,
-        "--cyan-strong": settings.branding.accentColor,
+        "--brand-primary": settings.branding.primaryColor,
+        "--brand-secondary": settings.branding.secondaryColor,
+        "--brand-accent": settings.branding.accentColor,
       } as CSSProperties)
     : undefined;
   const logoUrl = settings?.general.logoUrl || undefined;
@@ -227,7 +227,7 @@ export function PublicLayout() {
           />
           <p>
             {settings?.general.description ||
-              "A competitive community built on loyalty, power, respect, and records controlled by its administrator."}
+              "A modern competitive registry for gangs, tournaments, rankings, live streams, events, and verified match records."}
           </p>
         </div>
         <div>
