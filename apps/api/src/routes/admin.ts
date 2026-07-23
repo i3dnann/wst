@@ -7,6 +7,7 @@ import {
   generateOpeningRound,
   openingRoundSeedOrder,
 } from "../domain/bracket.js";
+import { canManageTournamentParticipants } from "../domain/tournament.js";
 import { envelope } from "../lib/envelope.js";
 import {
   discordAuditCategories,
@@ -19,6 +20,7 @@ import {
 import { HttpError } from "../lib/http-error.js";
 import { hashPassword } from "../lib/password.js";
 import { prisma } from "../lib/prisma.js";
+import { realtimeHub } from "../lib/realtime.js";
 import { refreshStreamStatus } from "../lib/stream-status.js";
 import { requirePermission } from "../middleware/authorize.js";
 
@@ -945,15 +947,11 @@ export function adminRoutes(app: FastifyInstance): void {
           "TOURNAMENT_NOT_FOUND",
           "Tournament was not found.",
         );
-      if (
-        ["IN_PROGRESS", "COMPLETED", "CANCELLED", "ARCHIVED"].includes(
-          tournament.status,
-        )
-      )
+      if (!canManageTournamentParticipants(tournament.status))
         throw new HttpError(
           409,
-          "PARTICIPANTS_LOCKED",
-          "Participants cannot be added in the tournament's current status.",
+          "TOURNAMENT_ARCHIVED",
+          "Restore the tournament before adding participants.",
         );
       const gang = await prisma.gang.findUnique({
         where: { id: input.gangId },
@@ -1007,7 +1005,7 @@ export function adminRoutes(app: FastifyInstance): void {
         where: { id: request.params.id },
         select: { maximumParticipants: true, status: true },
       });
-      if (tournament.status === "ARCHIVED")
+      if (!canManageTournamentParticipants(tournament.status))
         throw new HttpError(
           409,
           "TOURNAMENT_ARCHIVED",
@@ -1113,6 +1111,151 @@ export function adminRoutes(app: FastifyInstance): void {
         request.params.id,
         participant,
       );
+      return reply.code(204).send();
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    "/api/v1/admin/tournaments/:id/draw/start",
+    async (request) => {
+      const auth = requirePermission(request, "tournament.bracket.manage");
+      const tournament = await prisma.tournament.findUnique({
+        where: { id: request.params.id },
+        include: {
+          participants: {
+            where: { status: "APPROVED" },
+            orderBy: [{ seed: "asc" }, { registeredAt: "asc" }],
+            include: {
+              gang: {
+                select: {
+                  id: true,
+                  name: true,
+                  tag: true,
+                  logoUrl: true,
+                },
+              },
+            },
+          },
+        },
+      });
+      if (!tournament)
+        throw new HttpError(
+          404,
+          "TOURNAMENT_NOT_FOUND",
+          "Tournament was not found.",
+        );
+      if (tournament.status === "ARCHIVED")
+        throw new HttpError(
+          409,
+          "TOURNAMENT_ARCHIVED",
+          "Restore the tournament before starting a live draw.",
+        );
+      if (tournament.format !== "SINGLE_ELIMINATION")
+        throw new HttpError(
+          422,
+          "DRAW_FORMAT_INVALID",
+          "The live draw is available only for single-elimination tournaments.",
+        );
+      const entrantCount = tournament.participants.length;
+      const validEntrantCount =
+        entrantCount >= 2 &&
+        entrantCount <= 32 &&
+        (entrantCount & (entrantCount - 1)) === 0;
+      if (!validEntrantCount)
+        throw new HttpError(
+          422,
+          "DRAW_ENTRANTS_INVALID",
+          "Approve exactly 2, 4, 8, 16, or 32 gangs before starting the live draw.",
+        );
+      const draw = realtimeHub.startDraw({
+        tournamentId: tournament.id,
+        tournamentSlug: tournament.slug,
+        tournamentName: tournament.name,
+        participants: tournament.participants.map((participant) => ({
+          id: participant.id,
+          gang: participant.gang,
+        })),
+      });
+      await writeAudit({
+        actorUserId: auth.userId,
+        action: "tournament.draw.start",
+        entityType: "Tournament",
+        entityId: tournament.id,
+        afterData: {
+          participantCount: draw.participants.length,
+          tournamentSlug: draw.tournamentSlug,
+        },
+      });
+      return envelope(request, draw);
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    "/api/v1/admin/tournaments/:id/draw/spin",
+    async (request) => {
+      requirePermission(request, "tournament.bracket.manage");
+      const draw = realtimeHub.getDraw(request.params.id);
+      if (!draw)
+        throw new HttpError(
+          409,
+          "DRAW_NOT_ACTIVE",
+          "Start the live tournament draw before spinning.",
+        );
+      const approvedParticipants = await prisma.tournamentParticipant.findMany({
+        where: { tournamentId: request.params.id, status: "APPROVED" },
+        select: { id: true },
+      });
+      const approvedIds = new Set(
+        approvedParticipants.map((participant) => participant.id),
+      );
+      if (
+        approvedIds.size !== draw.participants.length ||
+        draw.participants.some(
+          (participant) => !approvedIds.has(participant.id),
+        )
+      )
+        throw new HttpError(
+          409,
+          "DRAW_PARTICIPANTS_CHANGED",
+          "The approved gangs changed. Reset and restart the live draw.",
+        );
+      if (draw.drawnParticipantIds.length >= draw.participants.length)
+        throw new HttpError(
+          409,
+          "DRAW_COMPLETE",
+          "Every gang has already been drawn.",
+        );
+      const result = realtimeHub.spinDraw(request.params.id);
+      if (!result)
+        throw new HttpError(
+          409,
+          "DRAW_SPIN_FAILED",
+          "The live draw could not select another gang.",
+        );
+      return envelope(request, result);
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    "/api/v1/admin/tournaments/:id/draw/reset",
+    (request) => {
+      requirePermission(request, "tournament.bracket.manage");
+      const draw = realtimeHub.resetDraw(request.params.id);
+      if (!draw)
+        throw new HttpError(
+          409,
+          "DRAW_NOT_ACTIVE",
+          "Start the live tournament draw before resetting it.",
+        );
+      return envelope(request, draw);
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>(
+    "/api/v1/admin/tournaments/:id/draw",
+    (request, reply) => {
+      requirePermission(request, "tournament.bracket.manage");
+      realtimeHub.cancelDraw(request.params.id);
       return reply.code(204).send();
     },
   );
@@ -1398,7 +1541,7 @@ export function adminRoutes(app: FastifyInstance): void {
           const updated = await tx.tournament.update({
             where: { id: tournament.id },
             data: { bracketVersion: { increment: 1 } },
-            select: { id: true, bracketVersion: true },
+            select: { id: true, slug: true, bracketVersion: true },
           });
           return {
             ...updated,
@@ -1425,6 +1568,7 @@ export function adminRoutes(app: FastifyInstance): void {
             }
           : {}),
       });
+      realtimeHub.completeDraw(result.id, result.slug, result.bracketVersion);
       return envelope(request, result);
     },
   );

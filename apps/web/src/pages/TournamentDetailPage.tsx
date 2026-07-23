@@ -12,6 +12,7 @@ import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ErrorState, PageSkeleton } from "@/components/data/StatusState";
 import { ChampionCelebration } from "@/components/effects/ChampionCelebration";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import { api } from "@/lib/api";
 
 interface GangRef {
@@ -75,6 +76,7 @@ function TeamRow({
 export default function TournamentDetailPage() {
   const { slug = "" } = useParams();
   const [activeRound, setActiveRound] = useState(0);
+  const { dragHandlers, isDragging } = useDragScroll<HTMLDivElement>();
   const [tournament, bracket] = useQueries({
     queries: [
       {
@@ -186,7 +188,10 @@ export default function TournamentDetailPage() {
             className="football-bracket"
             aria-label={`${data.name} tournament bracket`}
           >
-            <div className="football-bracket-scroll">
+            <div
+              className={`football-bracket-scroll${isDragging ? " is-dragging" : ""}`}
+              {...dragHandlers}
+            >
               {rounds.map((round, roundIndex) => (
                 <section
                   className={
@@ -265,7 +270,7 @@ export default function TournamentDetailPage() {
               </section>
             </div>
             <p className="bracket-scroll-cue">
-              Swipe or scroll horizontally to follow the road to the final.
+              Drag, swipe, or scroll to follow the road to the final.
             </p>
           </section>
         </>

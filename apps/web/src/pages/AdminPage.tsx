@@ -22,12 +22,14 @@ import {
   Trash2,
   Trophy,
   Users,
+  X,
 } from "lucide-react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ErrorState, PageSkeleton } from "@/components/data/StatusState";
 import { TournamentDrawWheel } from "@/components/admin/TournamentDrawWheel";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import { api } from "@/lib/api";
 
 type AdminSection =
@@ -399,10 +401,11 @@ function MatchAdvanceEditor({
             type="button"
             size="sm"
             variant="outline"
+            aria-label={`Set ${gang?.name ?? "empty slot"} as winner and advance`}
             disabled={!gang || advance.isPending}
             onClick={() => gang && advance.mutate(gang.id)}
           >
-            Set Winner &amp; Advance
+            Advance
           </Button>
         </div>
       ))}
@@ -413,11 +416,202 @@ function MatchAdvanceEditor({
   );
 }
 
+const BRACKET_CARD_WIDTH = 282;
+const BRACKET_CARD_HEIGHT = 154;
+const BRACKET_ROW_STEP = 178;
+const BRACKET_COLUMN_GAP = 122;
+const BRACKET_TOP = 72;
+const BRACKET_LEFT = 28;
+const WINNER_CARD_WIDTH = 210;
+
+interface AdminBracketLayout {
+  width: number;
+  height: number;
+  roundX: number[];
+  roundCenters: number[][];
+  winnerX: number;
+  winnerCenter: number;
+}
+
+function createAdminBracketLayout(
+  rounds: BracketRoundAdmin[],
+): AdminBracketLayout {
+  const roundX = rounds.map(
+    (_, index) =>
+      BRACKET_LEFT + index * (BRACKET_CARD_WIDTH + BRACKET_COLUMN_GAP),
+  );
+  const roundCenters: number[][] = [];
+  rounds.forEach((round, roundIndex) => {
+    if (roundIndex === 0) {
+      roundCenters.push(
+        round.matches.map(
+          (_, matchIndex) =>
+            BRACKET_TOP +
+            BRACKET_CARD_HEIGHT / 2 +
+            matchIndex * BRACKET_ROW_STEP,
+        ),
+      );
+      return;
+    }
+    const previousCenters = roundCenters[roundIndex - 1] ?? [];
+    roundCenters.push(
+      round.matches.map((_, matchIndex) => {
+        const first = previousCenters[matchIndex * 2];
+        const second = previousCenters[matchIndex * 2 + 1];
+        if (typeof first === "number" && typeof second === "number") {
+          return (first + second) / 2;
+        }
+        const groupSize = 2 ** roundIndex;
+        return (
+          BRACKET_TOP +
+          BRACKET_CARD_HEIGHT / 2 +
+          ((groupSize - 1) / 2 + matchIndex * groupSize) * BRACKET_ROW_STEP
+        );
+      }),
+    );
+  });
+  const firstRoundCenters = roundCenters[0] ?? [BRACKET_TOP];
+  const finalCenters = roundCenters.at(-1) ?? firstRoundCenters;
+  const winnerCenter = finalCenters[0] ?? BRACKET_TOP + BRACKET_CARD_HEIGHT / 2;
+  const winnerX =
+    (roundX.at(-1) ?? BRACKET_LEFT) + BRACKET_CARD_WIDTH + BRACKET_COLUMN_GAP;
+  const lowestCenter = Math.max(...firstRoundCenters, winnerCenter);
+  return {
+    width: winnerX + WINNER_CARD_WIDTH + BRACKET_LEFT,
+    height: Math.max(620, lowestCenter + BRACKET_CARD_HEIGHT / 2 + 42),
+    roundX,
+    roundCenters,
+    winnerX,
+    winnerCenter,
+  };
+}
+
+function AdminBracketCanvas({
+  rounds,
+  tournamentSlug,
+  zoom,
+}: {
+  rounds: BracketRoundAdmin[];
+  tournamentSlug: string;
+  zoom: number;
+}) {
+  const layout = useMemo(() => createAdminBracketLayout(rounds), [rounds]);
+  const { dragHandlers, isDragging } = useDragScroll<HTMLDivElement>();
+  const finalMatch = rounds.at(-1)?.matches[0];
+  const champion = finalMatch
+    ? finalMatch.winnerGangId === finalMatch.gangA?.id
+      ? finalMatch.gangA
+      : finalMatch.winnerGangId === finalMatch.gangB?.id
+        ? finalMatch.gangB
+        : null
+    : null;
+
+  return (
+    <div
+      className={`admin-bracket-viewport${isDragging ? " is-dragging" : ""}`}
+      {...dragHandlers}
+    >
+      <div
+        className="admin-bracket-zoom-frame"
+        style={{
+          width: layout.width * zoom,
+          height: layout.height * zoom,
+        }}
+      >
+        <div
+          className="admin-bracket-tree"
+          style={{
+            width: layout.width,
+            height: layout.height,
+            transform: `scale(${String(zoom)})`,
+          }}
+        >
+          <svg
+            className="admin-bracket-connectors"
+            viewBox={`0 0 ${String(layout.width)} ${String(layout.height)}`}
+            aria-hidden="true"
+          >
+            {rounds.slice(1).flatMap((round, roundIndex) => {
+              const targetRoundIndex = roundIndex + 1;
+              const sourceX =
+                (layout.roundX[roundIndex] ?? 0) + BRACKET_CARD_WIDTH;
+              const targetX = layout.roundX[targetRoundIndex] ?? 0;
+              const middleX = sourceX + (targetX - sourceX) / 2;
+              const sourceCenters = layout.roundCenters[roundIndex] ?? [];
+              const targetCenters = layout.roundCenters[targetRoundIndex] ?? [];
+              return round.matches.map((match, matchIndex) => {
+                const firstY = sourceCenters[matchIndex * 2] ?? 0;
+                const secondY = sourceCenters[matchIndex * 2 + 1] ?? firstY;
+                const targetY =
+                  targetCenters[matchIndex] ?? (firstY + secondY) / 2;
+                return (
+                  <path
+                    key={`connector-${match.id}`}
+                    d={`M ${String(sourceX)} ${String(firstY)} H ${String(middleX)} V ${String(secondY)} M ${String(sourceX)} ${String(secondY)} H ${String(middleX)} M ${String(middleX)} ${String(targetY)} H ${String(targetX)}`}
+                  />
+                );
+              });
+            })}
+            {rounds.length ? (
+              <path
+                d={`M ${String((layout.roundX.at(-1) ?? 0) + BRACKET_CARD_WIDTH)} ${String(layout.winnerCenter)} H ${String(layout.winnerX)}`}
+              />
+            ) : null}
+          </svg>
+
+          {rounds.map((round, roundIndex) => (
+            <section className="admin-bracket-round" key={round.id}>
+              <h4 style={{ left: layout.roundX[roundIndex] }}>
+                <span>Round {roundIndex + 1}</span>
+                {round.name}
+              </h4>
+              {round.matches.map((match, matchIndex) => (
+                <div
+                  className="admin-bracket-node"
+                  key={match.id}
+                  style={{
+                    left: layout.roundX[roundIndex],
+                    top:
+                      (layout.roundCenters[roundIndex]?.[matchIndex] ?? 0) -
+                      BRACKET_CARD_HEIGHT / 2,
+                    width: BRACKET_CARD_WIDTH,
+                    height: BRACKET_CARD_HEIGHT,
+                  }}
+                >
+                  <MatchAdvanceEditor
+                    match={match}
+                    tournamentSlug={tournamentSlug}
+                  />
+                </div>
+              ))}
+            </section>
+          ))}
+
+          <section
+            className={`admin-bracket-winner${champion ? " is-decided" : ""}`}
+            style={{
+              left: layout.winnerX,
+              top: layout.winnerCenter - 58,
+              width: WINNER_CARD_WIDTH,
+            }}
+          >
+            <Trophy />
+            <span>Tournament winner</span>
+            <strong>{champion?.name ?? "Awaiting final"}</strong>
+          </section>
+        </div>
+      </div>
+      <div className="admin-bracket-drag-hint">Drag to move the bracket</div>
+    </div>
+  );
+}
+
 export function BracketManager() {
   const queryClient = useQueryClient();
   const bracketCanvasRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const [view, setView] = useState<"canvas" | "list">("canvas");
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [drawOpen, setDrawOpen] = useState(false);
   const [pendingDrawOrder, setPendingDrawOrder] = useState<string[] | null>(
@@ -428,6 +622,19 @@ export function BracketManager() {
   >(null);
   const [confirmationName, setConfirmationName] = useState("");
   const [placement, setPlacement] = useState<"SEEDED" | "RANDOM">("SEEDED");
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsFullscreen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isFullscreen]);
   const [tournaments, gangs] = useQueries({
     queries: [
       {
@@ -577,6 +784,26 @@ export function BracketManager() {
     },
     onError: (error) => toast.error(error.message),
   });
+  const startLiveDraw = useMutation({
+    mutationFn: () => api.startTournamentDraw(selectedId),
+    onSuccess: () => {
+      setDrawOpen(true);
+      toast.success("Live draw started for every website viewer.");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const closeLiveDraw = async () => {
+    try {
+      await api.cancelTournamentDraw(selectedId);
+      setDrawOpen(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "The live draw could not close.",
+      );
+    }
+  };
   const availableGangs = useMemo(() => {
     const used = new Set(
       tournament?.participants.map((entry) => entry.gang.id) ?? [],
@@ -624,6 +851,7 @@ export function BracketManager() {
           Tournament
           <select
             value={selectedId}
+            disabled={drawOpen || startLiveDraw.isPending}
             onChange={(event) => setSelectedId(event.target.value)}
           >
             <option value="">Select tournament</option>
@@ -650,8 +878,12 @@ export function BracketManager() {
         <Button
           type="button"
           variant="outline"
-          disabled={!selectedId || generate.isPending}
-          onClick={() => setDrawOpen((open) => !open)}
+          disabled={
+            !selectedId || generate.isPending || startLiveDraw.isPending
+          }
+          onClick={() =>
+            drawOpen ? void closeLiveDraw() : startLiveDraw.mutate()
+          }
         >
           <Dices /> {drawOpen ? "Close Draw" : "Champions Draw"}
         </Button>
@@ -662,7 +894,16 @@ export function BracketManager() {
           isSaving={generate.isPending}
           participants={approvedParticipants}
           tournamentName={tournament.name}
-          onClose={() => setDrawOpen(false)}
+          onClose={closeLiveDraw}
+          onError={(message) => toast.error(message)}
+          onReset={() =>
+            api
+              .resetTournamentDraw(selectedId)
+              .then((response) => response.data)
+          }
+          onSpin={() =>
+            api.spinTournamentDraw(selectedId).then((response) => response.data)
+          }
           onConfirm={(drawParticipantIds) => {
             if (rounds.length) {
               setPendingDrawOrder(drawParticipantIds);
@@ -713,68 +954,87 @@ export function BracketManager() {
               <Plus /> Add
             </Button>
           </form>
-          <ol>
-            {[...(tournament?.participants ?? [])]
-              .sort((a, b) => (a.seed ?? 999) - (b.seed ?? 999))
-              .map((participant) => (
-                <li key={`${participant.id}-${String(participant.seed)}`}>
-                  <input
-                    aria-label={`${participant.gang.name} seed`}
-                    type="number"
-                    min="1"
-                    defaultValue={participant.seed ?? ""}
-                    onBlur={(event) => {
-                      const nextSeed = Number(event.target.value);
-                      if (!Number.isInteger(nextSeed) || nextSeed < 1) return;
-                      reseed.mutate({
-                        participantId: participant.id,
-                        nextSeed,
-                      });
-                    }}
-                  />
-                  <div>
-                    {participant.gang.logoUrl ? (
-                      <img src={participant.gang.logoUrl} alt="" />
-                    ) : (
-                      <Shield />
-                    )}
-                    <strong>{participant.gang.name}</strong>
-                    <small>{participant.gang.tag}</small>
-                  </div>
-                  <select
-                    aria-label={`${participant.gang.name} tournament status`}
-                    value={participant.status}
-                    disabled={updateParticipantStatus.isPending}
-                    onChange={(event) =>
-                      updateParticipantStatus.mutate({
-                        participantId: participant.id,
-                        status: event.target.value,
-                      })
-                    }
-                  >
-                    {[
-                      "PENDING",
-                      "APPROVED",
-                      "REJECTED",
-                      "WITHDRAWN",
-                      "ELIMINATED",
-                      "CHAMPION",
-                    ].map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    aria-label={`Remove ${participant.gang.name}`}
-                    onClick={() => setRemoveTarget(participant)}
-                  >
-                    <Trash2 />
-                  </button>
-                </li>
-              ))}
-          </ol>
+          {(tournament?.participants.length ?? 0) === 0 ? (
+            <div className="seed-manager-empty">
+              <Shield />
+              <strong>No gangs seeded yet</strong>
+              <span>
+                Select an active gang, choose its seed, and press Add.
+              </span>
+            </div>
+          ) : (
+            <ol>
+              {[...(tournament?.participants ?? [])]
+                .sort((a, b) => (a.seed ?? 999) - (b.seed ?? 999))
+                .map((participant) => (
+                  <li key={`${participant.id}-${String(participant.seed)}`}>
+                    <input
+                      aria-label={`${participant.gang.name} seed`}
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      step="1"
+                      defaultValue={participant.seed ?? ""}
+                      onFocus={(event) => event.currentTarget.select()}
+                      onKeyDown={(event) => {
+                        if (["e", "E", "+", "-", "."].includes(event.key)) {
+                          event.preventDefault();
+                        }
+                      }}
+                      onWheel={(event) => event.currentTarget.blur()}
+                      onBlur={(event) => {
+                        const nextSeed = Number(event.target.value);
+                        if (!Number.isInteger(nextSeed) || nextSeed < 1) return;
+                        reseed.mutate({
+                          participantId: participant.id,
+                          nextSeed,
+                        });
+                      }}
+                    />
+                    <div>
+                      {participant.gang.logoUrl ? (
+                        <img src={participant.gang.logoUrl} alt="" />
+                      ) : (
+                        <Shield />
+                      )}
+                      <strong>{participant.gang.name}</strong>
+                      <small>{participant.gang.tag}</small>
+                    </div>
+                    <select
+                      aria-label={`${participant.gang.name} tournament status`}
+                      value={participant.status}
+                      disabled={updateParticipantStatus.isPending}
+                      onChange={(event) =>
+                        updateParticipantStatus.mutate({
+                          participantId: participant.id,
+                          status: event.target.value,
+                        })
+                      }
+                    >
+                      {[
+                        "PENDING",
+                        "APPROVED",
+                        "REJECTED",
+                        "WITHDRAWN",
+                        "ELIMINATED",
+                        "CHAMPION",
+                      ].map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${participant.gang.name}`}
+                      onClick={() => setRemoveTarget(participant)}
+                    >
+                      <Trash2 />
+                    </button>
+                  </li>
+                ))}
+            </ol>
+          )}
         </section>
         <section className="admin-bracket-preview">
           <header>
@@ -802,41 +1062,48 @@ export function BracketManager() {
               <button type="button" onClick={() => setZoom(1)}>
                 Fit
               </button>
-              <button
-                type="button"
-                onClick={() =>
-                  void bracketCanvasRef.current?.requestFullscreen()
-                }
-              >
-                Fullscreen
+              <button type="button" onClick={() => setIsFullscreen(true)}>
+                Open fullscreen
               </button>
             </div>
           </header>
           {rounds.length ? (
             <div
-              className={`admin-bracket-scroll admin-bracket-scroll--${view}`}
+              className={`admin-bracket-fullscreen${isFullscreen ? " is-fullscreen" : ""}`}
               ref={bracketCanvasRef}
             >
-              <div
-                className="admin-bracket-scale"
-                style={{
-                  transform: `scale(${String(zoom)})`,
-                  transformOrigin: "top left",
-                }}
-              >
-                {rounds.map((round) => (
-                  <section key={round.id}>
-                    <h4>{round.name}</h4>
-                    {round.matches.map((match) => (
-                      <MatchAdvanceEditor
-                        match={match}
-                        tournamentSlug={selected?.slug ?? ""}
-                        key={match.id}
-                      />
-                    ))}
-                  </section>
-                ))}
-              </div>
+              {isFullscreen ? (
+                <button
+                  className="admin-bracket-fullscreen__exit"
+                  type="button"
+                  onClick={() => setIsFullscreen(false)}
+                >
+                  <X aria-hidden="true" />
+                  Exit fullscreen
+                </button>
+              ) : null}
+              {view === "canvas" ? (
+                <AdminBracketCanvas
+                  rounds={rounds}
+                  tournamentSlug={selected?.slug ?? ""}
+                  zoom={zoom}
+                />
+              ) : (
+                <div className="admin-bracket-list">
+                  {rounds.map((round) => (
+                    <section key={round.id}>
+                      <h4>{round.name}</h4>
+                      {round.matches.map((match) => (
+                        <MatchAdvanceEditor
+                          match={match}
+                          tournamentSlug={selected?.slug ?? ""}
+                          key={match.id}
+                        />
+                      ))}
+                    </section>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="gold-empty-copy compact">

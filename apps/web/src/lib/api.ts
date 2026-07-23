@@ -7,9 +7,14 @@ import type {
   WebsiteSettings,
 } from "@mafia/shared";
 
+const DEV_API_BASE_URL =
+  typeof window === "undefined"
+    ? "http://localhost:4177"
+    : `${window.location.protocol}//${window.location.hostname}:4177`;
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ??
-  (import.meta.env.DEV ? "http://localhost:4177" : "/backend");
+  (import.meta.env.DEV ? DEV_API_BASE_URL : "/backend");
 
 let refreshPromise: Promise<boolean> | null = null;
 
@@ -185,7 +190,63 @@ export interface DiscordAuditSettings {
   categories: string[];
 }
 
+export interface LiveDrawParticipant {
+  id: string;
+  gang: {
+    id: string;
+    name: string;
+    tag: string;
+    logoUrl: string | null;
+  };
+}
+
+export interface LiveTournamentDraw {
+  tournamentId: string;
+  tournamentSlug: string;
+  tournamentName: string;
+  participants: LiveDrawParticipant[];
+  drawnParticipantIds: string[];
+  updatedAt: string;
+}
+
+export interface LiveDrawSpinResult {
+  draw: LiveTournamentDraw;
+  selectedParticipantId: string;
+  durationMs: number;
+}
+
+export interface RealtimeEvent {
+  id: number;
+  type:
+    | "draw.started"
+    | "draw.spin"
+    | "draw.reset"
+    | "draw.cancelled"
+    | "draw.completed"
+    | "bracket.updated";
+  timestamp: string;
+  data: {
+    draw?: LiveTournamentDraw;
+    selectedParticipantId?: string;
+    durationMs?: number;
+    tournamentId?: string;
+    tournamentSlug?: string;
+    bracketVersion?: number;
+  };
+}
+
+export interface RealtimeSnapshot {
+  cursor: number;
+  events: RealtimeEvent[];
+  activeDraws: LiveTournamentDraw[];
+}
+
 export const api = {
+  realtime: (cursor: number, signal?: AbortSignal) =>
+    apiRequest<ApiEnvelope<RealtimeSnapshot>>(
+      `/api/v1/realtime?cursor=${encodeURIComponent(String(cursor))}`,
+      signal ? { signal } : undefined,
+    ),
   home: () => apiRequest<ApiEnvelope<HomeData>>("/api/v1/public/home"),
   publicSettings: () =>
     apiRequest<
@@ -359,6 +420,26 @@ export const api = {
     >(
       `/api/v1/admin/tournaments/${encodeURIComponent(tournamentId)}/bracket/generate`,
       { method: "POST", body: JSON.stringify(input) },
+    ),
+  startTournamentDraw: (tournamentId: string) =>
+    apiRequest<ApiEnvelope<LiveTournamentDraw>>(
+      `/api/v1/admin/tournaments/${encodeURIComponent(tournamentId)}/draw/start`,
+      { method: "POST", body: JSON.stringify({}) },
+    ),
+  spinTournamentDraw: (tournamentId: string) =>
+    apiRequest<ApiEnvelope<LiveDrawSpinResult>>(
+      `/api/v1/admin/tournaments/${encodeURIComponent(tournamentId)}/draw/spin`,
+      { method: "POST", body: JSON.stringify({}) },
+    ),
+  resetTournamentDraw: (tournamentId: string) =>
+    apiRequest<ApiEnvelope<LiveTournamentDraw>>(
+      `/api/v1/admin/tournaments/${encodeURIComponent(tournamentId)}/draw/reset`,
+      { method: "POST", body: JSON.stringify({}) },
+    ),
+  cancelTournamentDraw: (tournamentId: string) =>
+    apiRequest<unknown>(
+      `/api/v1/admin/tournaments/${encodeURIComponent(tournamentId)}/draw`,
+      { method: "DELETE" },
     ),
   advanceMatch: (
     matchId: string,

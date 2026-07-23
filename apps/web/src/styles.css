@@ -2508,6 +2508,686 @@ button:not(:disabled),
   }
 }
 
+/* World Star crimson theme and connected tournament canvas. */
+:root {
+  --wst-red: #d0203d;
+  --wst-red-bright: #f04460;
+  --wst-red-deep: #76101f;
+  --wst-surface: #0c0c0f;
+  --wst-surface-raised: #111116;
+  --wst-line: rgb(255 255 255 / 0.12);
+  --wst-muted: #999aa4;
+}
+
+.gold-home,
+.gold-content-page,
+.gold-control-shell,
+.tournament-detail-gold,
+.bracket-admin-workspace {
+  --cinema-gold: var(--wst-red);
+  --cinema-gold-bright: var(--wst-red-bright);
+  --line: var(--wst-line);
+}
+
+.gold-hero h1,
+.gold-section-heading h2,
+.gold-page-hero h1,
+.tournament-gold-header h1,
+.admin-manager-panel h2,
+.admin-manager-header h2,
+.seed-manager h3,
+.admin-bracket-preview h3,
+.gold-empty-copy strong,
+.gold-feature-copy h3,
+.event-directory h2,
+.tournament-ledger-copy h2,
+.bracket-round > header h2,
+.bracket-champion-lane > header h2,
+.bracket-champion-card strong,
+.seed-manager li strong,
+.admin-match-editor strong {
+  color: #f7f7f9 !important;
+  text-shadow: none !important;
+}
+
+.gold-section-heading span,
+.admin-manager-panel header span,
+.admin-manager-header span,
+.bracket-round > header span,
+.bracket-champion-lane > header span,
+.bracket-champion-card span,
+.bracket-admin-toolbar > div strong,
+.event-date-block strong,
+.event-status,
+.registry-rank {
+  color: var(--wst-red-bright) !important;
+}
+
+.gold-empty-copy p,
+.gold-feature-copy p,
+.tournament-gold-meta,
+.tournament-info-rail span,
+.admin-manager-header p,
+.seed-manager li small,
+.admin-match-editor > span,
+.bracket-admin-toolbar > div span {
+  color: var(--wst-muted) !important;
+}
+
+.gold-stat-rail svg,
+.gold-section-heading > svg,
+.tournament-gold-meta svg,
+.tournament-info-rail svg,
+.admin-manager-header > svg,
+.seed-manager li svg,
+.bracket-champion-card svg {
+  color: var(--wst-red-bright) !important;
+}
+
+.gold-feature-panel,
+.gold-events-panel,
+.gold-table,
+.gold-live-strip,
+.gold-page-section,
+.tournament-gold-header,
+.tournament-info-rail,
+.football-bracket,
+.bracket-round-tabs,
+.seed-manager,
+.admin-bracket-preview,
+.bracket-admin-toolbar,
+.seed-manager li,
+.admin-match-editor {
+  border-color: var(--wst-line) !important;
+  background-color: var(--wst-surface) !important;
+  box-shadow: none !important;
+}
+
+.bracket-admin-columns {
+  grid-template-columns: minmax(286px, 318px) minmax(640px, 1fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.seed-manager,
+.admin-bracket-preview {
+  padding: 18px;
+  border-radius: 10px;
+}
+
+.seed-manager ol {
+  scrollbar-color: var(--wst-red-deep) #09090c;
+}
+
+.seed-manager li {
+  border-radius: 7px;
+}
+
+.seed-manager li:hover {
+  border-color: rgb(240 68 96 / 0.36) !important;
+  background: rgb(208 32 61 / 0.07) !important;
+}
+
+.admin-bracket-preview {
+  overflow: hidden;
+}
+
+.admin-bracket-preview > header {
+  gap: 18px;
+}
+
+.bracket-view-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.bracket-view-controls button,
+.bracket-view-controls span {
+  min-height: 34px;
+  padding: 8px 11px;
+  border: 1px solid var(--wst-line);
+  border-radius: 5px;
+  background: #0a0a0d;
+  color: #bdbdc5 !important;
+  font: 700 10px/1 var(--ui);
+}
+
+.bracket-view-controls button:hover {
+  border-color: rgb(240 68 96 / 0.54);
+  background: rgb(208 32 61 / 0.13);
+  color: #fff !important;
+}
+
+.admin-bracket-fullscreen {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--wst-line);
+  border-radius: 8px;
+  background: #07070a;
+}
+
+.admin-bracket-fullscreen:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border: 0;
+  border-radius: 0;
+  background: #050506;
+}
+
+.admin-bracket-viewport {
+  position: relative;
+  width: 100%;
+  height: clamp(620px, 74vh, 920px);
+  overflow: auto;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  scrollbar-color: var(--wst-red-deep) #08080b;
+  scrollbar-width: thin;
+  background:
+    linear-gradient(rgb(255 255 255 / 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.025) 1px, transparent 1px),
+    radial-gradient(circle at 20% 0%, rgb(208 32 61 / 0.09), transparent 34rem),
+    #07070a;
+  background-size:
+    32px 32px,
+    32px 32px,
+    auto,
+    auto;
+}
+
+.admin-bracket-viewport.is-dragging,
+.football-bracket-scroll.is-dragging {
+  cursor: grabbing;
+}
+
+.admin-bracket-viewport input,
+.admin-bracket-viewport button,
+.admin-bracket-viewport select {
+  user-select: auto;
+}
+
+.admin-bracket-zoom-frame {
+  position: relative;
+}
+
+.admin-bracket-tree {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+}
+
+.admin-bracket-connectors {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.admin-bracket-connectors path {
+  fill: none;
+  stroke: rgb(240 68 96 / 0.68);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.admin-bracket-round h4 {
+  position: absolute;
+  top: 18px;
+  width: 282px;
+  margin: 0;
+  color: #fff !important;
+  font: 700 18px/1.1 var(--display);
+  letter-spacing: 0.025em;
+  text-align: center;
+}
+
+.admin-bracket-round h4 span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--wst-red-bright) !important;
+  font: 800 8px/1 var(--ui);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.admin-bracket-node {
+  position: absolute;
+  z-index: 2;
+}
+
+.admin-bracket-node .admin-match-editor {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border: 1px solid rgb(255 255 255 / 0.15) !important;
+  border-radius: 7px;
+  background: #0c0c10 !important;
+}
+
+.admin-bracket-node .admin-match-editor:hover {
+  border-color: rgb(240 68 96 / 0.52) !important;
+}
+
+.admin-match-editor > span {
+  min-height: 27px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--wst-line);
+  color: #81818b !important;
+  line-height: 1.25;
+}
+
+.admin-match-editor > div {
+  grid-template-columns: minmax(0, 1fr) 44px 76px;
+  min-height: 62px;
+  padding: 7px 9px;
+  border-top: 0;
+  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.admin-match-editor > div:last-of-type {
+  border-bottom: 0;
+}
+
+.admin-match-editor input {
+  width: 44px;
+  min-height: 38px !important;
+  padding: 5px !important;
+  text-align: center;
+}
+
+.admin-match-editor button {
+  min-height: 38px;
+  padding: 6px 8px;
+  border-color: rgb(240 68 96 / 0.3) !important;
+  color: #f1f1f3 !important;
+  font-size: 9px;
+}
+
+.admin-match-editor button:hover:not(:disabled) {
+  background: var(--wst-red) !important;
+}
+
+.admin-bracket-winner {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  min-height: 116px;
+  padding: 18px;
+  border: 1px solid rgb(240 68 96 / 0.42);
+  border-radius: 8px;
+  background: #0c0c10;
+  text-align: center;
+}
+
+.admin-bracket-winner svg {
+  width: 28px;
+  color: var(--wst-red-bright);
+}
+
+.admin-bracket-winner span {
+  margin-top: 9px;
+  color: var(--wst-red-bright);
+  font: 800 8px/1 var(--ui);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.admin-bracket-winner strong {
+  margin-top: 6px;
+  color: #fff;
+  font: 700 20px/1 var(--display);
+}
+
+.admin-bracket-winner.is-decided {
+  border-color: var(--wst-red-bright);
+  background: rgb(208 32 61 / 0.13);
+}
+
+.admin-bracket-drag-hint {
+  position: sticky;
+  z-index: 5;
+  bottom: 12px;
+  left: 12px;
+  width: max-content;
+  padding: 8px 11px;
+  border: 1px solid rgb(240 68 96 / 0.3);
+  border-radius: 5px;
+  background: rgb(8 8 11 / 0.9);
+  color: #a8a8b0;
+  font: 700 9px/1 var(--ui);
+  letter-spacing: 0.05em;
+  pointer-events: none;
+  text-transform: uppercase;
+}
+
+.admin-bracket-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 14px;
+  max-height: 76vh;
+  padding: 18px;
+  overflow: auto;
+}
+
+.admin-bracket-list h4 {
+  margin: 0 0 12px;
+  color: #fff;
+  font: 700 18px/1 var(--display);
+}
+
+.football-bracket-scroll {
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  scrollbar-color: var(--wst-red-deep) #08080b;
+}
+
+.bracket-round-tabs {
+  border-radius: 8px;
+  background: #0b0b0e !important;
+}
+
+.bracket-round-tabs button {
+  color: #9c9ca5;
+}
+
+.bracket-round-tabs button.active {
+  border-color: rgb(240 68 96 / 0.5);
+  background: rgb(208 32 61 / 0.12);
+  color: #fff;
+  box-shadow: inset 3px 0 var(--wst-red);
+}
+
+.bracket-round + .bracket-round .bracket-match-cell::before,
+.bracket-round + .bracket-round .bracket-match-cell::after,
+.football-match::after,
+.bracket-champion-card::before {
+  border-color: rgb(240 68 96 / 0.62) !important;
+  background: rgb(240 68 96 / 0.62) !important;
+}
+
+.football-match,
+.bracket-champion-card {
+  border-color: rgb(255 255 255 / 0.15);
+  border-radius: 7px;
+  background: #0c0c0f;
+  box-shadow: none;
+}
+
+.football-match-status,
+.football-match time {
+  border-color: rgb(255 255 255 / 0.09);
+  color: #85858f;
+}
+
+.bracket-team {
+  color: #c4c4cb;
+}
+
+.bracket-team + .bracket-team {
+  border-color: rgb(255 255 255 / 0.09);
+}
+
+.bracket-team svg {
+  color: var(--wst-red-bright);
+}
+
+.bracket-team--winner {
+  background: rgb(208 32 61 / 0.11);
+  color: #fff;
+}
+
+.bracket-champion-card--decided {
+  border-color: var(--wst-red-bright);
+  background: rgb(208 32 61 / 0.13);
+}
+
+@media (max-width: 1100px) {
+  .bracket-admin-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .seed-manager ol {
+    max-height: 360px;
+  }
+}
+
+@media (max-width: 700px) {
+  .admin-bracket-preview > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .bracket-view-controls {
+    justify-content: flex-start;
+  }
+
+  .admin-bracket-viewport {
+    height: 70svh;
+  }
+}
+
+.live-draw-broadcast {
+  position: fixed;
+  z-index: 2200;
+  inset: 0;
+  display: grid;
+  overflow-y: auto;
+  padding: clamp(12px, 3vw, 42px);
+  background: rgb(2 2 3 / 0.92);
+  backdrop-filter: blur(12px);
+  place-items: center;
+}
+
+.live-draw-broadcast__panel {
+  width: min(1180px, 100%);
+  overflow: hidden;
+  border: 1px solid #722536;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 28% 38%, rgb(197 31 56 / 0.13), transparent 35%),
+    #070708;
+  box-shadow: 0 32px 100px rgb(0 0 0 / 0.7);
+}
+
+.live-draw-broadcast__panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 88px;
+  padding: 16px 22px;
+  border-bottom: 1px solid #3d242a;
+}
+
+.live-draw-broadcast__panel > header span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #ef4058;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.live-draw-broadcast__panel > header span svg {
+  width: 15px;
+  height: 15px;
+  animation: live-draw-pulse 1.2s ease-in-out infinite;
+}
+
+.live-draw-broadcast__panel h2 {
+  margin: 5px 0 0;
+  color: #fff8ee;
+  font: 500 clamp(25px, 3.5vw, 42px)/1 var(--display);
+  letter-spacing: 0.025em;
+}
+
+.live-draw-broadcast__panel > header > strong {
+  color: #fff8ee;
+  font: 500 clamp(18px, 2.5vw, 28px)/1 var(--display);
+  white-space: nowrap;
+}
+
+.live-draw-broadcast__content {
+  display: grid;
+  grid-template-columns: minmax(330px, 0.85fr) minmax(470px, 1.15fr);
+  gap: clamp(24px, 4vw, 56px);
+  padding: clamp(24px, 4vw, 48px);
+}
+
+.live-draw-broadcast__wheel {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 14px;
+}
+
+.live-draw-broadcast__wheel .champions-draw__wheel {
+  width: min(100%, 440px);
+}
+
+.live-draw-broadcast__selection {
+  display: flex;
+  width: min(100%, 440px);
+  min-height: 74px;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 12px 16px;
+  border: 1px solid #7b2637;
+  background: #120b0e;
+  box-shadow: inset 3px 0 #ef4058;
+}
+
+.live-draw-broadcast__selection > svg {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  color: #ef4058;
+}
+
+.live-draw-broadcast__selection span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  color: #ef4058;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.live-draw-broadcast__selection strong {
+  overflow: hidden;
+  margin-top: 4px;
+  color: #fff8ee;
+  font: 500 clamp(20px, 3vw, 30px)/1 var(--display);
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.live-draw-broadcast__matchups ol {
+  max-height: 510px;
+}
+
+.live-draw-broadcast__panel > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 66px;
+  padding: 12px 22px;
+  border-top: 1px solid #3d242a;
+  background: #10090b;
+  color: #918a8d;
+  font-size: 11px;
+}
+
+.live-draw-broadcast__panel > footer a {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 15px;
+  border: 1px solid #c51f38;
+  color: #fff8ee;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+@keyframes live-draw-pulse {
+  50% {
+    opacity: 0.45;
+    transform: scale(0.86);
+  }
+}
+
+@media (max-width: 900px) {
+  .live-draw-broadcast {
+    place-items: start center;
+  }
+
+  .live-draw-broadcast__content {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .live-draw-broadcast {
+    padding: 0;
+  }
+
+  .live-draw-broadcast__panel {
+    min-height: 100dvh;
+    border-width: 0;
+    border-radius: 0;
+  }
+
+  .live-draw-broadcast__panel > header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .live-draw-broadcast__content {
+    gap: 28px;
+    padding: 32px 14px 24px;
+  }
+
+  .live-draw-broadcast__panel > footer {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .live-draw-broadcast__panel > footer a {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-draw-broadcast__panel > header span svg {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -11502,5 +12182,552 @@ textarea:focus,
 
   .bracket-admin-toolbar label {
     grid-column: auto;
+  }
+}
+
+/* Final cascade: crimson replaces every remaining legacy gold bracket token. */
+body .gold-hero h1,
+body .gold-section-heading h2,
+body .gold-page-hero h1,
+body .tournament-gold-header h1,
+body .admin-manager-panel h2,
+body .admin-manager-header h2,
+body .seed-manager h3,
+body .admin-bracket-preview h3,
+body .gold-empty-copy strong,
+body .gold-feature-copy h3,
+body .event-directory h2,
+body .tournament-ledger-copy h2,
+body .bracket-round > header h2,
+body .bracket-champion-lane > header h2,
+body .bracket-champion-card strong,
+body .seed-manager li strong,
+body .admin-match-editor strong {
+  color: #f7f7f9 !important;
+  text-shadow: none !important;
+}
+
+body .gold-section-heading span,
+body .admin-manager-panel header span,
+body .admin-manager-header span,
+body .bracket-round > header span,
+body .bracket-champion-lane > header span,
+body .bracket-champion-card span,
+body .bracket-admin-toolbar > div strong,
+body .event-date-block strong,
+body .event-status,
+body .registry-rank {
+  color: #f04460 !important;
+}
+
+body .gold-empty-copy p,
+body .gold-feature-copy p,
+body .tournament-gold-meta,
+body .tournament-info-rail span,
+body .admin-manager-header p,
+body .seed-manager li small,
+body .admin-match-editor > span,
+body .bracket-admin-toolbar > div span {
+  color: #999aa4 !important;
+}
+
+body .gold-stat-rail svg,
+body .gold-section-heading > svg,
+body .tournament-gold-meta svg,
+body .tournament-info-rail svg,
+body .admin-manager-header > svg,
+body .seed-manager li svg,
+body .bracket-champion-card svg {
+  color: #f04460 !important;
+}
+
+body .gold-feature-panel,
+body .gold-events-panel,
+body .gold-table,
+body .gold-live-strip,
+body .gold-page-section,
+body .tournament-gold-header,
+body .tournament-info-rail,
+body .football-bracket,
+body .bracket-round-tabs,
+body .seed-manager,
+body .admin-bracket-preview,
+body .bracket-admin-toolbar,
+body .seed-manager li,
+body .admin-match-editor {
+  border-color: rgb(255 255 255 / 0.12) !important;
+  background-color: #0c0c0f !important;
+  box-shadow: none !important;
+}
+
+body .bracket-admin-columns {
+  grid-template-columns: minmax(286px, 318px) minmax(640px, 1fr) !important;
+  align-items: start !important;
+  gap: 18px !important;
+}
+
+body .seed-manager,
+body .admin-bracket-preview {
+  padding: 18px !important;
+  border-radius: 10px !important;
+}
+
+body .seed-manager li {
+  border-radius: 7px !important;
+}
+
+body .admin-bracket-preview {
+  overflow: hidden !important;
+}
+
+body .admin-bracket-node .admin-match-editor {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border: 1px solid rgb(255 255 255 / 0.15) !important;
+  border-radius: 7px !important;
+  background: #0c0c10 !important;
+}
+
+body .admin-match-editor > div {
+  grid-template-columns: minmax(0, 1fr) 44px 76px !important;
+  min-height: 62px !important;
+  padding: 7px 9px !important;
+  border-color: rgb(255 255 255 / 0.08) !important;
+}
+
+body .admin-match-editor input {
+  width: 44px !important;
+  min-height: 38px !important;
+  padding: 5px !important;
+}
+
+body .admin-match-editor button {
+  min-height: 38px !important;
+  padding: 6px 8px !important;
+  border-color: rgb(240 68 96 / 0.3) !important;
+  color: #f1f1f3 !important;
+  font-size: 9px !important;
+}
+
+body .bracket-round-tabs {
+  border-radius: 8px !important;
+  background: #0b0b0e !important;
+}
+
+body .bracket-round-tabs button {
+  color: #9c9ca5 !important;
+}
+
+body .bracket-round-tabs button.active {
+  border-color: rgb(240 68 96 / 0.5) !important;
+  background: rgb(208 32 61 / 0.12) !important;
+  color: #fff !important;
+  box-shadow: inset 3px 0 #d0203d !important;
+}
+
+body .bracket-round + .bracket-round .bracket-match-cell::before,
+body .bracket-round + .bracket-round .bracket-match-cell::after,
+body .football-match::after,
+body .bracket-champion-card::before {
+  border-color: rgb(240 68 96 / 0.62) !important;
+  background: rgb(240 68 96 / 0.62) !important;
+}
+
+body .football-match,
+body .bracket-champion-card {
+  border-color: rgb(255 255 255 / 0.15) !important;
+  border-radius: 7px !important;
+  background: #0c0c0f !important;
+  box-shadow: none !important;
+}
+
+body .football-match-status,
+body .football-match time {
+  border-color: rgb(255 255 255 / 0.09) !important;
+  color: #85858f !important;
+}
+
+body .bracket-team {
+  color: #c4c4cb !important;
+}
+
+body .bracket-team + .bracket-team {
+  border-color: rgb(255 255 255 / 0.09) !important;
+}
+
+body .bracket-team svg {
+  color: #f04460 !important;
+}
+
+body .bracket-team--winner,
+body .bracket-champion-card--decided {
+  border-color: #f04460 !important;
+  background: rgb(208 32 61 / 0.12) !important;
+  color: #fff !important;
+}
+
+@media (max-width: 1100px) {
+  body .bracket-admin-columns {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Bracket workspace: keep the roster readable and give the canvas the full row. */
+body .bracket-admin-columns {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+body .seed-manager form {
+  grid-template-columns: minmax(180px, 1fr) 72px auto !important;
+}
+
+body .seed-manager ol {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)) !important;
+  gap: 8px !important;
+  max-height: 370px !important;
+  overflow-x: hidden !important;
+}
+
+body .seed-manager li {
+  grid-template-columns: 48px minmax(0, 1fr) minmax(112px, 128px) 36px !important;
+  min-width: 0 !important;
+}
+
+body .seed-manager li > div,
+body .seed-manager li > select {
+  min-width: 0 !important;
+}
+
+body .seed-manager li input[type="number"] {
+  appearance: textfield !important;
+  padding-inline: 6px !important;
+  text-align: center !important;
+  font-variant-numeric: tabular-nums;
+}
+
+body .seed-manager li input[type="number"]::-webkit-inner-spin-button,
+body .seed-manager li input[type="number"]::-webkit-outer-spin-button {
+  margin: 0 !important;
+  appearance: none !important;
+}
+
+body .seed-manager li > select {
+  width: 100% !important;
+}
+
+body .seed-manager li strong {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+body .admin-bracket-preview {
+  width: 100% !important;
+}
+
+body .admin-bracket-viewport {
+  min-height: 700px !important;
+  height: min(78vh, 940px) !important;
+}
+
+body .admin-bracket-fullscreen:fullscreen {
+  display: block !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+body .admin-bracket-fullscreen:fullscreen .admin-bracket-viewport,
+body .admin-bracket-fullscreen:fullscreen .admin-bracket-list {
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  max-height: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+body .admin-bracket-fullscreen.is-fullscreen {
+  position: fixed !important;
+  z-index: 4000 !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #050506 !important;
+}
+
+body .admin-bracket-fullscreen.is-fullscreen .admin-bracket-viewport,
+body .admin-bracket-fullscreen.is-fullscreen .admin-bracket-list {
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  max-height: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+body .admin-bracket-fullscreen__exit {
+  position: fixed;
+  z-index: 4002;
+  top: 18px;
+  right: 18px;
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgb(240 68 96 / 0.48);
+  border-radius: 6px;
+  background: rgb(12 12 15 / 0.94);
+  color: #fff;
+  font: 700 10px/1 var(--ui);
+  box-shadow: 0 10px 34px rgb(0 0 0 / 0.42);
+}
+
+body .admin-bracket-fullscreen__exit:hover {
+  background: #d0203d;
+}
+
+body .admin-bracket-fullscreen__exit svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Public directories: remove the last legacy gold surfaces. */
+body .public-directory-card,
+body .public-dossier,
+body .public-record-list > * {
+  border-color: rgb(240 68 96 / 0.28) !important;
+  background:
+    radial-gradient(circle at 0 0, rgb(208 32 61 / 0.08), transparent 22rem),
+    linear-gradient(145deg, #0d0d10, #09090c) !important;
+  box-shadow: none !important;
+}
+
+body .public-directory-card:hover,
+body .public-record-list > a:hover {
+  border-color: rgb(240 68 96 / 0.52) !important;
+  background:
+    radial-gradient(circle at 0 0, rgb(208 32 61 / 0.13), transparent 22rem),
+    linear-gradient(145deg, #101014, #0a0a0d) !important;
+}
+
+body .public-directory-card dl div,
+body .public-dossier-stats article {
+  border: 1px solid rgb(255 255 255 / 0.07) !important;
+  background: #0a0a0d !important;
+}
+
+body .public-directory-card > img,
+body .public-directory-card > svg,
+body .public-dossier > header > img {
+  outline: 1px solid rgb(240 68 96 / 0.34);
+  outline-offset: 2px;
+}
+
+body .public-directory-card > svg,
+body .public-dossier > header > svg,
+body .public-match-score strong {
+  color: #f04460 !important;
+}
+
+body .public-directory-card span,
+body .public-record-list small {
+  color: #a5a5ae !important;
+}
+
+body .match-public-dossier > section {
+  border-top-color: rgb(255 255 255 / 0.08) !important;
+}
+
+/* Admin live streams: align the complete workspace with the crimson theme. */
+body .stream-admin-layout {
+  border-color: rgb(255 255 255 / 0.12) !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgb(208 32 61 / 0.1), transparent 30rem),
+    linear-gradient(145deg, #0d0d10, #09090c) !important;
+  box-shadow: none !important;
+}
+
+body .stream-admin-layout .admin-dataset-heading h2,
+body .stream-admin-editor h3 {
+  color: #f7f7f9 !important;
+  text-shadow: none !important;
+}
+
+body .stream-admin-layout .admin-dataset-heading p {
+  color: #999aa4 !important;
+}
+
+body .stream-admin-list > button {
+  border-color: rgb(255 255 255 / 0.11) !important;
+  background: #0b0b0e !important;
+  color: #a5a5ae !important;
+}
+
+body .stream-admin-list > button:hover {
+  border-color: rgb(240 68 96 / 0.34) !important;
+  background: rgb(208 32 61 / 0.07) !important;
+}
+
+body .stream-admin-list > button.selected {
+  border-color: rgb(240 68 96 / 0.58) !important;
+  background: rgb(208 32 61 / 0.13) !important;
+  box-shadow: inset 3px 0 #d0203d !important;
+}
+
+body .stream-admin-list strong,
+body .stream-preview-meta strong {
+  color: #f4f4f6 !important;
+}
+
+body .stream-admin-list small,
+body .stream-admin-list time {
+  color: #8f9099 !important;
+}
+
+body .stream-admin-preview,
+body .stream-admin-editor {
+  border-color: rgb(255 255 255 / 0.12) !important;
+  background: #0a0a0d !important;
+  box-shadow: none !important;
+}
+
+body .stream-preview-meta {
+  border-top: 1px solid rgb(255 255 255 / 0.08);
+}
+
+body .stream-preview-meta a {
+  color: #f04460 !important;
+}
+
+body .stream-preview-meta a:hover {
+  color: #ff6b82 !important;
+}
+
+/* Numeric controls: keep values readable and remove native spinner chrome. */
+body input[type="number"] {
+  appearance: textfield !important;
+  -moz-appearance: textfield !important;
+  font-variant-numeric: tabular-nums;
+}
+
+body input[type="number"]::-webkit-inner-spin-button,
+body input[type="number"]::-webkit-outer-spin-button {
+  margin: 0 !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
+/* Bracket manager: remove legacy gold and clarify the empty seed state. */
+body .bracket-admin-workspace .admin-manager-header h2,
+body .bracket-admin-workspace .seed-manager h3,
+body .bracket-admin-workspace .admin-bracket-preview h3 {
+  color: #f7f7f9 !important;
+  text-shadow: none !important;
+}
+
+body .bracket-admin-workspace .admin-manager-header > div > span,
+body .bracket-admin-workspace .admin-manager-header > svg,
+body .bracket-admin-workspace .bracket-admin-toolbar > div strong,
+body .bracket-admin-workspace .seed-manager > header > span {
+  color: #f04460 !important;
+}
+
+body .bracket-admin-workspace .admin-manager-header p,
+body .bracket-admin-workspace .bracket-admin-toolbar label,
+body .bracket-admin-workspace .bracket-admin-toolbar > div span {
+  color: #999aa4 !important;
+}
+
+body .bracket-admin-workspace .bracket-admin-toolbar,
+body .bracket-admin-workspace .seed-manager,
+body .bracket-admin-workspace .admin-bracket-preview {
+  border-color: rgb(255 255 255 / 0.12) !important;
+  background:
+    radial-gradient(
+      circle at 100% 0%,
+      rgb(208 32 61 / 0.07),
+      transparent 24rem
+    ),
+    #0c0c0f !important;
+  box-shadow: none !important;
+}
+
+body .bracket-admin-workspace .seed-manager form select,
+body .bracket-admin-workspace .seed-manager form input {
+  border-color: rgb(255 255 255 / 0.14) !important;
+  background: #09090c !important;
+  color: #f4f4f6 !important;
+}
+
+body .seed-manager-empty {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  min-height: 180px;
+  padding: 30px 18px;
+  border: 1px dashed rgb(240 68 96 / 0.3);
+  border-radius: 8px;
+  background: rgb(208 32 61 / 0.045);
+  text-align: center;
+}
+
+body .seed-manager-empty svg {
+  width: 28px;
+  height: 28px;
+  color: #f04460;
+}
+
+body .seed-manager-empty strong {
+  color: #f7f7f9;
+  font: 600 15px/1.2 var(--display);
+}
+
+body .seed-manager-empty span {
+  max-width: 300px;
+  color: #999aa4;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+@media (max-width: 1200px) {
+  body .bracket-admin-toolbar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  }
+
+  body .bracket-admin-toolbar label {
+    grid-column: 1 / -1 !important;
+  }
+
+  body .bracket-admin-toolbar > div,
+  body .bracket-admin-toolbar > button {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 760px) {
+  body .seed-manager form {
+    grid-template-columns: minmax(0, 1fr) 64px auto !important;
+  }
+
+  body .seed-manager ol {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body .seed-manager li {
+    grid-template-columns: 44px minmax(0, 1fr) 104px 34px !important;
+    gap: 6px !important;
+  }
+
+  body .admin-bracket-viewport {
+    min-height: 620px !important;
   }
 }

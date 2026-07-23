@@ -3,6 +3,7 @@ import { gangListQuerySchema, websiteSettingsSchema } from "@mafia/shared";
 import { envelope } from "../lib/envelope.js";
 import { HttpError } from "../lib/http-error.js";
 import { prisma } from "../lib/prisma.js";
+import { realtimeHub } from "../lib/realtime.js";
 import { refreshStaleStreams } from "../lib/stream-status.js";
 
 const gangInclude = {
@@ -48,6 +49,26 @@ async function findGangs(args: Parameters<typeof prisma.gang.findMany>[0]) {
 }
 
 export function publicRoutes(app: FastifyInstance): void {
+  app.get<{ Querystring: { cursor?: string } }>(
+    "/api/v1/realtime",
+    async (request, reply) => {
+      const parsedCursor = Number.parseInt(request.query.cursor ?? "0", 10);
+      const cursor = Number.isFinite(parsedCursor)
+        ? Math.max(0, parsedCursor)
+        : 0;
+      const abortController = new AbortController();
+      const abort = () => {
+        abortController.abort();
+      };
+      reply.raw.once("close", abort);
+      reply.header("cache-control", "no-store, no-cache, must-revalidate");
+      reply.header("x-accel-buffering", "no");
+      const snapshot = await realtimeHub.poll(cursor, abortController.signal);
+      reply.raw.off("close", abort);
+      return envelope(request, snapshot);
+    },
+  );
+
   app.get("/api/v1/public/home", async (request) => {
     const [
       registeredGangs,

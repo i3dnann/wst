@@ -1,61 +1,29 @@
-import {
-  type CSSProperties,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LockKeyhole, RotateCcw, Sparkles, Trophy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DrawWheelGraphic } from "@/components/tournaments/DrawWheelGraphic";
+import type {
+  LiveDrawParticipant,
+  LiveDrawSpinResult,
+  LiveTournamentDraw,
+} from "@/lib/api";
 
 const FULL_TURN = 360;
-const SPIN_DURATION_MS = 3_000;
+const SPIN_DURATION_MS = 8_000;
+const SPIN_FULL_TURNS = 10;
 
-export interface DrawParticipant {
-  id: string;
-  gang: {
-    id: string;
-    name: string;
-    tag: string;
-    logoUrl: string | null;
-  };
-}
+export type DrawParticipant = LiveDrawParticipant;
 
 interface TournamentDrawWheelProps {
   hasBracket: boolean;
   isSaving: boolean;
   participants: DrawParticipant[];
   tournamentName: string;
-  onClose: () => void;
+  onClose: () => Promise<void> | void;
   onConfirm: (participantIds: string[]) => void;
-}
-
-function secureRandomIndex(length: number): number {
-  if (length <= 1) return 0;
-  const limit = Math.floor(0x1_0000_0000 / length) * length;
-  const random = new Uint32Array(1);
-  do {
-    window.crypto.getRandomValues(random);
-  } while ((random[0] ?? 0) >= limit);
-  return (random[0] ?? 0) % length;
-}
-
-function polarPoint(angle: number, radius = 49): [number, number] {
-  const radians = ((angle - 90) * Math.PI) / 180;
-  return [50 + radius * Math.cos(radians), 50 + radius * Math.sin(radians)];
-}
-
-function wheelSlice(startAngle: number, endAngle: number): string {
-  const [startX, startY] = polarPoint(startAngle);
-  const [endX, endY] = polarPoint(endAngle);
-  const largeArc = endAngle - startAngle > 180 ? 1 : 0;
-  return `M 50 50 L ${String(startX)} ${String(startY)} A 49 49 0 ${String(largeArc)} 1 ${String(endX)} ${String(endY)} Z`;
-}
-
-function wheelLabel(name: string): [string, string?] {
-  const words = name.trim().split(/\s+/);
-  if (words.length === 1) return [words[0]?.slice(0, 11) ?? name.slice(0, 11)];
-  return [words[0]?.slice(0, 9) ?? "", words.slice(1).join(" ").slice(0, 11)];
+  onError: (message: string) => void;
+  onReset: () => Promise<LiveTournamentDraw>;
+  onSpin: () => Promise<LiveDrawSpinResult>;
 }
 
 export function TournamentDrawWheel({
@@ -65,6 +33,9 @@ export function TournamentDrawWheel({
   tournamentName,
   onClose,
   onConfirm,
+  onError,
+  onReset,
+  onSpin,
 }: TournamentDrawWheelProps) {
   const participantSignature = participants
     .map((participant) => participant.id)
@@ -72,7 +43,9 @@ export function TournamentDrawWheel({
   const [drawnIds, setDrawnIds] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [spinning, setSpinning] = useState(false);
+  const [requestPending, setRequestPending] = useState(false);
   const [rotation, setRotation] = useState(0);
+  const [spinDuration, setSpinDuration] = useState(SPIN_DURATION_MS);
   const spinTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -117,52 +90,59 @@ export function TournamentDrawWheel({
     gangB: participantById.get(drawnIds[index * 2 + 1] ?? ""),
   }));
 
-  const spin = () => {
+  const spin = async () => {
     if (spinning || isSaving || !remaining.length || !entrantCountIsValid)
       return;
-    const selectedIndex = secureRandomIndex(remaining.length);
-    const nextParticipant = remaining[selectedIndex];
-    if (!nextParticipant) return;
-
-    const sliceAngle = FULL_TURN / remaining.length;
-    const selectedCenter = (selectedIndex + 0.5) * sliceAngle;
-    const currentRotation = ((rotation % FULL_TURN) + FULL_TURN) % FULL_TURN;
-    const targetRotation = (FULL_TURN - selectedCenter) % FULL_TURN;
-    const finalAdjustment =
-      (targetRotation - currentRotation + FULL_TURN) % FULL_TURN;
-    const reducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    const duration = reducedMotion ? 120 : SPIN_DURATION_MS;
-
     setSelectedId(null);
     setSpinning(true);
-    setRotation(
-      (current) =>
-        current + (reducedMotion ? 0 : FULL_TURN * 5) + finalAdjustment,
-    );
-    spinTimerRef.current = window.setTimeout(() => {
-      setDrawnIds((current) => [...current, nextParticipant.id]);
-      setSelectedId(nextParticipant.id);
+    setRequestPending(true);
+    try {
+      const result = await onSpin();
+      const selectedIndex = remaining.findIndex(
+        (participant) => participant.id === result.selectedParticipantId,
+      );
+      if (selectedIndex < 0)
+        throw new Error("The selected gang is not available.");
+      const sliceAngle = FULL_TURN / remaining.length;
+      const selectedCenter = (selectedIndex + 0.5) * sliceAngle;
+      const currentRotation = ((rotation % FULL_TURN) + FULL_TURN) % FULL_TURN;
+      const targetRotation = (FULL_TURN - selectedCenter) % FULL_TURN;
+      const finalAdjustment =
+        (targetRotation - currentRotation + FULL_TURN) % FULL_TURN;
+      setSpinDuration(result.durationMs);
+      setRotation(
+        (current) => current + FULL_TURN * SPIN_FULL_TURNS + finalAdjustment,
+      );
+      spinTimerRef.current = window.setTimeout(() => {
+        setDrawnIds(result.draw.drawnParticipantIds);
+        setSelectedId(result.selectedParticipantId);
+        setSpinning(false);
+        spinTimerRef.current = null;
+      }, result.durationMs);
+    } catch (error) {
       setSpinning(false);
-      spinTimerRef.current = null;
-    }, duration);
+      onError(error instanceof Error ? error.message : "The live draw failed.");
+    } finally {
+      setRequestPending(false);
+    }
   };
 
-  const resetDraw = () => {
+  const resetDraw = async () => {
     if (spinning || isSaving) return;
-    setDrawnIds([]);
-    setSelectedId(null);
-    setRotation(0);
+    setRequestPending(true);
+    try {
+      const draw = await onReset();
+      setDrawnIds(draw.drawnParticipantIds);
+      setSelectedId(null);
+      setRotation(0);
+    } catch (error) {
+      onError(
+        error instanceof Error ? error.message : "The draw could not reset.",
+      );
+    } finally {
+      setRequestPending(false);
+    }
   };
-
-  const sliceAngle = remaining.length
-    ? FULL_TURN / remaining.length
-    : FULL_TURN;
-  const wheelStyle = {
-    "--draw-wheel-duration": `${String(spinning ? SPIN_DURATION_MS : 0)}ms`,
-    transform: `rotate(${String(rotation)}deg)`,
-  } as CSSProperties;
 
   return (
     <section className="champions-draw" aria-labelledby="champions-draw-title">
@@ -182,8 +162,8 @@ export function TournamentDrawWheel({
         <button
           type="button"
           className="champions-draw__reset"
-          disabled={!drawnIds.length || spinning || isSaving}
-          onClick={resetDraw}
+          disabled={!drawnIds.length || spinning || isSaving || requestPending}
+          onClick={() => void resetDraw()}
         >
           <RotateCcw /> Reset draw
         </button>
@@ -191,7 +171,7 @@ export function TournamentDrawWheel({
           type="button"
           className="champions-draw__close"
           aria-label="Close Champions Draw"
-          onClick={onClose}
+          onClick={() => void onClose()}
         >
           <X />
         </button>
@@ -212,70 +192,23 @@ export function TournamentDrawWheel({
 
       <div className="champions-draw__body">
         <div className="champions-draw__wheel-column">
-          <div className="champions-draw__pointer" aria-hidden="true" />
-          <div
-            className={`champions-draw__wheel${spinning ? " is-spinning" : ""}`}
-            style={wheelStyle}
-            aria-hidden="true"
-          >
-            <svg viewBox="0 0 100 100">
-              {remaining.length ? (
-                remaining.map((participant, index) => {
-                  const start = index * sliceAngle;
-                  const end = start + sliceAngle;
-                  const mid = start + sliceAngle / 2;
-                  const [labelX, labelY] = polarPoint(mid, 34);
-                  const [firstLine, secondLine] = wheelLabel(
-                    participant.gang.name,
-                  );
-                  return (
-                    <g key={participant.id}>
-                      <path
-                        d={wheelSlice(start, end)}
-                        className={index % 2 ? "is-dark" : "is-red"}
-                      />
-                      <text
-                        x={labelX}
-                        y={labelY - (secondLine ? 1.4 : 0)}
-                        textAnchor="middle"
-                        style={{
-                          fontSize:
-                            remaining.length > 12
-                              ? "1.9px"
-                              : remaining.length > 8
-                                ? "2.35px"
-                                : "2.8px",
-                        }}
-                      >
-                        <tspan x={labelX}>{firstLine}</tspan>
-                        {secondLine ? (
-                          <tspan x={labelX} dy="2.8">
-                            {secondLine}
-                          </tspan>
-                        ) : null}
-                      </text>
-                    </g>
-                  );
-                })
-              ) : (
-                <circle cx="50" cy="50" r="49" />
-              )}
-              <circle
-                className="champions-draw__wheel-ring"
-                cx="50"
-                cy="50"
-                r="18"
-              />
-            </svg>
-            <img src="/assets/wst/wst-logo.png" alt="" />
-          </div>
+          <DrawWheelGraphic
+            participants={remaining}
+            rotation={rotation}
+            spinning={spinning}
+            durationMs={spinDuration}
+          />
           <Button
             type="button"
             className="champions-draw__spin"
             disabled={
-              spinning || isSaving || !remaining.length || !entrantCountIsValid
+              spinning ||
+              requestPending ||
+              isSaving ||
+              !remaining.length ||
+              !entrantCountIsValid
             }
-            onClick={spin}
+            onClick={() => void spin()}
           >
             <RotateCcw />
             {spinning

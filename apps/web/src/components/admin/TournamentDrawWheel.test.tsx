@@ -36,10 +36,6 @@ describe("TournamentDrawWheel", () => {
         dispatchEvent: vi.fn(),
       })),
     );
-    vi.spyOn(window.crypto, "getRandomValues").mockImplementation((array) => {
-      (array as Uint32Array)[0] = 0;
-      return array;
-    });
   });
 
   afterEach(() => {
@@ -48,8 +44,26 @@ describe("TournamentDrawWheel", () => {
     vi.unstubAllGlobals();
   });
 
-  it("draws each gang once, creates pairings, and submits the exact order", () => {
+  it("renders authoritative spins, creates pairings, and submits the exact order", async () => {
     const onConfirm = vi.fn();
+    let spinIndex = 0;
+    const onSpin = vi.fn(() => {
+      spinIndex += 1;
+      return Promise.resolve({
+        draw: {
+          tournamentId: "tournament-1",
+          tournamentSlug: "world-star-cup",
+          tournamentName: "World Star Cup",
+          participants,
+          drawnParticipantIds: participants
+            .slice(0, spinIndex)
+            .map(({ id }) => id),
+          updatedAt: new Date().toISOString(),
+        },
+        selectedParticipantId: participants[spinIndex - 1]?.id ?? "",
+        durationMs: 8_000,
+      });
+    });
     render(
       <TournamentDrawWheel
         hasBracket={false}
@@ -58,6 +72,18 @@ describe("TournamentDrawWheel", () => {
         tournamentName="World Star Cup"
         onClose={vi.fn()}
         onConfirm={onConfirm}
+        onError={vi.fn()}
+        onReset={vi.fn(() =>
+          Promise.resolve({
+            tournamentId: "tournament-1",
+            tournamentSlug: "world-star-cup",
+            tournamentName: "World Star Cup",
+            participants,
+            drawnParticipantIds: [],
+            updatedAt: new Date().toISOString(),
+          }),
+        )}
+        onSpin={onSpin}
       />,
     );
 
@@ -68,9 +94,10 @@ describe("TournamentDrawWheel", () => {
 
     for (const name of ["Alpha", "Bravo", "Charlie", "Delta"]) {
       fireEvent.click(screen.getByRole("button", { name: "Spin next gang" }));
+      await act(() => Promise.resolve());
       expect(screen.getByRole("button", { name: "Drawing…" })).toBeDisabled();
       act(() => {
-        vi.advanceTimersByTime(3_000);
+        vi.advanceTimersByTime(8_000);
       });
       expect(screen.getAllByText(name).length).toBeGreaterThan(0);
     }

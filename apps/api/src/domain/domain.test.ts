@@ -7,6 +7,7 @@ import {
 } from "./bracket.js";
 import { canManageGang, type AuthorizationContext } from "./permissions.js";
 import { calculatePoints, rankMovement } from "./ranking.js";
+import { canManageTournamentParticipants } from "./tournament.js";
 
 describe("ranking", () => {
   it("calculates authoritative points from auditable inputs", () => {
@@ -158,5 +159,22 @@ describe("gang scope", () => {
     };
     expect(canManageGang(context, "gang-a")).toBe(true);
     expect(canManageGang(context, "gang-b")).toBe(false);
+  });
+});
+
+describe("tournament participant management", () => {
+  it.each([
+    "DRAFT",
+    "REGISTRATION_OPEN",
+    "REGISTRATION_CLOSED",
+    "IN_PROGRESS",
+    "COMPLETED",
+    "CANCELLED",
+  ] as const)("allows an administrator to manage gangs while %s", (status) => {
+    expect(canManageTournamentParticipants(status)).toBe(true);
+  });
+
+  it("locks participant changes only while archived", () => {
+    expect(canManageTournamentParticipants("ARCHIVED")).toBe(false);
   });
 });
