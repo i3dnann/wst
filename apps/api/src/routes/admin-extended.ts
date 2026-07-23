@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { v2 as cloudinary } from "cloudinary";
 import { Prisma } from "@prisma/client";
 import { permissions, websiteSettingsSchema } from "@mafia/shared";
 import { z } from "zod";
@@ -76,8 +77,11 @@ const roleInput = z.object({
 
 const mediaCompleteInput = z.object({
   mediaAssetId: id,
-  width: z.number().int().min(64).max(20_000),
-  height: z.number().int().min(64).max(20_000),
+  publicUrl: z.url(),
+  publicId: z.string().trim().min(1).max(500),
+  resourceType: z.enum(["image", "video"]),
+  width: z.number().int().min(1).max(20_000).optional(),
+  height: z.number().int().min(1).max(20_000).optional(),
 });
 
 const defaultWebsiteSettings = {
@@ -1055,9 +1059,37 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
         "MEDIA_UPLOAD_NOT_FOUND",
         "This pending media upload does not exist or belongs to another administrator.",
       );
+    if (before.storageKey !== input.publicId)
+      throw new HttpError(
+        400,
+        "MEDIA_UPLOAD_MISMATCH",
+        "The Cloudinary upload does not match this media request.",
+      );
+    if (!env.CLOUDINARY_CLOUD_NAME)
+      throw new HttpError(
+        503,
+        "MEDIA_NOT_CONFIGURED",
+        "Cloudinary media storage is not configured.",
+      );
+    const publicUrl = new URL(input.publicUrl);
+    const expectedPrefix = `/${env.CLOUDINARY_CLOUD_NAME}/${input.resourceType}/upload/`;
+    if (
+      publicUrl.protocol !== "https:" ||
+      publicUrl.hostname !== "res.cloudinary.com" ||
+      !publicUrl.pathname.startsWith(expectedPrefix)
+    )
+      throw new HttpError(
+        400,
+        "MEDIA_URL_INVALID",
+        "Cloudinary returned an unexpected media URL.",
+      );
     const media = await prisma.mediaAsset.update({
       where: { id: before.id },
-      data: compact({ width: input.width, height: input.height }),
+      data: compact({
+        publicUrl: input.publicUrl,
+        width: input.width,
+        height: input.height,
+      }),
     });
     await recordAudit({
       actorUserId: auth.userId,
@@ -1121,14 +1153,50 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
         prisma.player.count({ where: { avatarUrl: before.publicUrl } }),
         prisma.tournament.count({ where: { bannerUrl: before.publicUrl } }),
         prisma.event.count({ where: { imageUrl: before.publicUrl } }),
+        prisma.liveStream.count({
+          where: { thumbnailUrl: before.publicUrl },
+        }),
       ]);
-      if (references.some((count) => count > 0))
+      const websiteSettings = await prisma.platformSetting.findUnique({
+        where: { key: websiteSettingKey },
+      });
+      const usedByWebsiteSettings =
+        websiteSettings !== null &&
+        JSON.stringify(websiteSettings.value).includes(before.publicUrl);
+      if (
+        references.some((count) => count > 0) ||
+        usedByWebsiteSettings
+      )
         throw new HttpError(
           409,
           "MEDIA_IN_USE",
           "Replace this media everywhere it is used before deleting its record.",
-          { references },
+          { references, usedByWebsiteSettings },
         );
+      if (before.publicUrl.startsWith("https://res.cloudinary.com/")) {
+        if (
+          !env.CLOUDINARY_CLOUD_NAME ||
+          !env.CLOUDINARY_API_KEY ||
+          !env.CLOUDINARY_API_SECRET
+        )
+          throw new HttpError(
+            503,
+            "MEDIA_NOT_CONFIGURED",
+            "Cloudinary media storage is not configured.",
+          );
+        cloudinary.config({
+          cloud_name: env.CLOUDINARY_CLOUD_NAME,
+          api_key: env.CLOUDINARY_API_KEY,
+          api_secret: env.CLOUDINARY_API_SECRET,
+          secure: true,
+        });
+        await cloudinary.uploader.destroy(before.storageKey, {
+          invalidate: true,
+          resource_type: before.mimeType.startsWith("video/")
+            ? "video"
+            : "image",
+        });
+      }
       await prisma.mediaAsset.delete({ where: { id: before.id } });
       await recordAudit({
         actorUserId: auth.userId,
@@ -1136,7 +1204,7 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
         entityType: "MediaAsset",
         entityId: before.id,
         beforeData: before,
-        reason: "Unreferenced media record permanently deleted.",
+        reason: "Unreferenced Cloudinary asset and media record permanently deleted.",
       });
       return reply.code(204).send();
     },
@@ -1255,11 +1323,9 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
         kick: true,
       },
       mediaStorageConfigured: Boolean(
-        env.S3_ENDPOINT &&
-        env.S3_BUCKET &&
-        env.S3_ACCESS_KEY_ID &&
-        env.S3_SECRET_ACCESS_KEY &&
-        env.S3_PUBLIC_BASE_URL,
+        env.CLOUDINARY_CLOUD_NAME &&
+        env.CLOUDINARY_API_KEY &&
+        env.CLOUDINARY_API_SECRET,
       ),
       discordAuditEnabled: discordValue.enabled === true,
       discordSettingsUpdatedAt: discord?.updatedAt ?? null,

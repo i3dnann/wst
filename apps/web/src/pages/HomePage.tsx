@@ -14,6 +14,7 @@ import { NumberTicker } from "@/components/ui/number-ticker";
 import { Ripple } from "@/components/ui/ripple";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { api } from "@/lib/api";
+import { cloudinaryMediaKindFromUrl } from "@/lib/cloudinary";
 import { usePublicWebsiteSettings } from "@/lib/website-settings";
 
 const formatDate = (value: string) =>
@@ -72,6 +73,9 @@ export default function HomePage() {
     settings.homepage.heroSubtitle === legacyHeroSubtitle
       ? defaultHeroSubtitle
       : settings.homepage.heroSubtitle;
+  const heroMediaUrl =
+    settings?.homepage.heroMediaUrl ||
+    "/assets/wst-red/city-overlook-red.jpg";
 
   const stats = [
     [Trophy, "Tournaments", tournamentList.length],
@@ -84,14 +88,22 @@ export default function HomePage() {
   return (
     <main className="gold-home">
       <section className="gold-hero">
-        <img
-          className="gold-hero-image"
-          src={
-            settings?.homepage.heroMediaUrl ||
-            "/assets/wst-red/city-overlook-red.jpg"
-          }
-          alt="A World Star figure overlooking the city at night"
-        />
+        {cloudinaryMediaKindFromUrl(heroMediaUrl) === "video" ? (
+          <video
+            className="gold-hero-image"
+            src={heroMediaUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+          />
+        ) : (
+          <img
+            className="gold-hero-image"
+            src={heroMediaUrl}
+            alt="A World Star figure overlooking the city at night"
+          />
+        )}
         <div className="gold-hero-shade" />
         <div className="gold-hero-content">
           <div className="gold-hero-emblem">

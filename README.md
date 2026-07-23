@@ -9,7 +9,7 @@ The visual system uses the supplied World Star imagery and main PNG mark in a ci
 ## Architecture
 
 - `apps/web`: React 19, Vite, React Router, TanStack Query, Tailwind CSS, Motion, shadcn and Magic UI components.
-- `apps/api`: Fastify REST API, Prisma ORM, MySQL/MariaDB, private email/password authentication, RBAC, audit logging and signed media uploads.
+- `apps/api`: Fastify REST API, Prisma ORM, MySQL/MariaDB, private email/password authentication, RBAC, audit logging and signed Cloudinary image/video uploads.
 - `packages/shared`: API contracts, Zod schemas, permissions and domain types.
 
 Only authenticated administrators can create or update published information. The public frontend shows honest empty/offline states until MySQL/MariaDB and the API are configured. HeidiSQL can be used to create, inspect, and back up the database.

@@ -32,6 +32,7 @@ import {
   type PublicLiveStream,
 } from "@mafia/shared";
 import { Button } from "@/components/ui/button";
+import { CloudinaryUploadField } from "@/components/admin/CloudinaryUploadField";
 import { ErrorState, PageSkeleton } from "@/components/data/StatusState";
 import {
   api,
@@ -40,7 +41,6 @@ import {
   type AuditRecord,
 } from "@/lib/api";
 import { BracketManager } from "./AdminPage";
-import LoginPage from "./LoginPage";
 import {
   GangOrganizationManager,
   MediaManager,
@@ -749,27 +749,18 @@ function RecordEditorFields({
           values={values}
           setValue={setValue}
         />
-        <Field
-          label="Logo URL / profile image"
-          name="logoUrl"
-          values={values}
-          setValue={setValue}
-          type="url"
+        <CloudinaryUploadField
+          label="Gang logo"
+          value={String(values.logoUrl ?? "")}
+          onChange={(url) => setValue("logoUrl", url)}
+          category="gang-logo"
           full
         />
-        {values.logoUrl ? (
-          <img
-            className="admin-profile-preview"
-            src={String(values.logoUrl)}
-            alt="Gang profile preview"
-          />
-        ) : null}
-        <Field
-          label="Banner URL"
-          name="bannerUrl"
-          values={values}
-          setValue={setValue}
-          type="url"
+        <CloudinaryUploadField
+          label="Gang banner"
+          value={String(values.bannerUrl ?? "")}
+          onChange={(url) => setValue("bannerUrl", url)}
+          category="gang-banner"
           full
         />
         <Field
@@ -870,12 +861,11 @@ function RecordEditorFields({
           setValue={setValue}
           full
         />
-        <Field
-          label="Avatar URL / profile image"
-          name="avatarUrl"
-          values={values}
-          setValue={setValue}
-          type="url"
+        <CloudinaryUploadField
+          label="Player avatar"
+          value={String(values.avatarUrl ?? "")}
+          onChange={(url) => setValue("avatarUrl", url)}
+          category="player-avatar"
           full
         />
         <Field
@@ -885,13 +875,6 @@ function RecordEditorFields({
           setValue={setValue}
           full
         />
-        {values.avatarUrl ? (
-          <img
-            className="admin-profile-preview"
-            src={String(values.avatarUrl)}
-            alt="Player profile preview"
-          />
-        ) : null}
         <label className="full-width">
           Biography
           <textarea
@@ -933,12 +916,11 @@ function RecordEditorFields({
           type="number"
           required
         />
-        <Field
-          label="Banner URL"
-          name="bannerUrl"
-          values={values}
-          setValue={setValue}
-          type="url"
+        <CloudinaryUploadField
+          label="Tournament banner"
+          value={String(values.bannerUrl ?? "")}
+          onChange={(url) => setValue("bannerUrl", url)}
+          category="tournament-banner"
           full
         />
         <SelectField
@@ -1143,12 +1125,12 @@ function RecordEditorFields({
         values={values}
         setValue={setValue}
       />
-      <Field
-        label="Image URL"
-        name="imageUrl"
-        values={values}
-        setValue={setValue}
-        type="url"
+      <CloudinaryUploadField
+        label="Event image or video"
+        value={String(values.imageUrl ?? "")}
+        onChange={(url) => setValue("imageUrl", url)}
+        category="event-image"
+        kind="image-or-video"
         full
       />
       <Field
@@ -1869,12 +1851,11 @@ function StreamManager() {
                 type="url"
                 full
               />
-              <Field
-                label="Thumbnail URL"
-                name="thumbnailUrl"
-                values={values}
-                setValue={setValue}
-                type="url"
+              <CloudinaryUploadField
+                label="Stream thumbnail"
+                value={String(values.thumbnailUrl ?? "")}
+                onChange={(url) => setValue("thumbnailUrl", url)}
+                category="stream-thumbnail"
                 full
               />
               <SelectField
@@ -2681,7 +2662,10 @@ export default function AdminCommandCenterPage() {
     onSettled: () => void navigate("/admin/login"),
   });
   if (me.isPending) return <PageSkeleton />;
-  if (me.isError) return <LoginPage />;
+  if (me.isError)
+    return (
+      <Navigate to="/admin/login" replace state={{ from: location.pathname }} />
+    );
   if (location.pathname === "/admin" || location.pathname === "/admin/") {
     return <Navigate to="/admin/overview" replace />;
   }

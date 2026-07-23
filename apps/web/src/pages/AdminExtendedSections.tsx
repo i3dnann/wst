@@ -17,8 +17,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState, ErrorState } from "@/components/data/StatusState";
+import { CloudinaryUploadField } from "@/components/admin/CloudinaryUploadField";
 import { Button } from "@/components/ui/button";
 import { ApiError, api } from "@/lib/api";
+import {
+  cloudinaryMediaKindFromUrl,
+  mediaAccept,
+  uploadMediaToCloudinary,
+  type MediaCategory,
+} from "@/lib/cloudinary";
 
 type Row = Record<string, unknown> & { id: string };
 
@@ -1117,24 +1124,38 @@ export function WebsiteSettingsManager() {
     },
     onError: (error) => toast.error(message(error)),
   });
-  const field = (key: keyof typeof form, label: string, type = "text") => (
-    <label>
-      {label}
-      <input
-        type={type}
-        value={String(form[key])}
-        onChange={(event) =>
-          setForm((value) => ({
-            ...value,
-            [key]:
-              type === "number"
-                ? Number(event.target.value)
-                : event.target.value,
-          }))
-        }
-      />
-    </label>
-  );
+  const field = (key: keyof typeof form, label: string, type = "text") => {
+    if (type === "cloudinary-image" || type === "cloudinary-media")
+      return (
+        <CloudinaryUploadField
+          label={label}
+          value={String(form[key])}
+          onChange={(url) =>
+            setForm((value) => ({ ...value, [key]: url }))
+          }
+          category="website-media"
+          kind={type === "cloudinary-media" ? "image-or-video" : "image"}
+        />
+      );
+    return (
+      <label>
+        {label}
+        <input
+          type={type}
+          value={String(form[key])}
+          onChange={(event) =>
+            setForm((value) => ({
+              ...value,
+              [key]:
+                type === "number"
+                  ? Number(event.target.value)
+                  : event.target.value,
+            }))
+          }
+        />
+      </label>
+    );
+  };
   return (
     <section className="admin-dataset admin-extended-section">
       <header className="admin-dataset-heading">
@@ -1162,8 +1183,8 @@ export function WebsiteSettingsManager() {
           <h3 className="full-width">General</h3>
           {field("websiteName", "Website name")}
           {field("shortName", "Short name")}
-          {field("logoUrl", "Logo URL", "url")}
-          {field("faviconUrl", "Favicon URL", "url")}
+          {field("logoUrl", "Website logo", "cloudinary-image")}
+          {field("faviconUrl", "Browser favicon", "cloudinary-image")}
           {field("defaultLanguage", "Language")}
           {field("timeZone", "Time zone")}
           <label className="admin-toggle-field">
@@ -1196,12 +1217,16 @@ export function WebsiteSettingsManager() {
           <h3 className="full-width">Homepage & Branding</h3>
           {field("heroTitle", "Hero title")}
           {field("heroSubtitle", "Hero subtitle")}
-          {field("heroMediaUrl", "Hero media", "url")}
+          {field("heroMediaUrl", "Hero image or video", "cloudinary-media")}
           {field("announcement", "Announcement")}
           {field("primaryColor", "Primary", "color")}
           {field("secondaryColor", "Secondary", "color")}
           {field("accentColor", "Accent", "color")}
-          {field("backgroundMediaUrl", "Background media", "url")}
+          {field(
+            "backgroundMediaUrl",
+            "Background image or video",
+            "cloudinary-media",
+          )}
           <label>
             Animation
             <select
@@ -1317,66 +1342,27 @@ export function WebsiteSettingsManager() {
   );
 }
 
-function uploadWithProgress(
-  url: string,
-  file: File,
-  mimeType: string,
-  onProgress: (value: number) => void,
-) {
-  return new Promise<void>((resolve, reject) => {
-    const request = new XMLHttpRequest();
-    request.open("PUT", url);
-    request.setRequestHeader("Content-Type", mimeType);
-    request.upload.addEventListener("progress", (event) => {
-      if (event.lengthComputable)
-        onProgress(Math.round((event.loaded / event.total) * 100));
-    });
-    request.addEventListener("load", () =>
-      request.status >= 200 && request.status < 300
-        ? resolve()
-        : reject(
-            new Error(`Upload failed with HTTP ${String(request.status)}.`),
-          ),
-    );
-    request.addEventListener("error", () =>
-      reject(new Error("The media upload connection failed.")),
-    );
-    request.send(file);
-  });
-}
-
-async function imageDimensions(file: File) {
-  const bitmap = await createImageBitmap(file);
-  const dimensions = { width: bitmap.width, height: bitmap.height };
-  bitmap.close();
-  if (dimensions.width < 64 || dimensions.height < 64)
-    throw new Error("Images must be at least 64 by 64 pixels.");
-  return dimensions;
-}
-
 export function MediaManager() {
   const queryClient = useQueryClient();
   const media = useQuery({ queryKey: ["admin-media"], queryFn: api.media });
   const [file, setFile] = useState<File | null>(null);
-  const [category, setCategory] = useState("website-media");
+  const [category, setCategory] =
+    useState<MediaCategory>("website-media");
   const [progress, setProgress] = useState(0);
+  const [latestUrl, setLatestUrl] = useState("");
   const upload = useMutation({
     mutationFn: async () => {
-      if (!file) throw new Error("Choose an image first.");
-      const dimensions = await imageDimensions(file);
-      const intent = await api.mediaUploadIntent({
+      if (!file) throw new Error("Choose an image or video first.");
+      return uploadMediaToCloudinary(
+        file,
         category,
-        filename: file.name,
-        mimeType: file.type,
-        size: file.size,
-      });
-      const uploadUrl = text(intent.data, "uploadUrl", "");
-      const mediaAssetId = text(intent.data, "mediaAssetId", "");
-      await uploadWithProgress(uploadUrl, file, file.type, setProgress);
-      return api.completeMediaUpload({ mediaAssetId, ...dimensions });
+        "image-or-video",
+        setProgress,
+      );
     },
-    onSuccess: () => {
-      toast.success("Media uploaded and queued for approval.");
+    onSuccess: (result) => {
+      toast.success("Uploaded to Cloudinary. The public URL is ready.");
+      setLatestUrl(result.secureUrl);
       setFile(null);
       setProgress(0);
       void queryClient.invalidateQueries({ queryKey: ["admin-media"] });
@@ -1395,7 +1381,7 @@ export function MediaManager() {
   const remove = useMutation({
     mutationFn: api.deleteMedia,
     onSuccess: () => {
-      toast.success("Unreferenced media record deleted.");
+      toast.success("Cloudinary asset and media record deleted.");
       void queryClient.invalidateQueries({ queryKey: ["admin-media"] });
     },
     onError: (error) => toast.error(message(error)),
@@ -1406,8 +1392,8 @@ export function MediaManager() {
         <div>
           <h2>Media Library</h2>
           <p>
-            Signed image uploads, moderation, preview, public URL copy, archive,
-            and safe deletion.
+            Signed Cloudinary image and video uploads, automatic public links,
+            previews, moderation, and safe record deletion.
           </p>
         </div>
       </header>
@@ -1431,7 +1417,9 @@ export function MediaManager() {
           Category
           <select
             value={category}
-            onChange={(event) => setCategory(event.target.value)}
+            onChange={(event) =>
+              setCategory(event.target.value as MediaCategory)
+            }
           >
             {[
               "gang-logo",
@@ -1439,6 +1427,8 @@ export function MediaManager() {
               "player-avatar",
               "tournament-banner",
               "event-image",
+              "event-video",
+              "stream-thumbnail",
               "website-media",
               "match-evidence",
             ].map((value) => (
@@ -1447,22 +1437,56 @@ export function MediaManager() {
           </select>
         </label>
         <label>
-          Image
+          Image or video
           <input
             type="file"
-            accept="image/png,image/jpeg,image/webp"
+            accept={mediaAccept("image-or-video")}
             required
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           />
         </label>
         <Button type="submit" disabled={upload.isPending}>
-          {upload.isPending ? `Uploading ${String(progress)}%` : "Upload Image"}
+          {upload.isPending
+            ? `Uploading ${String(progress)}%`
+            : "Upload to Cloudinary"}
         </Button>
+        {latestUrl ? (
+          <div className="media-upload-card__result">
+            <input
+              aria-label="Latest Cloudinary URL"
+              value={latestUrl}
+              readOnly
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                void navigator.clipboard.writeText(latestUrl);
+                toast.success("Cloudinary URL copied.");
+              }}
+            >
+              Copy URL
+            </Button>
+          </div>
+        ) : null}
       </form>
       <div className="media-admin-grid">
         {((media.data?.data ?? []) as Row[]).map((item) => (
           <article className="admin-card" key={item.id}>
-            <img src={text(item, "publicUrl", "")} alt="" />
+            {cloudinaryMediaKindFromUrl(text(item, "publicUrl", "")) ===
+            "video" ? (
+              <video
+                src={text(item, "publicUrl", "")}
+                controls
+                preload="metadata"
+              />
+            ) : text(item, "publicUrl", "").startsWith("https://") ? (
+              <img src={text(item, "publicUrl", "")} alt="" />
+            ) : (
+              <div className="media-admin-grid__pending">
+                Upload incomplete
+              </div>
+            )}
             <div>
               <strong>{text(item, "originalFilename")}</strong>
               <small>
@@ -1528,6 +1552,7 @@ export function ResultsDisputesManager() {
   const [selectedId, setSelectedId] = useState("");
   const [reason, setReason] = useState("");
   const [disputeNotes, setDisputeNotes] = useState("");
+  const [evidenceUrl, setEvidenceUrl] = useState("");
   const [assignedUserId, setAssignedUserId] = useState("");
   const [scoreA, setScoreA] = useState("0");
   const [scoreB, setScoreB] = useState("0");
@@ -1569,16 +1594,24 @@ export function ResultsDisputesManager() {
     await invalidateOperations(queryClient);
   };
   const dispute = useMutation({
-    mutationFn: () =>
-      api.disputeMatch(selectedId, {
+    mutationFn: () => {
+      const notes = [
+        disputeNotes.trim(),
+        evidenceUrl ? `Evidence: ${evidenceUrl}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+      return api.disputeMatch(selectedId, {
         reason,
-        notes: disputeNotes || undefined,
+        notes: notes || undefined,
         assignedUserId: assignedUserId || null,
-      }),
+      });
+    },
     onSuccess: () => {
       toast.success("Dispute opened; winner progression is blocked.");
       setReason("");
       setDisputeNotes("");
+      setEvidenceUrl("");
       void refresh();
     },
     onError: (error) => toast.error(message(error)),
@@ -1946,9 +1979,17 @@ export function ResultsDisputesManager() {
               <textarea
                 value={disputeNotes}
                 onChange={(event) => setDisputeNotes(event.target.value)}
-                placeholder="Evidence media URLs and private review notes"
+                placeholder="Private review notes"
               />
             </label>
+            <CloudinaryUploadField
+              label="Evidence image or video"
+              value={evidenceUrl}
+              onChange={setEvidenceUrl}
+              category="match-evidence"
+              kind="image-or-video"
+              full
+            />
           </div>
           <div>
             {selected.status === "DISPUTED" ? (

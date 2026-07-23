@@ -143,6 +143,35 @@ final result: passed
 
 ---
 
+# Cloudinary Admin Upload Integration — Design QA
+
+- Accepted visual source: existing World Star admin form system; this was a focused functional enhancement, so no separate concept image was required.
+- Desktop implementation screenshot: `C:\Users\adnan\AppData\Local\Temp\wst-cloudinary-upload-ui.png`
+- Mobile implementation screenshot: `C:\Users\adnan\AppData\Local\Temp\wst-cloudinary-upload-ui-mobile.png`
+- Browser method: Browser plugin was unavailable; Playwright used the installed Chrome runtime against the local Vite stylesheet.
+- Viewports: 1280 × 720 desktop and 390 × 844 mobile at device pixel ratio 1.
+
+## Fidelity ledger
+
+- Container model: uploader remains an open form field inside the existing admin panel rather than introducing a separate card system.
+- Typography: existing Bodoni headline and Inter/Barlow control hierarchy are preserved.
+- Palette: black/graphite surfaces, cool white text, muted gray help text, and crimson controls match the current admin theme.
+- Controls: read-only generated URL, upload button, copy action, remove action, progress state, preview, and file guidance remain visible and aligned.
+- Responsive behavior: desktop controls remain on one row; mobile moves the URL to its own row and keeps all actions inside the 390 px viewport.
+- Media treatment: image and video previews use a stable bounded frame and do not overflow the form.
+
+## Interaction and runtime evidence
+
+- Component test verifies that a successful upload automatically fills the secure Cloudinary URL.
+- Helper tests verify accepted formats, image-only validation, and Cloudinary image/video URL detection.
+- API and web typecheck, lint, all 35 API tests, all 16 web tests, and both production builds passed.
+- No horizontal overflow occurred at either QA viewport.
+- Live Cloudinary transfer is intentionally pending credentials because no Cloudinary account secret was supplied in the workspace.
+
+final result: passed
+
+---
+
 # World Star Editorial Headline Typography — Design QA
 
 - Source visual truth: `C:\Users\adnan\AppData\Local\Temp\codex-clipboard-ac5cde5e-12c6-4fb9-a092-9492ff9cf7f9.png`

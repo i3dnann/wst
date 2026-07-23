@@ -4,11 +4,6 @@ const optionalString = z.preprocess(
   (value) => (value === "" ? undefined : value),
   z.string().optional(),
 );
-const optionalUrl = z.preprocess(
-  (value) => (value === "" ? undefined : value),
-  z.url().optional(),
-);
-
 const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -18,12 +13,16 @@ const envSchema = z.object({
   FRONTEND_URL: z.url(),
   CORS_ALLOWED_ORIGINS: z.string().min(1),
   SESSION_SECRET: z.string().min(32),
-  S3_ENDPOINT: optionalUrl,
-  S3_REGION: z.string().default("auto"),
-  S3_BUCKET: optionalString,
-  S3_ACCESS_KEY_ID: optionalString,
-  S3_SECRET_ACCESS_KEY: optionalString,
-  S3_PUBLIC_BASE_URL: optionalUrl,
+  CLOUDINARY_CLOUD_NAME: optionalString,
+  CLOUDINARY_API_KEY: optionalString,
+  CLOUDINARY_API_SECRET: optionalString,
+  CLOUDINARY_FOLDER: z
+    .string()
+    .trim()
+    .min(1)
+    .max(100)
+    .regex(/^[a-zA-Z0-9/_-]+$/)
+    .default("world-star"),
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),

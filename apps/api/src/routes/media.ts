@@ -1,6 +1,5 @@
 import crypto from "node:crypto";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { v2 as cloudinary } from "cloudinary";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { envelope } from "../lib/envelope.js";
@@ -10,87 +9,93 @@ import { HttpError } from "../lib/http-error.js";
 import { prisma } from "../lib/prisma.js";
 import { requirePermission } from "../middleware/authorize.js";
 
-const uploadRequestSchema = z.object({
-  category: z.enum([
-    "gang-logo",
-    "gang-banner",
-    "player-avatar",
-    "tournament-banner",
-    "event-image",
-    "website-media",
-    "match-evidence",
-  ]),
-  filename: z.string().min(1).max(180),
-  mimeType: z.enum(["image/png", "image/jpeg", "image/webp"]),
-  size: z
-    .number()
-    .int()
-    .positive()
-    .max(8 * 1024 * 1024),
-  gangId: z.string().min(20).max(40).optional(),
-});
+const imageMimeTypes = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+] as const;
+const videoMimeTypes = [
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+] as const;
+const acceptedMimeTypes = [...imageMimeTypes, ...videoMimeTypes] as const;
 
-function createS3(): S3Client {
+const uploadRequestSchema = z
+  .object({
+    category: z.enum([
+      "gang-logo",
+      "gang-banner",
+      "player-avatar",
+      "tournament-banner",
+      "event-image",
+      "event-video",
+      "stream-thumbnail",
+      "website-media",
+      "match-evidence",
+    ]),
+    filename: z.string().trim().min(1).max(180),
+    mimeType: z.enum(acceptedMimeTypes),
+    size: z.number().int().positive().max(100 * 1024 * 1024),
+    gangId: z.string().min(20).max(40).optional(),
+  })
+  .superRefine((value, context) => {
+    if (
+      value.mimeType.startsWith("image/") &&
+      value.size > 12 * 1024 * 1024
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["size"],
+        message: "Images must be 12 MB or smaller.",
+      });
+    }
+  });
+
+function cloudinaryCredentials() {
   if (
-    !env.S3_ENDPOINT ||
-    !env.S3_ACCESS_KEY_ID ||
-    !env.S3_SECRET_ACCESS_KEY ||
-    !env.S3_BUCKET ||
-    !env.S3_PUBLIC_BASE_URL
+    !env.CLOUDINARY_CLOUD_NAME ||
+    !env.CLOUDINARY_API_KEY ||
+    !env.CLOUDINARY_API_SECRET
   ) {
     throw new HttpError(
       503,
       "MEDIA_NOT_CONFIGURED",
-      "Persistent media storage is not configured.",
+      "Cloudinary media storage is not configured.",
     );
   }
-  return new S3Client({
-    endpoint: env.S3_ENDPOINT,
-    region: env.S3_REGION,
-    forcePathStyle: true,
-    credentials: {
-      accessKeyId: env.S3_ACCESS_KEY_ID,
-      secretAccessKey: env.S3_SECRET_ACCESS_KEY,
-    },
-  });
+  return {
+    cloudName: env.CLOUDINARY_CLOUD_NAME,
+    apiKey: env.CLOUDINARY_API_KEY,
+    apiSecret: env.CLOUDINARY_API_SECRET,
+  };
 }
 
 export function mediaRoutes(app: FastifyInstance): void {
   app.post("/api/v1/media/upload-intent", async (request) => {
     const auth = requirePermission(request, "media.upload");
     const input = uploadRequestSchema.parse(request.body);
-    const publicBaseUrl = env.S3_PUBLIC_BASE_URL;
-    if (!publicBaseUrl)
-      throw new HttpError(
-        503,
-        "MEDIA_NOT_CONFIGURED",
-        "Persistent media storage is not configured.",
-      );
-    const extension =
-      input.mimeType === "image/png"
-        ? "png"
-        : input.mimeType === "image/webp"
-          ? "webp"
-          : "jpg";
-    const storageKey = `${input.category}/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.${extension}`;
-    const command = new PutObjectCommand({
-      Bucket: env.S3_BUCKET,
-      Key: storageKey,
-      ContentType: input.mimeType,
-      ContentLength: input.size,
-      Metadata: { moderation: "pending" },
-    });
-    const uploadUrl = await getSignedUrl(createS3(), command, {
-      expiresIn: 300,
-    });
+    const credentials = cloudinaryCredentials();
+    const resourceType = input.mimeType.startsWith("video/")
+      ? "video"
+      : "image";
+    const date = new Date().toISOString().slice(0, 10);
+    const publicId = `${env.CLOUDINARY_FOLDER}/${input.category}/${date}/${crypto.randomUUID()}`;
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signature = cloudinary.utils.api_sign_request(
+      { public_id: publicId, timestamp },
+      credentials.apiSecret,
+    );
+
     const media = await prisma.mediaAsset.create({
       data: {
         uploaderUserId: auth.userId,
         gangId: input.gangId ?? null,
         category: input.category,
         originalFilename: input.filename,
-        storageKey,
-        publicUrl: `${publicBaseUrl.replace(/\/$/, "")}/${storageKey}`,
+        storageKey: publicId,
+        publicUrl: `pending:${publicId}`,
         mimeType: input.mimeType,
         size: input.size,
       },
@@ -102,14 +107,19 @@ export function mediaRoutes(app: FastifyInstance): void {
       entityId: media.id,
       afterData: media,
     });
+
     return envelope(request, {
       mediaAssetId: media.id,
-      storageKey,
-      uploadUrl,
-      publicUrl: media.publicUrl,
-      expiresIn: 300,
-      acceptedMimeTypes: ["image/png", "image/jpeg", "image/webp"],
-      maximumBytes: 8 * 1024 * 1024,
+      uploadUrl: `https://api.cloudinary.com/v1_1/${encodeURIComponent(credentials.cloudName)}/${resourceType}/upload`,
+      cloudName: credentials.cloudName,
+      apiKey: credentials.apiKey,
+      publicId,
+      resourceType,
+      timestamp,
+      signature,
+      acceptedMimeTypes,
+      maximumBytes:
+        resourceType === "video" ? 100 * 1024 * 1024 : 12 * 1024 * 1024,
     });
   });
 }

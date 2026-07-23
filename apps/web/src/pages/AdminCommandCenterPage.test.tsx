@@ -111,6 +111,12 @@ describe("AdminCommandCenterPage record actions", () => {
     expect(
       screen.getByRole("dialog", { name: "Add Gang" }),
     ).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Upload file" })).toHaveLength(
+      2,
+    );
+    expect(screen.getByLabelText("Gang logo Cloudinary URL")).not.toHaveAttribute(
+      "readonly",
+    );
     fireEvent.change(screen.getByLabelText("Gang name"), {
       target: { value: "Crimson Kings" },
     });

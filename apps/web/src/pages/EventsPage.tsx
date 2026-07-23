@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, Clock, MapPin } from "lucide-react";
 import { api } from "@/lib/api";
+import { cloudinaryMediaKindFromUrl } from "@/lib/cloudinary";
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat(undefined, {
@@ -70,7 +71,15 @@ export default function EventsPage() {
                     ) : null}
                   </div>
                 </div>
-                {event.imageUrl ? (
+                {event.imageUrl &&
+                cloudinaryMediaKindFromUrl(event.imageUrl) === "video" ? (
+                  <video
+                    src={event.imageUrl}
+                    controls
+                    preload="metadata"
+                    playsInline
+                  />
+                ) : event.imageUrl ? (
                   <img src={event.imageUrl} alt="" />
                 ) : (
                   <img

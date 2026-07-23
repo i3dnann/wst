@@ -72,15 +72,15 @@ KICK_CLIENT_SECRET=
 YOUTUBE_API_KEY=
 STREAM_STATUS_TTL_SECONDS=60
 YOUTUBE_STATUS_TTL_SECONDS=1800
-S3_ENDPOINT=
-S3_REGION=auto
-S3_BUCKET=
-S3_ACCESS_KEY_ID=
-S3_SECRET_ACCESS_KEY=
-S3_PUBLIC_BASE_URL=
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+CLOUDINARY_FOLDER=world-star
 ```
 
-Use an HTTPS S3-compatible public base URL. Media upload is intentionally unavailable until every S3 value is configured. Twitch and YouTube automatic detection are also unavailable until their provider credentials are present; manual stream status remains supported.
+Copy the Cloudinary cloud name, API key, and API secret from **Cloudinary Console → Settings → API Keys**. Keep the API secret only in `apps/api/.env` on the VPS; never put it in Netlify or a `VITE_` variable. The protected API creates short-lived signed requests, uploads go directly from the administrator's browser to Cloudinary, and the resulting secure URL is recorded automatically. `CLOUDINARY_FOLDER` controls the top-level folder used for World Star assets.
+
+Media upload is intentionally unavailable until all three Cloudinary credentials are configured. Twitch, Kick, and YouTube automatic detection are also unavailable until their provider credentials are present; manual stream status remains supported.
 
 ## 5. Back up before every migration
 
