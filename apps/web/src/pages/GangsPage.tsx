@@ -1,14 +1,7 @@
 import {
   ArrowRight,
-  Award,
-  Crosshair,
   Search,
-  Shield,
   ShieldCheck,
-  Swords,
-  TrendingUp,
-  Trophy,
-  Users,
   X,
 } from "lucide-react";
 import { useDeferredValue, useState } from "react";
@@ -38,6 +31,10 @@ export default function GangsPage() {
     queryKey: ["gangs", queryString],
     queryFn: () => api.gangs(queryString),
   });
+  const resultCount = Math.max(
+    gangs.data?.meta.total ?? 0,
+    gangs.data?.data.length ?? 0,
+  );
 
   const reset = () => {
     setSearch("");
@@ -101,7 +98,6 @@ export default function GangsPage() {
             <option value="name">Alphabetical</option>
             <option value="newest">Newest</option>
             <option value="wins">Wins</option>
-            <option value="kills">Kills</option>
           </select>
         </label>
         <Button variant="ghost" onClick={reset}>
@@ -111,8 +107,7 @@ export default function GangsPage() {
 
       <div className="gang-registry-v3__results">
         <strong>
-          {gangs.data?.meta.total ?? 0}{" "}
-          {gangs.data?.meta.total === 1 ? "result" : "results"}
+          {resultCount} {resultCount === 1 ? "result" : "results"}
         </strong>
         <span>Approved public records</span>
       </div>
@@ -129,15 +124,6 @@ export default function GangsPage() {
       ) : (
         <section className="gang-registry-v3__list">
           {gangs.data.data.map((gang) => {
-            const stats = [
-              [Users, "Members", gang.memberCount],
-              [Swords, "Matches", gang.matchesPlayed],
-              [Trophy, "Wins", gang.wins],
-              [Shield, "Losses", gang.losses],
-              [Crosshair, "Kills", gang.kills],
-              [TrendingUp, "Win rate", `${String(gang.winRate)}%`],
-              [Award, "Trophies", gang.trophies],
-            ] as const;
             return (
               <article className="gang-registry-card" key={gang.id}>
                 <div className="gang-registry-card__media">
@@ -181,15 +167,6 @@ export default function GangsPage() {
                   </span>
                 </div>
                 <div className="gang-registry-card__footer">
-                  <dl>
-                    {stats.map(([Icon, label, value]) => (
-                      <div key={label}>
-                        <Icon aria-hidden="true" />
-                        <dt>{label}</dt>
-                        <dd>{value}</dd>
-                      </div>
-                    ))}
-                  </dl>
                   <Button asChild variant="outline">
                     <Link to={`/gangs/${gang.slug}`}>
                       View Gang <ArrowRight aria-hidden="true" />

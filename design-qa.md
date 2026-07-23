@@ -91,3 +91,94 @@ The visible Round of 16 nodes feed into the centered quarterfinal node through a
 - Remaining evidence blocker: the in-app browser-control connector was not available to capture the implemented screen. A refreshed screenshot of `/admin/live-streams` is required for the blocking visual comparison.
 
 final result: blocked
+
+---
+
+# World Star Standalone 404 — Design QA
+
+- Source visual truth: `C:\Users\adnan\AppData\Local\Temp\codex-clipboard-0ea346fb-92b7-4199-8450-75b4c68532df.png`
+- Implementation screenshot: `C:\Users\adnan\AppData\Local\Temp\wst-404-desktop.png`
+- Responsive screenshot: `C:\Users\adnan\AppData\Local\Temp\wst-404-mobile.png`
+- Combined comparison: `C:\Users\adnan\AppData\Local\Temp\wst-404-design-comparison.png`
+- Source pixels: 1322 × 975.
+- Implementation pixels: 1920 × 1080 at a 1920 × 1080 CSS viewport and device pixel ratio 1.
+- Responsive implementation pixels: 390 × 844 at a 390 × 844 CSS viewport and device pixel ratio 1.
+- State: unknown public URL redirected to the standalone `/404` route.
+- Browser path: Browser plugin was not available; regular Playwright drove the local Chromium-compatible runtime.
+
+## Full-view comparison evidence
+
+The combined comparison preserves the source hierarchy: edge-framed black/crimson skyline, small `404 Error` eyebrow, oversized white/red/white number, uppercase `Page Not Found` heading, short explanatory copy, and a red primary action. The user-requested simplification is applied intentionally: the secondary Explore action and social panel are absent, leaving one clear route home.
+
+## Focused comparison evidence
+
+A separate crop was not required because the desktop implementation capture renders the number, heading, copy, and action at readable size. The direct implementation view confirms crisp text, balanced digit spacing, consistent crimson accents, and unobstructed city framing.
+
+## Required fidelity surfaces
+
+- Fonts and typography: The existing World Star display and UI families preserve the site identity while matching the reference's condensed uppercase hierarchy. The 404 digits remain live, accessible text rather than baked-in lettering.
+- Spacing and layout rhythm: Content is vertically centered with a single compact action path. Desktop fills exactly 1920 × 1080 and mobile fills exactly 390 × 844 with no horizontal or vertical overflow.
+- Colors and visual tokens: Neutral black, cool white, muted gray, and World Star crimson replace all warm/yellow accents. Contrast remains strong across the city artwork.
+- Image quality and asset fidelity: A dedicated 1672 × 941 generated city asset provides the reference's edge framing and central negative space. The optimized project JPG is 151 KB and loaded at full natural resolution in QA.
+- Copy and content: Copy matches the requested 404 purpose. There is exactly one link, labeled `Go back home`; no social icons, social links, secondary navigation, site header, or footer are rendered.
+
+## Comparison history
+
+1. Initial P2: the negative letter spacing made the outer digits overlap the red zero too tightly and reduced the impact of the number.
+2. Fix: increased the maximum digit scale, relaxed letter spacing, and removed per-digit translation.
+3. Post-fix evidence: the revised 404 reads cleanly at 1920 × 1080 and 390 × 844, with no clipping or overflow.
+
+## Interaction and runtime evidence
+
+- Unknown route resolved to `http://127.0.0.1:5173/404`.
+- Keyboard Tab focused the only action (`A`, `href="/"`); Enter opened the homepage and rendered `.gold-home`.
+- Final desktop reload produced no console errors, warnings, page errors, failed responses, or framework error overlays.
+- Mobile produced no console errors or page errors; the full action remained inside the initial viewport.
+
+## Remaining P3 polish
+
+- The reference uses distressed textures inside the digits. The implementation keeps the digits clean and live for sharper responsive rendering, consistent with the user's request for a clean version.
+
+final result: passed
+
+---
+
+# World Star Editorial Headline Typography — Design QA
+
+- Source visual truth: `C:\Users\adnan\AppData\Local\Temp\codex-clipboard-ac5cde5e-12c6-4fb9-a092-9492ff9cf7f9.png`
+- Desktop implementation: `C:\Users\adnan\AppData\Local\Temp\wst-bodoni-headlines-desktop.png`
+- Responsive implementation: `C:\Users\adnan\AppData\Local\Temp\wst-bodoni-headlines-mobile.png`
+- Focused comparison: `C:\Users\adnan\AppData\Local\Temp\wst-bodoni-font-comparison.png`
+- Source pixels: 574 × 117.
+- Desktop viewport: 1920 × 1080 at device pixel ratio 1.
+- Mobile viewport: 390 × 844 at device pixel ratio 1.
+- Browser path: the Browser plugin was unavailable, so regular Playwright drove the installed Chrome runtime.
+
+## Full-view comparison evidence
+
+The final implementation uses `Bodoni Moda SC` for brand and headline surfaces. Its tall capitals, high stroke contrast, fine serifs, and narrow editorial rhythm closely match the supplied `WORLD STAR CFW` reference. Body copy, navigation labels, buttons, scores, and dense admin controls retain the existing Inter and Barlow Condensed UI families for readability.
+
+## Required fidelity surfaces
+
+- Fonts and typography: `Bodoni Moda SC` is loaded at weight 500 with optical sizing enabled. The shared `--headline` token is applied to public heroes, section headings, the World Star brand, admin section headings, login, and the 404 title.
+- Spacing and layout rhythm: desktop and mobile brand text and hero headlines remain fully visible. The tested pages have no horizontal overflow.
+- Colors and imagery: unchanged by this focused typography update.
+- Copy and content: unchanged.
+
+## Comparison history
+
+1. Initial candidate: standard `Bodoni Moda` had the correct contrast but was too broad and less condensed than the reference.
+2. Candidate review: `Bodoni Moda SC`, `GFS Didot`, and `Cormorant Garamond` were rendered side by side.
+3. Final selection: `Bodoni Moda SC` provided the closest tall-capital silhouette and cleanest match to the reference while remaining legible in the existing layouts.
+
+## Interaction and runtime evidence
+
+- Header navigation was exercised from the homepage to `/gangs`; the target page loaded and retained the new headline font.
+- Public routes sampled: `/gangs`, `/tournaments`, `/matches`, `/events`, `/404`, and `/admin/login`.
+- `document.fonts.check('500 64px "Bodoni Moda SC"')` returned true.
+- Desktop and mobile captures had no framework error overlay, clipping, or horizontal overflow.
+- No page runtime errors occurred during the navigation check.
+- Existing local API 404 responses for `/api/v1/public/home`, `/api/v1/live-streams`, and `/api/v1/events` remain unrelated to this typography change.
+- Web typecheck, lint, all 12 tests, and the production build passed.
+
+final result: passed

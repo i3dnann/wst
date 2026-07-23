@@ -10,13 +10,9 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MagicCard } from "@/components/ui/magic-card";
-import { Marquee } from "@/components/ui/marquee";
 import { NumberTicker } from "@/components/ui/number-ticker";
-import { Particles } from "@/components/ui/particles";
 import { Ripple } from "@/components/ui/ripple";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
-import { ShineBorder } from "@/components/ui/shine-border";
 import { api } from "@/lib/api";
 import { usePublicWebsiteSettings } from "@/lib/website-settings";
 
@@ -88,18 +84,11 @@ export default function HomePage() {
   return (
     <main className="gold-home">
       <section className="gold-hero">
-        <Particles
-          className="gold-hero-particles"
-          color="#9f1d2f"
-          quantity={62}
-          staticity={80}
-          size={0.35}
-        />
         <img
           className="gold-hero-image"
           src={
             settings?.homepage.heroMediaUrl ||
-            "/assets/wst-gold/city-overlook.png"
+            "/assets/wst-red/city-overlook-red.jpg"
           }
           alt="A World Star figure overlooking the city at night"
         />
@@ -110,7 +99,7 @@ export default function HomePage() {
               className="gold-hero-ripple"
               mainCircleSize={240}
               mainCircleOpacity={0.18}
-              numCircles={9}
+              numCircles={5}
             />
             <img
               className="gold-hero-mark"
@@ -157,31 +146,27 @@ export default function HomePage() {
         ))}
       </section>
 
-      <section className="gold-split-section">
-        <MagicCard
-          className="gold-feature-panel"
-          gradientColor="#4a0f18"
-          gradientFrom="#9f1d2f"
-          gradientTo="#ef4058"
-          gradientOpacity={0.16}
-        >
-          <ShineBorder
-            shineColor={["#6f0d1c", "#c51f38", "#ef4058"]}
-            duration={18}
+      <section className="home-competition-band">
+        <div className="home-feature-media">
+          <img
+            src="/assets/wst-red/sealed-dossier-red.jpg"
+            alt="Sealed World Star dossier"
+            loading="lazy"
+            decoding="async"
           />
+        </div>
+        <article className="home-feature-summary">
           <header className="gold-section-heading">
             <div>
               <span>Featured Tournament</span>
-              <h2>{featuredTournament?.name ?? "The next showdown awaits"}</h2>
+              <h2>
+                {(featuredTournament?.name ?? "The next showdown awaits").replace(
+                  /(\d+)-/g,
+                  "$1\u2011",
+                )}
+              </h2>
             </div>
-            <Trophy />
           </header>
-          <div className="gold-feature-media">
-            <img
-              src="/assets/wst-gold/sealed-dossier.png"
-              alt="Sealed World Star dossier"
-            />
-          </div>
           {featuredTournament ? (
             <div className="gold-feature-copy">
               <p>
@@ -203,15 +188,19 @@ export default function HomePage() {
               </Button>
             </div>
           )}
-        </MagicCard>
+        </article>
 
-        <div className="gold-events-panel">
+        <aside className="home-events-panel">
           <header className="gold-section-heading">
             <div>
               <span>Upcoming Events</span>
               <h2>What happens next</h2>
             </div>
-            <CalendarDays />
+            <Button asChild variant="outline">
+              <Link to="/events">
+                View All Events <ArrowRight />
+              </Link>
+            </Button>
           </header>
           {upcomingEvents.length ? (
             <ol className="gold-event-list">
@@ -237,12 +226,7 @@ export default function HomePage() {
               </p>
             </div>
           )}
-          <Button asChild variant="outline">
-            <Link to="/events">
-              View All Events <ArrowRight />
-            </Link>
-          </Button>
-        </div>
+        </aside>
       </section>
 
       <section className="gold-registry-section">
@@ -320,16 +304,6 @@ export default function HomePage() {
             Open Live Page <ArrowRight />
           </Link>
         </Button>
-        <Marquee className="gold-live-marquee" pauseOnHover repeat={3}>
-          {(liveStreams.length
-            ? liveStreams.map((stream) => stream.streamerName)
-            : ["Registry secured", "Events monitored", "Rankings verified"]
-          ).map((label) => (
-            <span key={label}>
-              <Radio aria-hidden="true" /> {label}
-            </span>
-          ))}
-        </Marquee>
       </section>
     </main>
   );

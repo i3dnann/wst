@@ -19,7 +19,7 @@ export default function LoginPage() {
   return (
     <main className="admin-login-page">
       <div className="admin-login-media" aria-hidden="true">
-        <img src="/assets/wst-gold/admin-office.png" alt="" />
+        <img src="/assets/wst-red/admin-office-red.jpg" alt="" />
       </div>
       <section className="admin-login-panel">
         <Link to="/" className="login-back">

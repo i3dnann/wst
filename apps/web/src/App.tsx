@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { PublicLayout } from "./components/layout/PublicLayout";
 import { PageSkeleton } from "./components/data/StatusState";
 import { RealtimeBridge } from "./components/realtime/RealtimeBridge";
+import { ScrollRevealController } from "./components/effects/ScrollRevealController";
 
 const HomePage = lazy(() => import("./pages/HomePage"));
 const GangsPage = lazy(() => import("./pages/GangsPage"));
@@ -53,8 +54,15 @@ export function App() {
   return (
     <>
       <RealtimeBridge />
+      <ScrollRevealController routeKey={location.pathname} />
+      <div className="global-atmosphere" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
       <AnimatePresence mode="wait">
         <motion.div
+          className="route-stage"
           key={admin ? "admin" : "public"}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -109,9 +117,9 @@ export function App() {
                   path="dashboard/*"
                   element={<InformationPage kind="dashboard" />}
                 />
-                <Route path="404" element={<NotFoundPage />} />
                 <Route path="*" element={<Navigate to="/404" replace />} />
               </Route>
+              <Route path="404" element={<NotFoundPage />} />
               <Route path="admin/login" element={<LoginPage />} />
               <Route path="admin/*" element={<AdminPage />} />
             </Routes>

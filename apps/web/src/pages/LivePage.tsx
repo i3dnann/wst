@@ -122,7 +122,7 @@ export default function LivePage() {
             ) : (
               <div className="live-player-empty">
                 <img
-                  src="/assets/wst-gold/city-overlook.png"
+                  src="/assets/wst-red/city-overlook-red.jpg"
                   alt="World Star city at night"
                 />
                 <div>

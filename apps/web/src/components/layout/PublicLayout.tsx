@@ -145,7 +145,7 @@ function MaintenancePage({
     <main className="maintenance-page" aria-labelledby="maintenance-title">
       <img
         className="maintenance-page__image"
-        src="/assets/wst-gold/maintenance-mafia.png"
+        src="/assets/wst-red/admin-office-red.jpg"
         alt="A suited mafia figure seated in a dark private lounge"
       />
       <div className="maintenance-page__shade" aria-hidden="true" />
@@ -300,8 +300,20 @@ export function PublicLayout() {
               ))}
           </div>
         ) : null}
-        <small>
-          © {new Date().getFullYear()} {shortName}. All rights reserved.
+        <small className="site-footer__legal">
+          <span>
+            © {new Date().getFullYear()} {shortName}. All rights reserved.
+          </span>
+          <span className="site-footer__studio-credit">
+            Created with <em>love</em> by{" "}
+            <a
+              href="https://discord.gg/eZqaNx5P7y"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              A2 Studio
+            </a>
+          </span>
         </small>
       </footer>
     </div>

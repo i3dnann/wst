@@ -56,6 +56,18 @@ export default function InformationPage({
   return (
     <main className="information-page">
       <header className="information-hero">
+        <img
+          className="information-hero__media"
+          src={
+            kind === "rules"
+              ? "/assets/wst-red/sealed-dossier-red.jpg"
+              : "/assets/wst-red/admin-office-red.jpg"
+          }
+          alt=""
+          loading="lazy"
+          decoding="async"
+        />
+        <span className="information-hero__shade" aria-hidden="true" />
         <content.Icon />
         <div>
           <h1>{content.title}</h1>

@@ -107,7 +107,9 @@ export default function TournamentsPage() {
             <article key={item.id}>
               <div className="tournament-ledger-media">
                 <img
-                  src={item.bannerUrl ?? "/assets/wst-gold/sealed-dossier.png"}
+                  src={item.bannerUrl ?? "/assets/wst-red/vintage-car-red.jpg"}
+                  loading="lazy"
+                  decoding="async"
                   alt=""
                 />
                 <span

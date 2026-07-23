@@ -2,7 +2,6 @@ import { Component, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
-  ChevronDown,
   FileClock,
   Gavel,
   LayoutDashboard,
@@ -1767,7 +1766,7 @@ function StreamManager() {
                 <img
                   src={
                     selected?.thumbnailUrl ??
-                    "/assets/wst-gold/city-overlook.png"
+                    "/assets/wst-red/city-overlook-red.jpg"
                   }
                   alt=""
                 />
@@ -2699,110 +2698,56 @@ export default function AdminCommandCenterPage() {
     "Unknown admin section";
   return (
     <div className="control-shell gold-control-shell command-center-v2">
-      <header className="admin-command-bar">
-        <Link className="admin-command-brand" to="/admin/overview">
+      <aside className="control-sidebar admin-sidebar">
+        <Link
+          className="control-brand admin-sidebar-brand"
+          to="/"
+          title="Open the World Star home page"
+        >
           <img src="/assets/wst/wst-logo.png" alt="World Star" />
           <span>
             <strong>WORLD STAR</strong>
             <small>ADMIN COMMAND CENTER</small>
           </span>
         </Link>
-        <nav
-          className="admin-primary-navigation"
-          aria-label="Administrator navigation"
-        >
+        <nav aria-label="Administrator navigation">
           {navigationGroups.map((group) => {
             const items = visibleNavigation.filter((item) =>
               group.sections.includes(item[2]),
             );
-            const firstItem = items[0];
-            if (!firstItem) return null;
-            if (items.length === 1) {
-              const [Icon, label, value] = firstItem;
-              return (
-                <Link
-                  key={value}
-                  className={`admin-navigation-link ${
-                    effectiveSection === value ? "active" : ""
-                  }`}
-                  to={`/admin/${adminSectionRoutes[value]}`}
-                >
-                  <Icon />
-                  <span>{label}</span>
-                </Link>
-              );
-            }
-            const activeItem = items.find(
-              ([, , value]) => effectiveSection === value,
-            );
-            const GroupIcon = (activeItem ?? firstItem)[0];
+            if (!items.length) return null;
             return (
-              <details
-                className={`admin-navigation-menu ${
-                  activeItem ? "active" : ""
-                }`}
-                key={`${group.label}-${location.pathname}`}
-                name="admin-navigation-menu"
-              >
-                <summary>
-                  <GroupIcon />
-                  <span>{group.label}</span>
-                  <ChevronDown />
-                </summary>
-                <div className="admin-navigation-popover">
-                  <strong>{group.label}</strong>
-                  {items.map(([Icon, label, value]) => (
-                    <Link
-                      key={value}
-                      className={effectiveSection === value ? "active" : ""}
-                      to={`/admin/${adminSectionRoutes[value]}`}
-                    >
-                      <Icon />
-                      <span>{label}</span>
-                    </Link>
-                  ))}
-                </div>
-              </details>
+              <section className="control-nav-group" key={group.label}>
+                <strong>{group.label}</strong>
+                {items.map(([Icon, label, value]) => (
+                  <Link
+                    key={value}
+                    className={effectiveSection === value ? "active" : ""}
+                    to={`/admin/${adminSectionRoutes[value]}`}
+                    title={label}
+                  >
+                    <Icon />
+                    <span>{label}</span>
+                  </Link>
+                ))}
+              </section>
             );
           })}
         </nav>
-        <div className="admin-command-actions">
-          <Link className="admin-public-site-link" to="/">
-            <Eye />
-            <span>Public site</span>
-          </Link>
-          <div className="administrator-chip">
-            <Shield />
-            <span>
-              Administrator<small>{me.data.data.email}</small>
-            </span>
-          </div>
-          <button
-            type="button"
-            className="admin-command-logout"
-            onClick={() => logout.mutate()}
-            aria-label="Log out"
-          >
-            <LogOut />
-            <span>Log out</span>
-          </button>
+        <div className="admin-sidebar-account">
+          <Shield />
+          <span>
+            Administrator<small>{me.data.data.email}</small>
+          </span>
         </div>
-        <nav
-          className="admin-mobile-navigation"
-          aria-label="Administrator mobile navigation"
+        <button
+          type="button"
+          className="control-logout"
+          onClick={() => logout.mutate()}
         >
-          {visibleNavigation.map(([Icon, label, value]) => (
-            <Link
-              key={value}
-              className={effectiveSection === value ? "active" : ""}
-              to={`/admin/${adminSectionRoutes[value]}`}
-            >
-              <Icon />
-              <span>{label}</span>
-            </Link>
-          ))}
-        </nav>
-      </header>
+          <LogOut /> <span>Log out</span>
+        </button>
+      </aside>
       <main className="control-main">
         <header className="control-heading">
           <div>

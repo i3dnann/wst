@@ -1608,7 +1608,7 @@ function Overview({
         </section>
         <aside className="admin-art-panel">
           <img
-            src="/assets/wst-gold/admin-office.png"
+            src="/assets/wst-red/admin-office-red.jpg"
             alt="World Star administrator office"
           />
           <div>

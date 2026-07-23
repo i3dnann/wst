@@ -73,7 +73,12 @@ export default function EventsPage() {
                 {event.imageUrl ? (
                   <img src={event.imageUrl} alt="" />
                 ) : (
-                  <img src="/assets/wst-gold/sealed-dossier.png" alt="" />
+                  <img
+                    src="/assets/wst-red/sealed-dossier-red.jpg"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
                 )}
               </li>
             ))}

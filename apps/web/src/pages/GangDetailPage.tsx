@@ -2,12 +2,10 @@ import {
   ArrowLeft,
   Award,
   CalendarDays,
-  Crosshair,
   MapPin,
   Shield,
   ShieldCheck,
   Swords,
-  TrendingUp,
   Trophy,
   Users,
 } from "lucide-react";
@@ -95,12 +93,6 @@ export default function GangDetailPage() {
     [Swords, "Matches", matchesPlayed],
     [Trophy, "Wins", wins],
     [Shield, "Losses", readNumber(seasonStat, "losses")],
-    [Crosshair, "Kills", readNumber(seasonStat, "kills")],
-    [
-      TrendingUp,
-      "Win rate",
-      `${String(matchesPlayed ? Math.round((wins / matchesPlayed) * 1000) / 10 : 0)}%`,
-    ],
     [Award, "Trophies", trophies],
   ] as const;
   const description = readString(
