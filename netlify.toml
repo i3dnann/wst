@@ -4,6 +4,12 @@
   functions = "netlify/functions"
 
 [[redirects]]
+  from = "https://wstgang.netlify.app/*"
+  to = "https://wstgang.com/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
   from = "/backend/*"
   to = "/.netlify/functions/backend/:splat"
   status = 200

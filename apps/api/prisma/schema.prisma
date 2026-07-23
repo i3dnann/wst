@@ -415,6 +415,7 @@ model Match {
   position              Int?
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
+  deletedAt             DateTime?
   tournament            Tournament?       @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
   bracketRound          BracketRound?     @relation(fields: [bracketRoundId], references: [id], onDelete: SetNull)
   nextMatch             Match?            @relation("WinnerProgression", fields: [nextMatchId], references: [id], onDelete: SetNull)
@@ -432,6 +433,7 @@ model Match {
 
   @@unique([bracketRoundId, position])
   @@index([tournamentId, status, scheduledAt])
+  @@index([deletedAt])
   @@index([nextMatchId])
   @@index([streamId])
   @@index([disputeAssignedUserId])

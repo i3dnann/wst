@@ -26,6 +26,10 @@ const navigation = [
 
 const primaryNavigation = navigation.slice(0, 8);
 const moreNavigation = navigation.slice(8);
+const publicSiteUrl = (
+  import.meta.env.VITE_PUBLIC_SITE_URL ??
+  (import.meta.env.PROD ? "https://wstgang.com" : window.location.origin)
+).replace(/\/+$/, "");
 
 const legacyBrandColors: Record<string, string> = {
   "#b88a44": "#c51f38",
@@ -162,6 +166,7 @@ function MaintenancePage({
 }
 
 export function PublicLayout() {
+  const location = useLocation();
   const website = usePublicWebsiteSettings();
   const settings = website.data;
   const brandStyle = settings
@@ -189,6 +194,28 @@ export function PublicLayout() {
     if (favicon && settings.general.faviconUrl)
       favicon.href = settings.general.faviconUrl;
   }, [settings]);
+  useEffect(() => {
+    const canonicalUrl = new URL(location.pathname, `${publicSiteUrl}/`).href;
+    let canonical = document.querySelector<HTMLLinkElement>(
+      'link[rel="canonical"]',
+    );
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      document.head.append(canonical);
+    }
+    canonical.href = canonicalUrl;
+
+    let openGraphUrl = document.querySelector<HTMLMetaElement>(
+      'meta[property="og:url"]',
+    );
+    if (!openGraphUrl) {
+      openGraphUrl = document.createElement("meta");
+      openGraphUrl.setAttribute("property", "og:url");
+      document.head.append(openGraphUrl);
+    }
+    openGraphUrl.content = canonicalUrl;
+  }, [location.pathname]);
   return (
     <div className="site-frame" style={brandStyle}>
       <ScrollProgress className="site-scroll-progress" />

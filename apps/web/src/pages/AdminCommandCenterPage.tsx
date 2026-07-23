@@ -2,6 +2,7 @@ import { Component, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
+  ChevronDown,
   FileClock,
   Gavel,
   LayoutDashboard,
@@ -113,13 +114,13 @@ function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
-function isRemovedRecord(kind: RecordKind, record: AdminRecord): boolean {
+function isRemovedRecord(record: AdminRecord): boolean {
   const rawStatus = record.status;
   const status =
     typeof rawStatus === "string" || typeof rawStatus === "number"
       ? String(rawStatus).toUpperCase()
       : "";
-  return status === "ARCHIVED" || (kind === "match" && status === "CANCELLED");
+  return status === "ARCHIVED";
 }
 
 const adminRouteAliases: Record<string, AdminSection> = {
@@ -1257,8 +1258,8 @@ function RecordsManager({
     [records.data],
   );
   const activeRows = useMemo(
-    () => rows.filter((record) => !isRemovedRecord(kind, record)),
-    [kind, rows],
+    () => rows.filter((record) => !isRemovedRecord(record)),
+    [rows],
   );
   const gangRows = asArray<AdminRecord>(gangs.data?.data);
   const tournamentRows = asArray<AdminRecord>(tournaments.data?.data);
@@ -2698,56 +2699,115 @@ export default function AdminCommandCenterPage() {
     "Unknown admin section";
   return (
     <div className="control-shell gold-control-shell command-center-v2">
-      <aside className="control-sidebar">
-        <div className="control-brand">
+      <header className="admin-command-bar">
+        <Link className="admin-command-brand" to="/admin/overview">
           <img src="/assets/wst/wst-logo.png" alt="World Star" />
           <span>
             <strong>WORLD STAR</strong>
             <small>ADMIN COMMAND CENTER</small>
           </span>
-        </div>
-        <nav aria-label="Administrator navigation">
+        </Link>
+        <nav
+          className="admin-primary-navigation"
+          aria-label="Administrator navigation"
+        >
           {navigationGroups.map((group) => {
             const items = visibleNavigation.filter((item) =>
               group.sections.includes(item[2]),
             );
-            if (!items.length) return null;
+            const firstItem = items[0];
+            if (!firstItem) return null;
+            if (items.length === 1) {
+              const [Icon, label, value] = firstItem;
+              return (
+                <Link
+                  key={value}
+                  className={`admin-navigation-link ${
+                    effectiveSection === value ? "active" : ""
+                  }`}
+                  to={`/admin/${adminSectionRoutes[value]}`}
+                >
+                  <Icon />
+                  <span>{label}</span>
+                </Link>
+              );
+            }
+            const activeItem = items.find(
+              ([, , value]) => effectiveSection === value,
+            );
+            const GroupIcon = (activeItem ?? firstItem)[0];
             return (
-              <section className="control-nav-group" key={group.label}>
-                <strong>{group.label}</strong>
-                {items.map(([Icon, label, value]) => (
-                  <Link
-                    key={value}
-                    className={effectiveSection === value ? "active" : ""}
-                    to={`/admin/${adminSectionRoutes[value]}`}
-                    title={label}
-                  >
-                    <Icon /> <span>{label}</span>
-                  </Link>
-                ))}
-              </section>
+              <details
+                className={`admin-navigation-menu ${
+                  activeItem ? "active" : ""
+                }`}
+                key={`${group.label}-${location.pathname}`}
+                name="admin-navigation-menu"
+              >
+                <summary>
+                  <GroupIcon />
+                  <span>{group.label}</span>
+                  <ChevronDown />
+                </summary>
+                <div className="admin-navigation-popover">
+                  <strong>{group.label}</strong>
+                  {items.map(([Icon, label, value]) => (
+                    <Link
+                      key={value}
+                      className={effectiveSection === value ? "active" : ""}
+                      to={`/admin/${adminSectionRoutes[value]}`}
+                    >
+                      <Icon />
+                      <span>{label}</span>
+                    </Link>
+                  ))}
+                </div>
+              </details>
             );
           })}
         </nav>
-        <button
-          type="button"
-          className="control-logout"
-          onClick={() => logout.mutate()}
-        >
-          <LogOut /> Log Out
-        </button>
-      </aside>
-      <main className="control-main">
-        <header className="control-heading">
-          <div>
-            <h1>{title}</h1>
-            <p>Manage every World Star record from one protected workspace.</p>
-          </div>
+        <div className="admin-command-actions">
+          <Link className="admin-public-site-link" to="/">
+            <Eye />
+            <span>Public site</span>
+          </Link>
           <div className="administrator-chip">
             <Shield />
             <span>
               Administrator<small>{me.data.data.email}</small>
             </span>
+          </div>
+          <button
+            type="button"
+            className="admin-command-logout"
+            onClick={() => logout.mutate()}
+            aria-label="Log out"
+          >
+            <LogOut />
+            <span>Log out</span>
+          </button>
+        </div>
+        <nav
+          className="admin-mobile-navigation"
+          aria-label="Administrator mobile navigation"
+        >
+          {visibleNavigation.map(([Icon, label, value]) => (
+            <Link
+              key={value}
+              className={effectiveSection === value ? "active" : ""}
+              to={`/admin/${adminSectionRoutes[value]}`}
+            >
+              <Icon />
+              <span>{label}</span>
+            </Link>
+          ))}
+        </nav>
+      </header>
+      <main className="control-main">
+        <header className="control-heading">
+          <div>
+            <h1>{title}</h1>
+            <p>Manage every World Star record from one protected workspace.</p>
           </div>
         </header>
         <AdminSectionBoundary section={effectiveSection}>

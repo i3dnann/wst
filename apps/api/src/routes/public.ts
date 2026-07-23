@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { gangListQuerySchema, websiteSettingsSchema } from "@mafia/shared";
+import { Prisma } from "@prisma/client";
 import { envelope } from "../lib/envelope.js";
 import { HttpError } from "../lib/http-error.js";
 import { prisma } from "../lib/prisma.js";
@@ -11,6 +12,35 @@ const gangInclude = {
   seasonStats: { orderBy: { updatedAt: "desc" as const }, take: 1 },
   awards: { where: { type: "TOURNAMENT_VICTORY" }, select: { id: true } },
 };
+
+const visibleMatchWhere = {
+  deletedAt: null,
+  AND: [
+    {
+      OR: [
+        { tournamentId: null },
+        {
+          tournament: {
+            status: { not: "ARCHIVED" },
+            publicVisible: true,
+          },
+        },
+      ],
+    },
+    {
+      OR: [
+        { gangAId: null },
+        { gangA: { status: { not: "ARCHIVED" } } },
+      ],
+    },
+    {
+      OR: [
+        { gangBId: null },
+        { gangB: { status: { not: "ARCHIVED" } } },
+      ],
+    },
+  ],
+} satisfies Prisma.MatchWhereInput;
 
 function toGangListItem(gang: Awaited<ReturnType<typeof findGangs>>[number]) {
   const stat = gang.seasonStats[0];
@@ -82,7 +112,9 @@ export function publicRoutes(app: FastifyInstance): void {
     ] = await Promise.all([
       prisma.gang.count({ where: { status: "ACTIVE" } }),
       prisma.player.count({ where: { status: "ACTIVE" } }),
-      prisma.match.count({ where: { status: "COMPLETED" } }),
+      prisma.match.count({
+        where: { ...visibleMatchWhere, status: "COMPLETED" },
+      }),
       prisma.tournament.count({ where: { status: "IN_PROGRESS" } }),
       findGangs({
         where: { status: "ACTIVE", featured: true },
@@ -95,7 +127,7 @@ export function publicRoutes(app: FastifyInstance): void {
         take: 5,
       }),
       prisma.match.findMany({
-        where: { status: "COMPLETED" },
+        where: { ...visibleMatchWhere, status: "COMPLETED" },
         orderBy: { finalizedAt: "desc" },
         take: 5,
         include: { gangA: true, gangB: true, winnerGang: true },
@@ -190,7 +222,10 @@ export function publicRoutes(app: FastifyInstance): void {
       take: 50,
       include: {
         memberships: {
-          where: { active: true },
+          where: {
+            active: true,
+            gang: { status: { not: "ARCHIVED" } },
+          },
           include: { gang: true, gangRole: true },
         },
         seasonStats: { orderBy: { updatedAt: "desc" }, take: 1 },
@@ -206,6 +241,7 @@ export function publicRoutes(app: FastifyInstance): void {
         where: { slug: request.params.slug, status: { not: "ARCHIVED" } },
         include: {
           memberships: {
+            where: { gang: { status: { not: "ARCHIVED" } } },
             include: { gang: true, gangRole: true },
             orderBy: { joinedAt: "desc" },
           },
@@ -237,9 +273,18 @@ export function publicRoutes(app: FastifyInstance): void {
       where: { status: { not: "ARCHIVED" }, publicVisible: true },
       orderBy: { startAt: "desc" },
       include: {
-        _count: { select: { participants: true } },
+        _count: {
+          select: {
+            participants: {
+              where: { gang: { status: { not: "ARCHIVED" } } },
+            },
+          },
+        },
         participants: {
-          where: { status: "CHAMPION" },
+          where: {
+            status: "CHAMPION",
+            gang: { status: { not: "ARCHIVED" } },
+          },
           take: 1,
           include: { gang: true },
         },
@@ -262,6 +307,7 @@ export function publicRoutes(app: FastifyInstance): void {
             select: { id: true, displayName: true, avatarUrl: true },
           },
           participants: {
+            where: { gang: { status: { not: "ARCHIVED" } } },
             include: { gang: true, roster: { include: { player: true } } },
           },
         },
@@ -298,6 +344,7 @@ export function publicRoutes(app: FastifyInstance): void {
         orderBy: [{ sortOrder: "asc" }, { roundNumber: "asc" }],
         include: {
           matches: {
+            where: visibleMatchWhere,
             orderBy: { createdAt: "asc" },
             include: { gangA: true, gangB: true },
           },
@@ -333,6 +380,7 @@ export function publicRoutes(app: FastifyInstance): void {
 
   app.get("/api/v1/matches", async (request) => {
     const matches = await prisma.match.findMany({
+      where: visibleMatchWhere,
       orderBy: { scheduledAt: "desc" },
       take: 50,
       include: {
@@ -389,8 +437,8 @@ export function publicRoutes(app: FastifyInstance): void {
   app.get<{ Params: { id: string } }>(
     "/api/v1/matches/:id",
     async (request) => {
-      const match = await prisma.match.findUnique({
-        where: { id: request.params.id },
+      const match = await prisma.match.findFirst({
+        where: { id: request.params.id, ...visibleMatchWhere },
         include: {
           gangA: true,
           gangB: true,

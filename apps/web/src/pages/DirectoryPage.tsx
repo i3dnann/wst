@@ -411,12 +411,14 @@ function MatchList({ rows }: { rows: RecordRow[] }) {
                   </strong>
                 </div>
                 <div className="match-archive__meta">
-                  <small>
-                    {value(match, "status").replaceAll("_", " ")} ·{" "}
+                  <span data-status={matchStatus(match)}>
+                    {readableStatus(matchStatus(match))}
+                  </span>
+                  <time>
                     {typeof match.scheduledAt === "string"
                       ? new Date(match.scheduledAt).toLocaleString()
                       : "Not scheduled"}
-                  </small>
+                  </time>
                 </div>
                 <ChevronRight aria-hidden="true" />
               </Link>
@@ -520,7 +522,7 @@ export default function DirectoryPage({ type }: { type: keyof typeof labels }) {
   const detail = record(query.data.data) as RecordRow | null;
   const isMatchList = isMatch && !isDetail;
   return (
-    <main className="page-shell">
+    <main className={`page-shell${isMatchList ? " match-archive-page" : ""}`}>
       {!isMatchList ? (
         <header className="page-heading">
           <div>

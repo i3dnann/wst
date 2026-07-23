@@ -57,9 +57,18 @@ if (!result.success) {
   throw new Error(`Invalid server environment. Check: ${fields}`);
 }
 
+function normalizeOrigin(value: string): string {
+  return new URL(value.trim()).origin;
+}
+
 export const env = {
   ...result.data,
-  allowedOrigins: result.data.CORS_ALLOWED_ORIGINS.split(",").map((origin) =>
-    origin.trim(),
-  ),
+  allowedOrigins: [
+    ...new Set(
+      [
+        result.data.FRONTEND_URL,
+        ...result.data.CORS_ALLOWED_ORIGINS.split(","),
+      ].map(normalizeOrigin),
+    ),
+  ],
 };

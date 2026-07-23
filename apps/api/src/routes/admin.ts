@@ -27,6 +27,30 @@ import {
 import { refreshStreamStatus } from "../lib/stream-status.js";
 import { requirePermission } from "../middleware/authorize.js";
 
+const visibleAdminMatchWhere = {
+  deletedAt: null,
+  AND: [
+    {
+      OR: [
+        { tournamentId: null },
+        { tournament: { status: { not: "ARCHIVED" } } },
+      ],
+    },
+    {
+      OR: [
+        { gangAId: null },
+        { gangA: { status: { not: "ARCHIVED" } } },
+      ],
+    },
+    {
+      OR: [
+        { gangBId: null },
+        { gangB: { status: { not: "ARCHIVED" } } },
+      ],
+    },
+  ],
+} satisfies Prisma.MatchWhereInput;
+
 const slugSchema = z
   .string()
   .trim()
@@ -529,22 +553,32 @@ export function adminRoutes(app: FastifyInstance): void {
       unseededParticipants,
       streamsWithErrors,
     ] = await Promise.all([
-      prisma.gang.count(),
+      prisma.gang.count({ where: { status: { not: "ARCHIVED" } } }),
       prisma.gang.count({ where: { status: "ACTIVE" } }),
       prisma.gang.count({ where: { status: "ARCHIVED" } }),
       prisma.player.count(),
       prisma.player.count({ where: { status: "ACTIVE" } }),
-      prisma.tournament.count(),
+      prisma.tournament.count({ where: { status: { not: "ARCHIVED" } } }),
       prisma.tournament.count({ where: { status: "DRAFT" } }),
       prisma.tournament.count({ where: { status: "REGISTRATION_OPEN" } }),
       prisma.tournament.count({ where: { status: "IN_PROGRESS" } }),
       prisma.tournament.count({ where: { status: "COMPLETED" } }),
       prisma.match.count({
-        where: { status: "SCHEDULED", scheduledAt: { gte: new Date() } },
+        where: {
+          ...visibleAdminMatchWhere,
+          status: "SCHEDULED",
+          scheduledAt: { gte: new Date() },
+        },
       }),
-      prisma.match.count({ where: { status: "LIVE" } }),
-      prisma.match.count({ where: { status: "AWAITING_RESULT" } }),
-      prisma.match.count({ where: { status: "DISPUTED" } }),
+      prisma.match.count({
+        where: { ...visibleAdminMatchWhere, status: "LIVE" },
+      }),
+      prisma.match.count({
+        where: { ...visibleAdminMatchWhere, status: "AWAITING_RESULT" },
+      }),
+      prisma.match.count({
+        where: { ...visibleAdminMatchWhere, status: "DISPUTED" },
+      }),
       prisma.event.count({
         where: { startsAt: { gte: new Date() }, status: "SCHEDULED" },
       }),
@@ -558,6 +592,7 @@ export function adminRoutes(app: FastifyInstance): void {
       }),
       prisma.match.findMany({
         where: {
+          ...visibleAdminMatchWhere,
           scheduledAt: { gte: new Date() },
           status: { in: ["SCHEDULED", "CHECK_IN_OPEN", "READY"] },
         },
@@ -629,7 +664,10 @@ export function adminRoutes(app: FastifyInstance): void {
       orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
       include: {
         memberships: {
-          where: { active: true },
+          where: {
+            active: true,
+            gang: { status: { not: "ARCHIVED" } },
+          },
           take: 1,
           include: { gang: { select: { id: true, name: true, tag: true } } },
         },
@@ -643,7 +681,16 @@ export function adminRoutes(app: FastifyInstance): void {
     requirePermission(request, "tournament.read");
     const tournaments = await prisma.tournament.findMany({
       orderBy: { updatedAt: "desc" },
-      include: { _count: { select: { participants: true, matches: true } } },
+      include: {
+        _count: {
+          select: {
+            participants: {
+              where: { gang: { status: { not: "ARCHIVED" } } },
+            },
+            matches: { where: { deletedAt: null } },
+          },
+        },
+      },
       take: 250,
     });
     return envelope(request, tournaments);
@@ -658,6 +705,7 @@ export function adminRoutes(app: FastifyInstance): void {
         include: {
           season: { select: { id: true, name: true } },
           participants: {
+            where: { gang: { status: { not: "ARCHIVED" } } },
             orderBy: [{ seed: "asc" }, { registeredAt: "asc" }],
             include: {
               gang: true,
@@ -674,6 +722,7 @@ export function adminRoutes(app: FastifyInstance): void {
             orderBy: { sortOrder: "asc" },
             include: {
               matches: {
+                where: { deletedAt: null },
                 orderBy: { position: "asc" },
                 include: {
                   gangA: {
@@ -704,6 +753,7 @@ export function adminRoutes(app: FastifyInstance): void {
   app.get("/api/v1/admin/matches", async (request) => {
     requirePermission(request, "match.update");
     const matches = await prisma.match.findMany({
+      where: visibleAdminMatchWhere,
       orderBy: [{ scheduledAt: "desc" }, { updatedAt: "desc" }],
       include: {
         gangA: { select: { id: true, name: true, tag: true } },
@@ -1676,7 +1726,7 @@ export function adminRoutes(app: FastifyInstance): void {
         const match = await tx.match.update({
           where: { id: before.id },
           data: {
-            status: "CANCELLED",
+            deletedAt: new Date(),
             gangAScore: null,
             gangBScore: null,
             winnerGangId: null,
@@ -1695,7 +1745,7 @@ export function adminRoutes(app: FastifyInstance): void {
       });
       await writeAudit({
         actorUserId: auth.userId,
-        action: "match.cancel",
+        action: "match.delete",
         entityType: "Match",
         entityId: match.id,
         beforeData: before,

@@ -57,8 +57,8 @@ Copy `apps/api/.env.example` to `apps/api/.env`. Use production values and never
 NODE_ENV=production
 PORT=4177
 DATABASE_URL=mysql://wst_app:URL_ENCODED_PASSWORD@127.0.0.1:3306/worldstar_wst
-FRONTEND_URL=https://wstgang.netlify.app
-CORS_ALLOWED_ORIGINS=https://wstgang.netlify.app
+FRONTEND_URL=https://wstgang.com
+CORS_ALLOWED_ORIGINS=https://wstgang.com,https://www.wstgang.com
 SESSION_SECRET=REPLACE_WITH_AT_LEAST_32_RANDOM_CHARACTERS
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=REPLACE_WITH_A_12_CHARACTER_OR_LONGER_PASSWORD
@@ -163,23 +163,91 @@ Connect `i3dnann/wst`, choose branch `main`, and keep the repository root as the
 
 Set these Netlify environment variables in the UI:
 
-| Variable            | Scope     | Value                             |
-| ------------------- | --------- | --------------------------------- |
-| `NODE_VERSION`      | Builds    | `22`                              |
-| `VITE_APP_NAME`     | Builds    | `World Star`                      |
-| `VITE_API_BASE_URL` | Builds    | `/backend`                        |
-| `API_PROXY_TARGET`  | Functions | `https://api.your-domain.example` |
+| Variable               | Scope     | Value                             |
+| ---------------------- | --------- | --------------------------------- |
+| `NODE_VERSION`         | Builds    | `22`                              |
+| `VITE_APP_NAME`        | Builds    | `World Star`                      |
+| `VITE_PUBLIC_SITE_URL` | Builds    | `https://wstgang.com`             |
+| `VITE_API_BASE_URL`    | Builds    | `/backend`                        |
+| `API_PROXY_TARGET`     | Functions | `https://api.your-domain.example` |
 
 `API_PROXY_TARGET` is read at function runtime. After changing it, trigger a new production deploy. The browser calls the same-origin `/backend` path, so secure HttpOnly session cookies stay on the Netlify site and are never stored in local storage.
 
 Verify through the deployed frontend:
 
 ```text
-https://wstgang.netlify.app/backend/health/live
-https://wstgang.netlify.app/backend/health/ready
+https://wstgang.com/backend/health/live
+https://wstgang.com/backend/health/ready
 ```
 
-## 10. Stream and Discord integrations
+## 10. Move production to `wstgang.com`
+
+In Netlify, open **Domain management > Production domains** and make `wstgang.com` the primary domain. Keep `www.wstgang.com` as the domain alias. In **Site configuration > Environment variables**, set:
+
+```env
+VITE_PUBLIC_SITE_URL=https://wstgang.com
+VITE_API_BASE_URL=/backend
+```
+
+Keep `API_PROXY_TARGET` set to the existing HTTPS address of the VPS API. Trigger a new production deploy after changing a build variable. The redirect in `netlify.toml` sends old `wstgang.netlify.app` links to the matching path on `wstgang.com`.
+
+The VPS environment is not stored in Git. Update `C:\Sites\worldstar\apps\api\.env` and restart the API:
+
+```powershell
+Set-Location C:\Sites\worldstar
+$apiEnvPath = 'C:\Sites\worldstar\apps\api\.env'
+$apiEnvText = [System.IO.File]::ReadAllText($apiEnvPath)
+$apiEnvText = [regex]::Replace(
+  $apiEnvText,
+  '(?m)^FRONTEND_URL=.*$',
+  'FRONTEND_URL=https://wstgang.com'
+)
+$apiEnvText = [regex]::Replace(
+  $apiEnvText,
+  '(?m)^CORS_ALLOWED_ORIGINS=.*$',
+  'CORS_ALLOWED_ORIGINS=https://wstgang.com,https://www.wstgang.com'
+)
+[System.IO.File]::WriteAllText(
+  $apiEnvPath,
+  $apiEnvText,
+  [System.Text.UTF8Encoding]::new($false)
+)
+Select-String -Path $apiEnvPath -Pattern '^(FRONTEND_URL|CORS_ALLOWED_ORIGINS)='
+pm2.cmd reload worldstar-api --update-env
+pm2.cmd save
+pm2.cmd status
+```
+
+Verify both the local API and the Netlify proxy:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:4177/health/live
+Invoke-RestMethod https://wstgang.com/backend/health/live
+Invoke-RestMethod https://wstgang.com/backend/health/ready
+```
+
+Check that the new browser origin is accepted without using a real password:
+
+```powershell
+$headers = @{
+  Origin = 'https://wstgang.com'
+  'Content-Type' = 'application/json'
+}
+try {
+  Invoke-WebRequest `
+    -UseBasicParsing `
+    -Uri 'https://wstgang.com/backend/api/v1/auth/login' `
+    -Method Post `
+    -Headers $headers `
+    -Body '{"email":"nobody@example.com","password":"not-a-real-password"}'
+} catch {
+  [int]$_.Exception.Response.StatusCode
+}
+```
+
+The expected result is `401` for invalid credentials. A `500` response means the VPS still has the old CORS origin or PM2 was not reloaded with `--update-env`.
+
+## 11. Stream and Discord integrations
 
 - Twitch needs an application client ID and secret.
 - YouTube needs a Google Cloud API key with YouTube Data API v3 enabled and a channel ID beginning with `UC`.
@@ -187,7 +255,7 @@ https://wstgang.netlify.app/backend/health/ready
 - The API refreshes approved Kick channels at the configured stream TTL, stores their live title, category, start time, and viewer count, and exposes only that public metadata to the Live page.
 - Configure the Discord audit webhook in **Admin > Discord**. Normal API responses only return a masked state. Failed deliveries are written to the database audit log.
 
-## 11. Rollback
+## 12. Rollback
 
 Application rollback and database rollback are separate operations. Record the deployed commit before updating:
 
