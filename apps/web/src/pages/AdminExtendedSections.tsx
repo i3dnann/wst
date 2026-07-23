@@ -16,7 +16,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
-import { ErrorState } from "@/components/data/StatusState";
+import { EmptyState, ErrorState } from "@/components/data/StatusState";
 import { Button } from "@/components/ui/button";
 import { ApiError, api } from "@/lib/api";
 
@@ -1691,57 +1691,64 @@ export function ResultsDisputesManager() {
           }}
         />
       ) : null}
-      <div className="admin-table-scroll">
-        <table className="admin-data-table">
-          <thead>
-            <tr>
-              <th>Match</th>
-              <th>Tournament / round</th>
-              <th>Status</th>
-              <th>Score</th>
-              <th>Version</th>
-              <th>Manage</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((item) => {
-              const gangA = relation(item, "gangA");
-              const gangB = relation(item, "gangB");
-              const tournament = relation(item, "tournament");
-              const round = relation(item, "bracketRound");
-              return (
-                <tr key={item.id}>
-                  <td>
-                    <strong>
-                      {text(gangA, "name", "TBD")} vs{" "}
-                      {text(gangB, "name", "TBD")}
-                    </strong>
-                  </td>
-                  <td>
-                    {text(tournament, "name", "Independent")} ·{" "}
-                    {text(round, "name", "No round")}
-                  </td>
-                  <td>{text(item, "status")}</td>
-                  <td>
-                    {displayValue(item.gangAScore)} –{" "}
-                    {displayValue(item.gangBScore)}
-                  </td>
-                  <td>{numberValue(item, "version")}</td>
-                  <td>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setSelectedId(item.id)}
-                    >
-                      Manage
-                    </Button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {!matches.isLoading && !matches.isError && rows.length === 0 ? (
+        <EmptyState
+          title="No matches have been published"
+          message="This page stays empty until an administrator spins every gang in the Champions Draw and confirms the final pairings. The bracket and its matches are created together."
+        />
+      ) : rows.length ? (
+        <div className="admin-table-scroll">
+          <table className="admin-data-table">
+            <thead>
+              <tr>
+                <th>Match</th>
+                <th>Tournament / round</th>
+                <th>Status</th>
+                <th>Score</th>
+                <th>Version</th>
+                <th>Manage</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((item) => {
+                const gangA = relation(item, "gangA");
+                const gangB = relation(item, "gangB");
+                const tournament = relation(item, "tournament");
+                const round = relation(item, "bracketRound");
+                return (
+                  <tr key={item.id}>
+                    <td>
+                      <strong>
+                        {text(gangA, "name", "TBD")} vs{" "}
+                        {text(gangB, "name", "TBD")}
+                      </strong>
+                    </td>
+                    <td>
+                      {text(tournament, "name", "Independent")} ·{" "}
+                      {text(round, "name", "No round")}
+                    </td>
+                    <td>{text(item, "status")}</td>
+                    <td>
+                      {displayValue(item.gangAScore)} –{" "}
+                      {displayValue(item.gangBScore)}
+                    </td>
+                    <td>{numberValue(item, "version")}</td>
+                    <td>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedId(item.id)}
+                      >
+                        Manage
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
       {selected ? (
         <form
           className="admin-card result-action-card"

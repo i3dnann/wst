@@ -407,9 +407,9 @@ export const api = {
     input: {
       confirmReset?: boolean;
       confirmationName?: string;
-      placement?: "SEEDED" | "RANDOM" | "DRAW";
+      placement: "DRAW";
       drawParticipantIds?: string[];
-    } = {},
+    },
   ) =>
     apiRequest<
       ApiEnvelope<{

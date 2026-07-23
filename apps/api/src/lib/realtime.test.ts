@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { realtimeHub } from "./realtime.js";
+import { drawConfirmationIssue, realtimeHub } from "./realtime.js";
 
 const participants = ["Alpha", "Bravo", "Charlie", "Delta"].map(
   (name, index) => ({
@@ -67,5 +67,41 @@ describe("realtime tournament draws", () => {
       tournamentSlug: "world-star-cup",
       bracketVersion: 7,
     });
+  });
+
+  it("allows bracket confirmation only for the completed authoritative order", () => {
+    const started = realtimeHub.startDraw({
+      tournamentId: "tournament-1",
+      tournamentSlug: "world-star-cup",
+      tournamentName: "World Star Cup",
+      participants,
+    });
+    expect(
+      drawConfirmationIssue(started, "DRAW", started.drawnParticipantIds),
+    ).toBe("DRAW_INCOMPLETE");
+
+    for (let index = 0; index < participants.length; index += 1)
+      realtimeHub.spinDraw("tournament-1");
+    const completed = realtimeHub.getDraw("tournament-1");
+    expect(completed).not.toBeNull();
+    expect(
+      drawConfirmationIssue(
+        completed,
+        "DRAW",
+        completed?.drawnParticipantIds,
+      ),
+    ).toBeNull();
+    expect(
+      drawConfirmationIssue(completed, "DRAW", [
+        ...(completed?.drawnParticipantIds ?? []),
+      ].reverse()),
+    ).toBe("DRAW_ORDER_MISMATCH");
+    expect(
+      drawConfirmationIssue(
+        completed,
+        "SEEDED",
+        completed?.drawnParticipantIds,
+      ),
+    ).toBe("DRAW_NOT_ACTIVE");
   });
 });

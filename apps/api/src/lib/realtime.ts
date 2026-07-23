@@ -42,6 +42,31 @@ export interface RealtimeSnapshot {
   activeDraws: LiveTournamentDraw[];
 }
 
+export type DrawConfirmationIssue =
+  | "DRAW_NOT_ACTIVE"
+  | "DRAW_INCOMPLETE"
+  | "DRAW_ORDER_MISMATCH";
+
+export function drawConfirmationIssue(
+  draw: LiveTournamentDraw | null,
+  placement: "SEEDED" | "RANDOM" | "DRAW",
+  submittedParticipantIds: string[] | undefined,
+): DrawConfirmationIssue | null {
+  if (!draw || placement !== "DRAW") return "DRAW_NOT_ACTIVE";
+  if (draw.drawnParticipantIds.length !== draw.participants.length)
+    return "DRAW_INCOMPLETE";
+  if (
+    !submittedParticipantIds ||
+    submittedParticipantIds.length !== draw.drawnParticipantIds.length ||
+    submittedParticipantIds.some(
+      (participantId, index) =>
+        participantId !== draw.drawnParticipantIds[index],
+    )
+  )
+    return "DRAW_ORDER_MISMATCH";
+  return null;
+}
+
 function cloneDraw(draw: LiveTournamentDraw): LiveTournamentDraw {
   return {
     ...draw,

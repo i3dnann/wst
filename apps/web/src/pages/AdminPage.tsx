@@ -12,10 +12,10 @@ import {
   FileText,
   Gavel,
   LayoutDashboard,
+  LockKeyhole,
   LogOut,
   Plus,
   Radio,
-  RefreshCw,
   Settings,
   Shield,
   Swords,
@@ -621,7 +621,6 @@ export function BracketManager() {
     TournamentDetail["participants"][number] | null
   >(null);
   const [confirmationName, setConfirmationName] = useState("");
-  const [placement, setPlacement] = useState<"SEEDED" | "RANDOM">("SEEDED");
   useEffect(() => {
     if (!isFullscreen) return;
     const previousOverflow = document.body.style.overflow;
@@ -771,7 +770,7 @@ export function BracketManager() {
     mutationFn: (input: {
       confirmReset?: boolean;
       confirmationName?: string;
-      placement?: "SEEDED" | "RANDOM" | "DRAW";
+      placement: "DRAW";
       drawParticipantIds?: string[];
     }) => api.generateBracket(selectedId, input),
     onSuccess: (result) => {
@@ -823,8 +822,8 @@ export function BracketManager() {
           <span>Tournament Control</span>
           <h2>Bracket Manager</h2>
           <p>
-            Add or remove gangs, change seeds, regenerate rounds, and advance
-            winners.
+            Approve the field, complete the Champions Draw, then confirm its
+            pairings to publish matches and the bracket.
           </p>
         </div>
         <Trophy />
@@ -867,17 +866,7 @@ export function BracketManager() {
           <span>of {tournament?.maximumParticipants ?? 0} entrants</span>
         </div>
         <Button
-          disabled={!selectedId || generate.isPending}
-          onClick={() =>
-            rounds.length ? setResetOpen(true) : generate.mutate({ placement })
-          }
-        >
-          <RefreshCw />{" "}
-          {rounds.length ? "Regenerate Bracket" : "Generate Bracket"}
-        </Button>
-        <Button
           type="button"
-          variant="outline"
           disabled={
             !selectedId || generate.isPending || startLiveDraw.isPending
           }
@@ -885,7 +874,12 @@ export function BracketManager() {
             drawOpen ? void closeLiveDraw() : startLiveDraw.mutate()
           }
         >
-          <Dices /> {drawOpen ? "Close Draw" : "Champions Draw"}
+          <Dices />{" "}
+          {drawOpen
+            ? "Close Draw"
+            : rounds.length
+              ? "Run New Champions Draw"
+              : "Start Champions Draw"}
         </Button>
       </div>
       {drawOpen && tournament ? (
@@ -1107,9 +1101,13 @@ export function BracketManager() {
             </div>
           ) : (
             <div className="gold-empty-copy compact">
-              <Trophy />
-              <strong>No bracket generated</strong>
-              <p>Add approved gangs, then generate the bracket.</p>
+              <LockKeyhole />
+              <strong>Bracket locked until the draw is confirmed</strong>
+              <p>
+                Start the Champions Draw, spin every approved gang, review the
+                pairings, and confirm. Matches and the bracket will then appear
+                together.
+              </p>
             </div>
           )}
         </section>
@@ -1128,18 +1126,14 @@ export function BracketManager() {
               generate.mutate({
                 confirmReset: true,
                 ...(completedMatches ? { confirmationName } : {}),
-                placement: pendingDrawOrder ? "DRAW" : placement,
+                placement: "DRAW",
                 ...(pendingDrawOrder
                   ? { drawParticipantIds: pendingDrawOrder }
                   : {}),
               });
             }}
           >
-            <h3 id="reset-bracket-title">
-              {pendingDrawOrder
-                ? "Confirm Champions Draw"
-                : "Regenerate & Reset Bracket"}
-            </h3>
+            <h3 id="reset-bracket-title">Confirm Champions Draw</h3>
             <p>
               This resets every bracket match, score, player statistic, and
               winner progression.{" "}
@@ -1147,25 +1141,10 @@ export function BracketManager() {
                 ? `${String(completedMatches)} completed match result(s) will be removed.`
                 : "The current opening slots will be replaced."}
             </p>
-            {pendingDrawOrder ? (
-              <p>
-                The completed wheel draw will become the exact opening-round
-                matchup order.
-              </p>
-            ) : (
-              <label>
-                Placement
-                <select
-                  value={placement}
-                  onChange={(event) =>
-                    setPlacement(event.target.value as "SEEDED" | "RANDOM")
-                  }
-                >
-                  <option value="SEEDED">Deterministic seeded placement</option>
-                  <option value="RANDOM">Randomize participants</option>
-                </select>
-              </label>
-            )}
+            <p>
+              The completed wheel draw will become the exact opening-round
+              matchup order.
+            </p>
             {completedMatches ? (
               <label>
                 Type <strong>{selected?.name}</strong> to confirm
@@ -1197,9 +1176,7 @@ export function BracketManager() {
                   )
                 }
               >
-                {pendingDrawOrder
-                  ? "Confirm Draw & Reset Bracket"
-                  : "Yes, Reset Bracket"}
+                Confirm Draw &amp; Reset Bracket
               </Button>
             </div>
           </form>

@@ -335,7 +335,13 @@ export function publicRoutes(app: FastifyInstance): void {
     const matches = await prisma.match.findMany({
       orderBy: { scheduledAt: "desc" },
       take: 50,
-      include: { gangA: true, gangB: true, winnerGang: true, tournament: true },
+      include: {
+        gangA: true,
+        gangB: true,
+        winnerGang: true,
+        tournament: true,
+        bracketRound: true,
+      },
     });
     return envelope(request, matches);
   });

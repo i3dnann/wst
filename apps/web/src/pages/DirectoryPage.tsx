@@ -1,5 +1,17 @@
+import { useDeferredValue, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Shield, Swords, Trophy, UserRound } from "lucide-react";
+import {
+  Activity,
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  Search,
+  Shield,
+  Swords,
+  Trophy,
+  UserRound,
+} from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import type { ApiEnvelope } from "@mafia/shared";
 import {
@@ -64,6 +76,41 @@ function array(value: unknown): RecordRow[] {
   return Array.isArray(value)
     ? value.filter((item): item is RecordRow => Boolean(record(item)?.id))
     : [];
+}
+
+const matchFilters = [
+  "ALL",
+  "SCHEDULED",
+  "LIVE",
+  "COMPLETED",
+  "DISPUTED",
+  "CANCELLED",
+] as const;
+
+type MatchFilter = (typeof matchFilters)[number];
+
+function matchStatus(row: RecordRow): string {
+  return value(row, "status", "SCHEDULED").toUpperCase();
+}
+
+function matchesFilter(status: string, filter: MatchFilter): boolean {
+  if (filter === "ALL") return true;
+  if (filter === "SCHEDULED") {
+    return ["SCHEDULED", "CHECK_IN_OPEN", "READY", "AWAITING_RESULT"].includes(
+      status,
+    );
+  }
+  if (filter === "COMPLETED") {
+    return ["COMPLETED", "FORFEIT"].includes(status);
+  }
+  return status === filter;
+}
+
+function readableStatus(status: string): string {
+  return status
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function PlayerList({ rows }: { rows: RecordRow[] }) {
@@ -212,31 +259,181 @@ function PlayerProfile({ row }: { row: RecordRow }) {
 }
 
 function MatchList({ rows }: { rows: RecordRow[] }) {
+  const [filter, setFilter] = useState<MatchFilter>("ALL");
+  const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search.trim().toLowerCase());
+  const { filteredRows, upcomingCount, completedCount } = useMemo(() => {
+    let upcoming = 0;
+    let completed = 0;
+    const visible: RecordRow[] = [];
+
+    for (const match of rows) {
+      const status = matchStatus(match);
+      if (matchesFilter(status, "SCHEDULED")) upcoming += 1;
+      if (matchesFilter(status, "COMPLETED")) completed += 1;
+
+      const gangA = record(match.gangA);
+      const gangB = record(match.gangB);
+      const tournament = record(match.tournament);
+      const haystack = [
+        value(gangA, "name", ""),
+        value(gangA, "tag", ""),
+        value(gangB, "name", ""),
+        value(gangB, "tag", ""),
+        value(tournament, "name", ""),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      if (
+        matchesFilter(status, filter) &&
+        (!deferredSearch || haystack.includes(deferredSearch))
+      ) {
+        visible.push(match);
+      }
+    }
+
+    return {
+      filteredRows: visible,
+      upcomingCount: upcoming,
+      completedCount: completed,
+    };
+  }, [deferredSearch, filter, rows]);
+
   return (
-    <div className="public-record-list">
-      {rows.map((match) => {
-        const gangA = record(match.gangA);
-        const gangB = record(match.gangB);
-        const tournament = record(match.tournament);
-        return (
-          <Link to={`/matches/${match.id}`} key={match.id}>
-            <span>{value(tournament, "name", "Independent match")}</span>
-            <strong>
-              {value(gangA, "name", "TBD")}{" "}
-              <b>{displayValue(match.gangAScore)}</b> vs{" "}
-              <b>{displayValue(match.gangBScore)}</b>{" "}
-              {value(gangB, "name", "TBD")}
-            </strong>
-            <small>
-              {value(match, "status").replaceAll("_", " ")} ·{" "}
-              {typeof match.scheduledAt === "string"
-                ? new Date(match.scheduledAt).toLocaleString()
-                : "Not scheduled"}
-            </small>
-          </Link>
-        );
-      })}
-    </div>
+    <section className="match-archive">
+      <header className="match-archive__header">
+        <div>
+          <h1>Match Archive</h1>
+          <p>Scheduled, live, disputed, and finalized competitive records.</p>
+        </div>
+        <dl className="match-archive__summary" aria-label="Archive summary">
+          <div>
+            <CalendarDays aria-hidden="true" />
+            <dd>{rows.length}</dd>
+            <dt>Total matches</dt>
+          </div>
+          <div>
+            <Clock3 aria-hidden="true" />
+            <dd>{upcomingCount}</dd>
+            <dt>Upcoming</dt>
+          </div>
+          <div>
+            <CheckCircle2 aria-hidden="true" />
+            <dd>{completedCount}</dd>
+            <dt>Completed</dt>
+          </div>
+        </dl>
+      </header>
+
+      <div className="match-archive__toolbar">
+        <label className="match-archive__search">
+          <span className="sr-only">Search matches</span>
+          <Search aria-hidden="true" />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search gangs or tournaments"
+          />
+        </label>
+        <div
+          className="match-archive__filters"
+          role="group"
+          aria-label="Filter matches by status"
+        >
+          {matchFilters.map((item) => (
+            <button
+              type="button"
+              className={filter === item ? "is-active" : undefined}
+              aria-pressed={filter === item}
+              onClick={() => setFilter(item)}
+              key={item}
+            >
+              {readableStatus(item)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filteredRows.length ? (
+        <div className="match-archive__feed">
+          <div className="match-archive__columns" aria-hidden="true">
+            <span>Tournament</span>
+            <span>Matchup</span>
+            <span>Status &amp; date</span>
+          </div>
+          {filteredRows.map((match) => {
+            const gangA = record(match.gangA);
+            const gangB = record(match.gangB);
+            const tournament = record(match.tournament);
+            const round = record(match.bracketRound);
+            const gangAName = value(gangA, "name", "TBD");
+            const gangBName = value(gangB, "name", "TBD");
+            const hasScore =
+              typeof match.gangAScore === "number" ||
+              typeof match.gangBScore === "number";
+            return (
+              <Link
+                className="match-archive__row"
+                to={`/matches/${match.id}`}
+                key={match.id}
+              >
+                <div className="match-archive__context">
+                  <strong>
+                    {value(tournament, "name", "Independent match")}
+                  </strong>
+                  {round ? (
+                    <span>{value(round, "name", "Tournament")}</span>
+                  ) : null}
+                </div>
+                <div className="match-archive__matchup">
+                  <strong
+                    className={gangAName === "TBD" ? "is-tbd" : undefined}
+                  >
+                    {gangAName}
+                  </strong>
+                  <span className="match-archive__versus">
+                    {hasScore ? (
+                      <>
+                        <b>{displayValue(match.gangAScore, "0")}</b>
+                        <i>:</i>
+                        <b>{displayValue(match.gangBScore, "0")}</b>
+                      </>
+                    ) : (
+                      "VS"
+                    )}
+                  </span>
+                  <strong
+                    className={gangBName === "TBD" ? "is-tbd" : undefined}
+                  >
+                    {gangBName}
+                  </strong>
+                </div>
+                <div className="match-archive__meta">
+                  <small>
+                    {value(match, "status").replaceAll("_", " ")} ·{" "}
+                    {typeof match.scheduledAt === "string"
+                      ? new Date(match.scheduledAt).toLocaleString()
+                      : "Not scheduled"}
+                  </small>
+                </div>
+                <ChevronRight aria-hidden="true" />
+              </Link>
+            );
+          })}
+        </div>
+      ) : (
+        <EmptyState
+          title={rows.length ? "No matches found" : "No matches published"}
+          message={
+            rows.length
+              ? "Try another search or status filter."
+              : "Published match records will appear here."
+          }
+        />
+      )}
+    </section>
   );
 }
 
@@ -321,24 +518,27 @@ export default function DirectoryPage({ type }: { type: keyof typeof labels }) {
     );
   const rows = array(query.data.data);
   const detail = record(query.data.data) as RecordRow | null;
+  const isMatchList = isMatch && !isDetail;
   return (
     <main className="page-shell">
-      <header className="page-heading">
-        <div>
-          <h1>{title}</h1>
-          <p>{description}</p>
-        </div>
-      </header>
-      {!isDetail && rows.length === 0 ? (
+      {!isMatchList ? (
+        <header className="page-heading">
+          <div>
+            <h1>{title}</h1>
+            <p>{description}</p>
+          </div>
+        </header>
+      ) : null}
+      {isMatchList ? (
+        <MatchList rows={rows} />
+      ) : !isDetail && rows.length === 0 ? (
         <EmptyState title={`No ${isMatch ? "matches" : "players"} published`} />
       ) : isDetail && !detail ? (
         <EmptyState title="Record not found" />
       ) : isMatch ? (
         isDetail && detail ? (
           <MatchDetail row={detail} />
-        ) : (
-          <MatchList rows={rows} />
-        )
+        ) : null
       ) : isDetail && detail ? (
         <PlayerProfile row={detail} />
       ) : (

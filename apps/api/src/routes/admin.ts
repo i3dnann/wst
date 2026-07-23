@@ -20,7 +20,10 @@ import {
 import { HttpError } from "../lib/http-error.js";
 import { hashPassword } from "../lib/password.js";
 import { prisma } from "../lib/prisma.js";
-import { realtimeHub } from "../lib/realtime.js";
+import {
+  drawConfirmationIssue,
+  realtimeHub,
+} from "../lib/realtime.js";
 import { refreshStreamStatus } from "../lib/stream-status.js";
 import { requirePermission } from "../middleware/authorize.js";
 
@@ -1265,6 +1268,29 @@ export function adminRoutes(app: FastifyInstance): void {
     async (request) => {
       const auth = requirePermission(request, "tournament.bracket.manage");
       const input = bracketGenerateSchema.parse(request.body ?? {});
+      const confirmationIssue = drawConfirmationIssue(
+        realtimeHub.getDraw(request.params.id),
+        input.placement,
+        input.drawParticipantIds,
+      );
+      if (confirmationIssue === "DRAW_NOT_ACTIVE")
+        throw new HttpError(
+          409,
+          "DRAW_CONFIRMATION_REQUIRED",
+          "Start the Champions Draw, spin every gang, and confirm the completed pairings before building the bracket.",
+        );
+      if (confirmationIssue === "DRAW_INCOMPLETE")
+        throw new HttpError(
+          409,
+          "DRAW_INCOMPLETE",
+          "Spin the wheel until every approved gang has been drawn before confirming the bracket.",
+        );
+      if (confirmationIssue === "DRAW_ORDER_MISMATCH")
+        throw new HttpError(
+          409,
+          "DRAW_ORDER_MISMATCH",
+          "The submitted pairings do not match the authoritative wheel result. Review and confirm the completed draw again.",
+        );
       const result = await prisma.$transaction(
         async (tx) => {
           const tournament = await tx.tournament.findUnique({
