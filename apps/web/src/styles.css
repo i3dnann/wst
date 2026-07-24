@@ -16825,6 +16825,8 @@ body .site-footer .site-footer__legal {
   align-items: center;
   justify-content: center;
   gap: 8px 18px;
+  opacity: 1 !important;
+  transform: none !important;
   color: #777781 !important;
   font: 600 11px/1.5 var(--ui);
   letter-spacing: 0.025em;

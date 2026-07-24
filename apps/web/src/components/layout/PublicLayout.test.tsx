@@ -94,6 +94,9 @@ describe("PublicLayout website settings", () => {
       "href",
       "https://discord.gg/eZqaNx5P7y",
     );
+    expect(
+      screen.getByText(/All rights reserved/).closest("small"),
+    ).toHaveAttribute("data-disable-scroll-reveal");
   });
 
   it("replaces a locked section and all its detail routes with Coming Soon", () => {

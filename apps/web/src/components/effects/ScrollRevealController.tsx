@@ -5,7 +5,6 @@ const revealSelector = [
   "main > section",
   "main > div",
   ".site-footer > div",
-  ".site-footer > small",
   ".gang-registry-card",
   ".tournament-ledger-list > article",
   ".event-directory > li",
@@ -78,7 +77,9 @@ export function ScrollRevealController({ routeKey }: { routeKey: string }) {
 
     const scan = (scope: ParentNode = document) => {
       const matches =
-        scope instanceof Element && scope.matches(revealSelector) ? [scope] : [];
+        scope instanceof Element && scope.matches(revealSelector)
+          ? [scope]
+          : [];
       const descendants = Array.from(scope.querySelectorAll(revealSelector));
       [...matches, ...descendants].forEach((element, index) => {
         if (

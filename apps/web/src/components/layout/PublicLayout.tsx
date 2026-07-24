@@ -389,7 +389,7 @@ export function PublicLayout() {
               ))}
           </div>
         ) : null}
-        <small className="site-footer__legal">
+        <small className="site-footer__legal" data-disable-scroll-reveal>
           <span>
             © {new Date().getFullYear()} {shortName}. All rights reserved.
           </span>
