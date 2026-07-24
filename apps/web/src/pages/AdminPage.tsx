@@ -649,18 +649,26 @@ export function BracketManager() {
     ],
   });
   const tournamentList = useMemo(
-    () => (tournaments.data?.data ?? []) as unknown as TournamentSummary[],
+    () =>
+      ((tournaments.data?.data ?? []) as unknown as TournamentSummary[]).filter(
+        (tournament) => tournament.status !== "ARCHIVED",
+      ),
     [tournaments.data?.data],
   );
   const [selectedId, setSelectedId] = useState("");
   useEffect(() => {
-    if (!selectedId && tournamentList[0]) setSelectedId(tournamentList[0].id);
+    const selectedStillExists = tournamentList.some(
+      (tournament) => tournament.id === selectedId,
+    );
+    if (selectedStillExists) return;
+    setSelectedId(tournamentList[0]?.id ?? "");
   }, [selectedId, tournamentList]);
   const selected = tournamentList.find((item) => item.id === selectedId);
+  const activeSelectedId = selected?.id ?? "";
   const detail = useQuery({
-    queryKey: ["admin-tournament", selectedId],
-    queryFn: () => api.adminTournament(selectedId),
-    enabled: Boolean(selectedId),
+    queryKey: ["admin-tournament", activeSelectedId],
+    queryFn: () => api.adminTournament(activeSelectedId),
+    enabled: Boolean(activeSelectedId),
     retry: false,
   });
   const tournament = detail.data?.data as unknown as
@@ -695,7 +703,7 @@ export function BracketManager() {
   const refresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({
-        queryKey: ["admin-tournament", selectedId],
+        queryKey: ["admin-tournament", activeSelectedId],
       }),
       queryClient.invalidateQueries({
         queryKey: ["admin-records", "tournament"],
@@ -711,7 +719,7 @@ export function BracketManager() {
         Number.isInteger(requestedSeed) && requestedSeed > 0
           ? requestedSeed
           : nextAvailableSeed;
-      return api.addTournamentParticipant(selectedId, {
+      return api.addTournamentParticipant(activeSelectedId, {
         gangId,
         seed: normalizedSeed,
       });
@@ -726,7 +734,7 @@ export function BracketManager() {
   });
   const remove = useMutation({
     mutationFn: (participantId: string) =>
-      api.removeTournamentParticipant(selectedId, participantId),
+      api.removeTournamentParticipant(activeSelectedId, participantId),
     onSuccess: () => {
       toast.success("Gang removed.");
       setRemoveTarget(null);
@@ -742,7 +750,7 @@ export function BracketManager() {
       participantId: string;
       nextSeed: number;
     }) =>
-      api.updateTournamentParticipant(selectedId, participantId, {
+      api.updateTournamentParticipant(activeSelectedId, participantId, {
         seed: nextSeed,
       }),
     onSuccess: () => {
@@ -759,7 +767,9 @@ export function BracketManager() {
       participantId: string;
       status: string;
     }) =>
-      api.updateTournamentParticipant(selectedId, participantId, { status }),
+      api.updateTournamentParticipant(activeSelectedId, participantId, {
+        status,
+      }),
     onSuccess: () => {
       toast.success("Tournament gang status updated.");
       void refresh();
@@ -772,7 +782,7 @@ export function BracketManager() {
       confirmationName?: string;
       placement: "DRAW";
       drawParticipantIds?: string[];
-    }) => api.generateBracket(selectedId, input),
+    }) => api.generateBracket(activeSelectedId, input),
     onSuccess: (result) => {
       toast.success(`${String(result.data.slotCount)}-slot bracket generated.`);
       setResetOpen(false);
@@ -784,7 +794,7 @@ export function BracketManager() {
     onError: (error) => toast.error(error.message),
   });
   const startLiveDraw = useMutation({
-    mutationFn: () => api.startTournamentDraw(selectedId),
+    mutationFn: () => api.startTournamentDraw(activeSelectedId),
     onSuccess: () => {
       setDrawOpen(true);
       toast.success("Live draw started for every website viewer.");
@@ -793,7 +803,7 @@ export function BracketManager() {
   });
   const closeLiveDraw = async () => {
     try {
-      await api.cancelTournamentDraw(selectedId);
+      await api.cancelTournamentDraw(activeSelectedId);
       setDrawOpen(false);
     } catch (error) {
       toast.error(
@@ -841,7 +851,7 @@ export function BracketManager() {
           retry={() => {
             void tournaments.refetch();
             void gangs.refetch();
-            if (selectedId) void detail.refetch();
+            if (activeSelectedId) void detail.refetch();
           }}
         />
       ) : null}
@@ -849,7 +859,7 @@ export function BracketManager() {
         <label>
           Tournament
           <select
-            value={selectedId}
+            value={activeSelectedId}
             disabled={drawOpen || startLiveDraw.isPending}
             onChange={(event) => setSelectedId(event.target.value)}
           >
@@ -868,7 +878,7 @@ export function BracketManager() {
         <Button
           type="button"
           disabled={
-            !selectedId || generate.isPending || startLiveDraw.isPending
+            !activeSelectedId || generate.isPending || startLiveDraw.isPending
           }
           onClick={() =>
             drawOpen ? void closeLiveDraw() : startLiveDraw.mutate()
@@ -892,11 +902,13 @@ export function BracketManager() {
           onError={(message) => toast.error(message)}
           onReset={() =>
             api
-              .resetTournamentDraw(selectedId)
+              .resetTournamentDraw(activeSelectedId)
               .then((response) => response.data)
           }
           onSpin={() =>
-            api.spinTournamentDraw(selectedId).then((response) => response.data)
+            api
+              .spinTournamentDraw(activeSelectedId)
+              .then((response) => response.data)
           }
           onConfirm={(drawParticipantIds) => {
             if (rounds.length) {
@@ -943,7 +955,7 @@ export function BracketManager() {
             <Button
               type="submit"
               size="sm"
-              disabled={!selectedId || !gangId || add.isPending}
+              disabled={!activeSelectedId || !gangId || add.isPending}
             >
               <Plus /> Add
             </Button>

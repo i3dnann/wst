@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma.js";
+import { realtimeHub } from "./realtime.js";
 
 export const discordAuditSettingKey = "discord.audit";
 
@@ -149,6 +150,11 @@ export async function recordAudit(input: {
   if (input.reason !== undefined) data.reason = input.reason;
   const audit = await prisma.auditLog.create({
     data,
+  });
+  realtimeHub.publish("data.changed", {
+    action: input.action,
+    entityType: input.entityType,
+    entityId: input.entityId ?? null,
   });
   void dispatchAuditWebhook(audit.id).catch(async (error: unknown) => {
     try {

@@ -223,7 +223,8 @@ export interface RealtimeEvent {
     | "draw.reset"
     | "draw.cancelled"
     | "draw.completed"
-    | "bracket.updated";
+    | "bracket.updated"
+    | "data.changed";
   timestamp: string;
   data: {
     draw?: LiveTournamentDraw;
@@ -232,6 +233,9 @@ export interface RealtimeEvent {
     tournamentId?: string;
     tournamentSlug?: string;
     bracketVersion?: number;
+    action?: string;
+    entityType?: string;
+    entityId?: string | null;
   };
 }
 

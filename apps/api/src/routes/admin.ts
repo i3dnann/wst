@@ -20,10 +20,7 @@ import {
 import { HttpError } from "../lib/http-error.js";
 import { hashPassword } from "../lib/password.js";
 import { prisma } from "../lib/prisma.js";
-import {
-  drawConfirmationIssue,
-  realtimeHub,
-} from "../lib/realtime.js";
+import { drawConfirmationIssue, realtimeHub } from "../lib/realtime.js";
 import { refreshStreamStatus } from "../lib/stream-status.js";
 import { requirePermission } from "../middleware/authorize.js";
 
@@ -37,16 +34,10 @@ const visibleAdminMatchWhere = {
       ],
     },
     {
-      OR: [
-        { gangAId: null },
-        { gangA: { status: { not: "ARCHIVED" } } },
-      ],
+      OR: [{ gangAId: null }, { gangA: { status: { not: "ARCHIVED" } } }],
     },
     {
-      OR: [
-        { gangBId: null },
-        { gangB: { status: { not: "ARCHIVED" } } },
-      ],
+      OR: [{ gangBId: null }, { gangB: { status: { not: "ARCHIVED" } } }],
     },
   ],
 } satisfies Prisma.MatchWhereInput;
@@ -680,6 +671,7 @@ export function adminRoutes(app: FastifyInstance): void {
   app.get("/api/v1/admin/tournaments", async (request) => {
     requirePermission(request, "tournament.read");
     const tournaments = await prisma.tournament.findMany({
+      where: { status: { not: "ARCHIVED" } },
       orderBy: { updatedAt: "desc" },
       include: {
         _count: {
@@ -700,8 +692,11 @@ export function adminRoutes(app: FastifyInstance): void {
     "/api/v1/admin/tournaments/:id",
     async (request) => {
       requirePermission(request, "tournament.read");
-      const tournament = await prisma.tournament.findUnique({
-        where: { id: request.params.id },
+      const tournament = await prisma.tournament.findFirst({
+        where: {
+          id: request.params.id,
+          status: { not: "ARCHIVED" },
+        },
         include: {
           season: { select: { id: true, name: true } },
           participants: {

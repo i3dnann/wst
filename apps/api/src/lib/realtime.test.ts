@@ -69,6 +69,26 @@ describe("realtime tournament draws", () => {
     });
   });
 
+  it("wakes connected clients when administrator data changes", async () => {
+    realtimeHub.publish("data.changed", {
+      action: "tournament.archive",
+      entityType: "Tournament",
+      entityId: "tournament-1",
+    });
+
+    const snapshot = await realtimeHub.poll(0);
+
+    expect(snapshot.events).toHaveLength(1);
+    expect(snapshot.events[0]).toMatchObject({
+      type: "data.changed",
+      data: {
+        action: "tournament.archive",
+        entityType: "Tournament",
+        entityId: "tournament-1",
+      },
+    });
+  });
+
   it("allows bracket confirmation only for the completed authoritative order", () => {
     const started = realtimeHub.startDraw({
       tournamentId: "tournament-1",
@@ -85,16 +105,14 @@ describe("realtime tournament draws", () => {
     const completed = realtimeHub.getDraw("tournament-1");
     expect(completed).not.toBeNull();
     expect(
+      drawConfirmationIssue(completed, "DRAW", completed?.drawnParticipantIds),
+    ).toBeNull();
+    expect(
       drawConfirmationIssue(
         completed,
         "DRAW",
-        completed?.drawnParticipantIds,
+        [...(completed?.drawnParticipantIds ?? [])].reverse(),
       ),
-    ).toBeNull();
-    expect(
-      drawConfirmationIssue(completed, "DRAW", [
-        ...(completed?.drawnParticipantIds ?? []),
-      ].reverse()),
     ).toBe("DRAW_ORDER_MISMATCH");
     expect(
       drawConfirmationIssue(

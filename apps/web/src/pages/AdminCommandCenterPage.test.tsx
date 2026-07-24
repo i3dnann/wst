@@ -6,7 +6,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/lib/api";
 import AdminCommandCenterPage from "./AdminCommandCenterPage";
@@ -15,8 +15,11 @@ vi.mock("@/lib/api", () => ({
   api: {
     adminMe: vi.fn(),
     adminGangs: vi.fn(),
+    adminPlayers: vi.fn(),
+    adminMatches: vi.fn(),
     adminTournaments: vi.fn(),
     publicSeasons: vi.fn(),
+    disputeAssignees: vi.fn(),
     createGang: vi.fn(),
     adminLiveStreams: vi.fn(),
     createLiveStream: vi.fn(),
@@ -30,10 +33,14 @@ vi.mock("@/lib/api", () => ({
 
 const adminMe = vi.mocked(api.adminMe);
 const adminGangs = vi.mocked(api.adminGangs);
+const adminPlayers = vi.mocked(api.adminPlayers);
+const adminMatches = vi.mocked(api.adminMatches);
+const disputeAssignees = vi.mocked(api.disputeAssignees);
 const createGang = vi.mocked(api.createGang);
 const adminLiveStreams = vi.mocked(api.adminLiveStreams);
 const createLiveStream = vi.mocked(api.createLiveStream);
 const refreshLiveStream = vi.mocked(api.refreshLiveStream);
+const adminLogout = vi.mocked(api.adminLogout);
 
 function renderGangs(permissions: string[]) {
   adminMe.mockResolvedValue({
@@ -114,9 +121,9 @@ describe("AdminCommandCenterPage record actions", () => {
     expect(screen.getAllByRole("button", { name: "Upload file" })).toHaveLength(
       2,
     );
-    expect(screen.getByLabelText("Gang logo Cloudinary URL")).not.toHaveAttribute(
-      "readonly",
-    );
+    expect(
+      screen.getByLabelText("Gang logo Cloudinary URL"),
+    ).not.toHaveAttribute("readonly");
     fireEvent.change(screen.getByLabelText("Gang name"), {
       target: { value: "Crimson Kings" },
     });
@@ -207,5 +214,111 @@ describe("AdminCommandCenterPage record actions", () => {
         "stream-identifier-000001",
       ),
     );
+  });
+
+  it("clears the remembered administrator after a confirmed logout", async () => {
+    adminMe.mockResolvedValue({
+      data: {
+        id: "admin-user-identifier-001",
+        email: "admin@example.com",
+        displayName: "Administrator",
+        permissions: ["gang.read"],
+      },
+      meta: { requestId: "test", timestamp: new Date().toISOString() },
+    });
+    adminGangs.mockResolvedValue({
+      data: [],
+      meta: { requestId: "test", timestamp: new Date().toISOString() },
+    });
+    adminLogout.mockResolvedValue(undefined);
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={["/admin/gangs"]}>
+          <Routes>
+            <Route path="/admin/*" element={<AdminCommandCenterPage />} />
+            <Route path="/admin/login" element={<p>Signed out</p>} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Log out" }));
+
+    expect(await screen.findByText("Signed out")).toBeInTheDocument();
+    expect(adminLogout).toHaveBeenCalledOnce();
+    expect(client.getQueryData(["admin-me"])).toBeUndefined();
+  });
+
+  it("opens result management in a dismissible modal drawer", async () => {
+    adminMe.mockResolvedValue({
+      data: {
+        id: "admin-user-identifier-001",
+        email: "admin@example.com",
+        displayName: "Administrator",
+        permissions: ["match.finalize"],
+      },
+      meta: { requestId: "test", timestamp: new Date().toISOString() },
+    });
+    adminMatches.mockResolvedValue({
+      data: [
+        {
+          id: "match-identifier-0000001",
+          status: "SCHEDULED",
+          version: 1,
+          gangAScore: 0,
+          gangBScore: 0,
+          gangA: { id: "gang-identifier-00000001", name: "Crimson" },
+          gangB: { id: "gang-identifier-00000002", name: "Vipers" },
+          tournament: {
+            id: "tournament-identifier-001",
+            name: "World Star Cup",
+          },
+          bracketRound: {
+            id: "round-identifier-00000001",
+            name: "Round of 16",
+          },
+        },
+      ],
+      meta: { requestId: "test", timestamp: new Date().toISOString() },
+    });
+    adminPlayers.mockResolvedValue({
+      data: [],
+      meta: { requestId: "test", timestamp: new Date().toISOString() },
+    });
+    disputeAssignees.mockResolvedValue({
+      data: [],
+      meta: { requestId: "test", timestamp: new Date().toISOString() },
+    });
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={["/admin/result"]}>
+          <AdminCommandCenterPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Manage" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "Manage match result" }),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Close result editor" }),
+    );
+    expect(
+      screen.queryByRole("dialog", { name: "Manage match result" }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -31,7 +31,8 @@ export type RealtimeEvent = {
     | "draw.reset"
     | "draw.cancelled"
     | "draw.completed"
-    | "bracket.updated";
+    | "bracket.updated"
+    | "data.changed";
   timestamp: string;
   data: Record<string, unknown>;
 };
@@ -43,9 +44,7 @@ export interface RealtimeSnapshot {
 }
 
 export type DrawConfirmationIssue =
-  | "DRAW_NOT_ACTIVE"
-  | "DRAW_INCOMPLETE"
-  | "DRAW_ORDER_MISMATCH";
+  "DRAW_NOT_ACTIVE" | "DRAW_INCOMPLETE" | "DRAW_ORDER_MISMATCH";
 
 export function drawConfirmationIssue(
   draw: LiveTournamentDraw | null,

@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Trash2,
   UserPlus,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState, ErrorState } from "@/components/data/StatusState";
@@ -105,13 +106,19 @@ export function GangOrganizationManager() {
     ],
   });
   const gangRows = useMemo(
-    () => (gangs.data?.data ?? []) as Row[],
+    () =>
+      ((gangs.data?.data ?? []) as Row[]).filter(
+        (gang) => gang.status !== "ARCHIVED",
+      ),
     [gangs.data?.data],
   );
-  const playerRows = (players.data?.data ?? []) as Row[];
+  const playerRows = ((players.data?.data ?? []) as Row[]).filter(
+    (player) => player.status !== "ARCHIVED",
+  );
   const [gangId, setGangId] = useState("");
   useEffect(() => {
-    if (!gangId && gangRows[0]) setGangId(gangRows[0].id);
+    if (gangRows.some((gang) => gang.id === gangId)) return;
+    setGangId(gangRows[0]?.id ?? "");
   }, [gangId, gangRows]);
   const roles = useQuery({
     queryKey: ["gang-roles", gangId],
@@ -1130,9 +1137,7 @@ export function WebsiteSettingsManager() {
         <CloudinaryUploadField
           label={label}
           value={String(form[key])}
-          onChange={(url) =>
-            setForm((value) => ({ ...value, [key]: url }))
-          }
+          onChange={(url) => setForm((value) => ({ ...value, [key]: url }))}
           category="website-media"
           kind={type === "cloudinary-media" ? "image-or-video" : "image"}
         />
@@ -1346,8 +1351,7 @@ export function MediaManager() {
   const queryClient = useQueryClient();
   const media = useQuery({ queryKey: ["admin-media"], queryFn: api.media });
   const [file, setFile] = useState<File | null>(null);
-  const [category, setCategory] =
-    useState<MediaCategory>("website-media");
+  const [category, setCategory] = useState<MediaCategory>("website-media");
   const [progress, setProgress] = useState(0);
   const [latestUrl, setLatestUrl] = useState("");
   const upload = useMutation({
@@ -1483,9 +1487,7 @@ export function MediaManager() {
             ) : text(item, "publicUrl", "").startsWith("https://") ? (
               <img src={text(item, "publicUrl", "")} alt="" />
             ) : (
-              <div className="media-admin-grid__pending">
-                Upload incomplete
-              </div>
+              <div className="media-admin-grid__pending">Upload incomplete</div>
             )}
             <div>
               <strong>{text(item, "originalFilename")}</strong>
@@ -1783,269 +1785,307 @@ export function ResultsDisputesManager() {
         </div>
       ) : null}
       {selected ? (
-        <form
-          className="admin-card result-action-card"
-          onSubmit={(event) => {
-            event.preventDefault();
-            finalize.mutate();
-          }}
+        <div
+          className="admin-drawer-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Manage match result"
+          onMouseDown={() => setSelectedId("")}
         >
-          <h3>
-            {text(selectedGangA, "name", "TBD")} vs{" "}
-            {text(selectedGangB, "name", "TBD")}
-          </h3>
-          <div className="result-score-grid">
-            <label>
-              {text(selectedGangA, "name", "Gang A")} score
-              <input
-                type="number"
-                min="0"
-                required
-                value={scoreA}
-                onChange={(event) => setScoreA(event.target.value)}
-              />
-            </label>
-            <label>
-              {text(selectedGangB, "name", "Gang B")} score
-              <input
-                type="number"
-                min="0"
-                required
-                value={scoreB}
-                onChange={(event) => setScoreB(event.target.value)}
-              />
-            </label>
-            <label>
-              Winner
-              <select
-                required
-                value={winnerGangId}
-                onChange={(event) => setWinnerGangId(event.target.value)}
-              >
-                <option value="">Select winner</option>
-                {[selectedGangA, selectedGangB].filter(Boolean).map((gang) => (
-                  <option key={text(gang, "id")} value={text(gang, "id")}>
-                    {text(gang, "name")}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <label>
-            Result notes
-            <textarea
-              value={resultNotes}
-              onChange={(event) => setResultNotes(event.target.value)}
-            />
-          </label>
-          <div className="player-stat-editor">
+          <aside
+            className="admin-edit-drawer result-editor-drawer"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
             <header>
-              <strong>Player statistics</strong>
-              <Button
+              <div>
+                <h2>Manage Match Result</h2>
+                <p>
+                  Finalize scores, player statistics, and disputes from one
+                  workspace.
+                </p>
+              </div>
+              <button
                 type="button"
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  setStats((current) => [
-                    ...current,
-                    {
-                      key: crypto.randomUUID(),
-                      playerId: "",
-                      gangId: text(selectedGangA, "id", ""),
-                      kills: 0,
-                      deaths: 0,
-                      assists: 0,
-                      score: 0,
-                      roundsPlayed: 1,
-                      mvp: false,
-                      played: true,
-                      notes: "",
-                    },
-                  ])
-                }
+                aria-label="Close result editor"
+                onClick={() => setSelectedId("")}
               >
-                <UserPlus /> Add Player
-              </Button>
+                <X />
+              </button>
             </header>
-            {stats.map((stat) => (
-              <div className="player-stat-row" key={stat.key}>
-                <select
-                  required
-                  value={stat.playerId}
-                  onChange={(event) =>
-                    updateStat(stat.key, "playerId", event.target.value)
-                  }
-                >
-                  <option value="">Player</option>
-                  {playerRows.map((player) => (
-                    <option key={player.id} value={player.id}>
-                      {text(player, "displayName")}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  required
-                  value={stat.gangId}
-                  onChange={(event) =>
-                    updateStat(stat.key, "gangId", event.target.value)
-                  }
-                >
-                  {[selectedGangA, selectedGangB]
-                    .filter(Boolean)
-                    .map((gang) => (
-                      <option key={text(gang, "id")} value={text(gang, "id")}>
-                        {text(gang, "name")}
-                      </option>
-                    ))}
-                </select>
-                {(
-                  [
-                    "kills",
-                    "deaths",
-                    "assists",
-                    "score",
-                    "roundsPlayed",
-                  ] as const
-                ).map((field) => (
-                  <label key={field}>
-                    {field}
-                    <input
-                      type="number"
-                      min="0"
-                      value={stat[field]}
+            <form
+              className="admin-drawer-form result-action-card result-editor-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                finalize.mutate();
+              }}
+            >
+              <h3>
+                {text(selectedGangA, "name", "TBD")} vs{" "}
+                {text(selectedGangB, "name", "TBD")}
+              </h3>
+              <div className="result-score-grid">
+                <label>
+                  {text(selectedGangA, "name", "Gang A")} score
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={scoreA}
+                    onChange={(event) => setScoreA(event.target.value)}
+                  />
+                </label>
+                <label>
+                  {text(selectedGangB, "name", "Gang B")} score
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={scoreB}
+                    onChange={(event) => setScoreB(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Winner
+                  <select
+                    required
+                    value={winnerGangId}
+                    onChange={(event) => setWinnerGangId(event.target.value)}
+                  >
+                    <option value="">Select winner</option>
+                    {[selectedGangA, selectedGangB]
+                      .filter(Boolean)
+                      .map((gang) => (
+                        <option key={text(gang, "id")} value={text(gang, "id")}>
+                          {text(gang, "name")}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              </div>
+              <label>
+                Result notes
+                <textarea
+                  value={resultNotes}
+                  onChange={(event) => setResultNotes(event.target.value)}
+                />
+              </label>
+              <div className="player-stat-editor">
+                <header>
+                  <strong>Player statistics</strong>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setStats((current) => [
+                        ...current,
+                        {
+                          key: crypto.randomUUID(),
+                          playerId: "",
+                          gangId: text(selectedGangA, "id", ""),
+                          kills: 0,
+                          deaths: 0,
+                          assists: 0,
+                          score: 0,
+                          roundsPlayed: 1,
+                          mvp: false,
+                          played: true,
+                          notes: "",
+                        },
+                      ])
+                    }
+                  >
+                    <UserPlus /> Add Player
+                  </Button>
+                </header>
+                {stats.map((stat) => (
+                  <div className="player-stat-row" key={stat.key}>
+                    <select
+                      required
+                      value={stat.playerId}
                       onChange={(event) =>
-                        updateStat(stat.key, field, Number(event.target.value))
+                        updateStat(stat.key, "playerId", event.target.value)
+                      }
+                    >
+                      <option value="">Player</option>
+                      {playerRows.map((player) => (
+                        <option key={player.id} value={player.id}>
+                          {text(player, "displayName")}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      required
+                      value={stat.gangId}
+                      onChange={(event) =>
+                        updateStat(stat.key, "gangId", event.target.value)
+                      }
+                    >
+                      {[selectedGangA, selectedGangB]
+                        .filter(Boolean)
+                        .map((gang) => (
+                          <option
+                            key={text(gang, "id")}
+                            value={text(gang, "id")}
+                          >
+                            {text(gang, "name")}
+                          </option>
+                        ))}
+                    </select>
+                    {(
+                      [
+                        "kills",
+                        "deaths",
+                        "assists",
+                        "score",
+                        "roundsPlayed",
+                      ] as const
+                    ).map((field) => (
+                      <label key={field}>
+                        {field}
+                        <input
+                          type="number"
+                          min="0"
+                          value={stat[field]}
+                          onChange={(event) =>
+                            updateStat(
+                              stat.key,
+                              field,
+                              Number(event.target.value),
+                            )
+                          }
+                        />
+                      </label>
+                    ))}
+                    <label className="admin-toggle-field">
+                      <input
+                        type="checkbox"
+                        checked={stat.mvp}
+                        onChange={(event) =>
+                          updateStat(stat.key, "mvp", event.target.checked)
+                        }
+                      />
+                      <span>MVP</span>
+                    </label>
+                    <input
+                      aria-label="Player notes"
+                      placeholder="Notes"
+                      value={stat.notes}
+                      onChange={(event) =>
+                        updateStat(stat.key, "notes", event.target.value)
                       }
                     />
-                  </label>
+                    <button
+                      type="button"
+                      aria-label="Remove player statistic"
+                      onClick={() =>
+                        setStats((current) =>
+                          current.filter((entry) => entry.key !== stat.key),
+                        )
+                      }
+                    >
+                      <Trash2 />
+                    </button>
+                  </div>
                 ))}
-                <label className="admin-toggle-field">
-                  <input
-                    type="checkbox"
-                    checked={stat.mvp}
-                    onChange={(event) =>
-                      updateStat(stat.key, "mvp", event.target.checked)
-                    }
-                  />
-                  <span>MVP</span>
-                </label>
-                <input
-                  aria-label="Player notes"
-                  placeholder="Notes"
-                  value={stat.notes}
-                  onChange={(event) =>
-                    updateStat(stat.key, "notes", event.target.value)
-                  }
+              </div>
+              <label>
+                Dispute / reopen reason
+                <textarea
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
                 />
-                <button
+              </label>
+              <div className="result-score-grid">
+                <label>
+                  Dispute assignee
+                  <select
+                    value={assignedUserId}
+                    onChange={(event) => setAssignedUserId(event.target.value)}
+                  >
+                    <option value="">Unassigned</option>
+                    {assigneeRows.map((administrator) => (
+                      <option key={administrator.id} value={administrator.id}>
+                        {text(administrator, "displayName")} (
+                        {text(administrator, "email")})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Internal dispute notes
+                  <textarea
+                    value={disputeNotes}
+                    onChange={(event) => setDisputeNotes(event.target.value)}
+                    placeholder="Private review notes"
+                  />
+                </label>
+                <CloudinaryUploadField
+                  label="Evidence image or video"
+                  value={evidenceUrl}
+                  onChange={setEvidenceUrl}
+                  category="match-evidence"
+                  kind="image-or-video"
+                  full
+                />
+              </div>
+              <div className="admin-drawer-actions">
+                {selected.status === "DISPUTED" ? (
+                  <Button
+                    type="button"
+                    disabled={reason.length < 5 || resolve.isPending}
+                    onClick={() => resolve.mutate()}
+                  >
+                    Resolve Dispute
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    disabled={
+                      reason.length < 5 ||
+                      dispute.isPending ||
+                      selected.status === "COMPLETED"
+                    }
+                    onClick={() => dispute.mutate()}
+                  >
+                    Open Dispute
+                  </Button>
+                )}
+                <Button
                   type="button"
-                  aria-label="Remove player statistic"
-                  onClick={() =>
-                    setStats((current) =>
-                      current.filter((entry) => entry.key !== stat.key),
-                    )
+                  variant="outline"
+                  disabled={
+                    reason.length < 5 ||
+                    reopen.isPending ||
+                    (selected.status !== "COMPLETED" &&
+                      selected.status !== "DISPUTED")
+                  }
+                  onClick={() => previewReopen.mutate()}
+                >
+                  <ArchiveRestore /> Reopen & Undo Progression
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    !winnerGangId ||
+                    finalize.isPending ||
+                    selected.status === "COMPLETED" ||
+                    selected.status === "DISPUTED"
                   }
                 >
-                  <Trash2 />
-                </button>
+                  <Save /> Finalize Result
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setSelectedId("")}
+                >
+                  Close
+                </Button>
               </div>
-            ))}
-          </div>
-          <label>
-            Dispute / reopen reason
-            <textarea
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-            />
-          </label>
-          <div className="result-score-grid">
-            <label>
-              Dispute assignee
-              <select
-                value={assignedUserId}
-                onChange={(event) => setAssignedUserId(event.target.value)}
-              >
-                <option value="">Unassigned</option>
-                {assigneeRows.map((administrator) => (
-                  <option key={administrator.id} value={administrator.id}>
-                    {text(administrator, "displayName")} (
-                    {text(administrator, "email")})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Internal dispute notes
-              <textarea
-                value={disputeNotes}
-                onChange={(event) => setDisputeNotes(event.target.value)}
-                placeholder="Private review notes"
-              />
-            </label>
-            <CloudinaryUploadField
-              label="Evidence image or video"
-              value={evidenceUrl}
-              onChange={setEvidenceUrl}
-              category="match-evidence"
-              kind="image-or-video"
-              full
-            />
-          </div>
-          <div>
-            {selected.status === "DISPUTED" ? (
-              <Button
-                type="button"
-                disabled={reason.length < 5 || resolve.isPending}
-                onClick={() => resolve.mutate()}
-              >
-                Resolve Dispute
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                disabled={
-                  reason.length < 5 ||
-                  dispute.isPending ||
-                  selected.status === "COMPLETED"
-                }
-                onClick={() => dispute.mutate()}
-              >
-                Open Dispute
-              </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              disabled={
-                reason.length < 5 ||
-                reopen.isPending ||
-                (selected.status !== "COMPLETED" &&
-                  selected.status !== "DISPUTED")
-              }
-              onClick={() => previewReopen.mutate()}
-            >
-              <ArchiveRestore /> Reopen & Undo Progression
-            </Button>
-            <Button
-              type="submit"
-              disabled={
-                !winnerGangId ||
-                finalize.isPending ||
-                selected.status === "COMPLETED" ||
-                selected.status === "DISPUTED"
-              }
-            >
-              <Save /> Finalize Result
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setSelectedId("")}
-            >
-              Close
-            </Button>
-          </div>
-        </form>
+            </form>
+          </aside>
+        </div>
       ) : null}
       {reopenImpact ? (
         <div

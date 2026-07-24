@@ -499,6 +499,29 @@
   gap: 0.8rem;
 }
 
+.result-editor-drawer {
+  width: min(1040px, 100%) !important;
+}
+
+.result-editor-form {
+  position: static;
+  bottom: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.result-editor-form > * {
+  grid-column: 1 / -1;
+}
+
+.result-editor-form > h3 {
+  margin: 0;
+  color: var(--foreground);
+  font: 600 clamp(1.35rem, 2vw, 2rem) / 1.1 var(--display);
+}
+
 @media (max-width: 900px) {
   .admin-extended-grid,
   .settings-card-grid,
@@ -15874,7 +15897,12 @@ body .site-footer__studio-credit a:focus-visible::after {
 
 .ws-motion-ready .ws-scroll-reveal.is-revealed {
   opacity: 1;
-  transform: translate3d(0, 0, 0);
+  /*
+   * Release the transform once the reveal is complete. A zero-value transform
+   * still creates a containing block, which traps fixed admin drawers inside
+   * their dataset card instead of the viewport.
+   */
+  transform: none;
   will-change: auto;
 }
 
@@ -16346,4 +16374,146 @@ body .admin-login-panel button {
   .admin-session-check > svg {
     animation: none;
   }
+}
+
+/* Audit history and Discord integration: World Star red/charcoal theme. */
+body .command-center-v2 .audit-admin-layout {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border-color: rgb(239 64 88 / 0.28);
+  background:
+    radial-gradient(circle at 100% 0%, rgb(197 31 56 / 0.1), transparent 30rem),
+    linear-gradient(145deg, #0d0d11, #08080b);
+}
+
+body .command-center-v2 .audit-admin-grid,
+body .command-center-v2 .audit-admin-grid > * {
+  max-width: 100%;
+  min-width: 0;
+}
+
+body .command-center-v2 .audit-admin-layout .admin-dataset-heading h2,
+body .command-center-v2 .discord-settings-panel h3 {
+  color: #f5f4f5;
+}
+
+body .command-center-v2 .audit-admin-layout .admin-dataset-heading p,
+body .command-center-v2 .discord-settings-panel p {
+  color: #8f8e98;
+}
+
+body .command-center-v2 .audit-filter-toolbar label {
+  display: grid;
+  align-content: start;
+  width: 100%;
+  min-width: 0;
+  gap: 6px;
+  padding: 8px 10px;
+  border-color: rgb(255 255 255 / 0.14);
+  background: #09090c;
+  color: #aaa9b2;
+}
+
+body .command-center-v2 .audit-filter-toolbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  align-items: stretch;
+}
+
+body .command-center-v2 .audit-filter-toolbar > button {
+  width: 100%;
+  min-height: 100%;
+}
+
+body .command-center-v2 .audit-filter-toolbar label:focus-within {
+  border-color: rgb(239 64 88 / 0.72);
+  box-shadow: 0 0 0 3px rgb(197 31 56 / 0.12);
+}
+
+body .command-center-v2 .audit-filter-toolbar input {
+  min-width: 0;
+  min-height: 30px;
+  padding: 0;
+  color: #f2f1f3;
+  color-scheme: dark;
+}
+
+body .command-center-v2 .audit-filter-toolbar input::placeholder {
+  color: #676670;
+}
+
+body .command-center-v2 .audit-admin-layout .admin-table-scroll {
+  border-color: rgb(239 64 88 / 0.24);
+  background: #09090c;
+}
+
+body .command-center-v2 .audit-admin-layout .admin-data-table th,
+body .command-center-v2 .audit-admin-layout .admin-data-table td {
+  border-bottom-color: rgb(255 255 255 / 0.09);
+}
+
+body .command-center-v2 .audit-admin-layout .admin-data-table th {
+  color: #ef4058;
+}
+
+body .command-center-v2 .audit-admin-layout .admin-data-table td {
+  color: #aaa9b2;
+}
+
+body .command-center-v2 .audit-admin-layout .admin-data-table td strong {
+  color: #f0eff1;
+}
+
+body .command-center-v2 .audit-admin-layout .admin-data-table code {
+  color: #b8b7bf;
+}
+
+body .command-center-v2 .audit-admin-layout .admin-data-table tbody tr:hover {
+  background: rgb(197 31 56 / 0.09);
+}
+
+body .command-center-v2 .discord-settings-panel {
+  border-color: rgb(239 64 88 / 0.24);
+  background:
+    linear-gradient(145deg, rgb(197 31 56 / 0.06), transparent 42%), #09090c;
+}
+
+body .command-center-v2 .discord-settings-panel > header svg {
+  color: #ef4058;
+}
+
+body .command-center-v2 .discord-settings-panel > label {
+  color: #aaa9b2;
+}
+
+body .command-center-v2 .discord-settings-panel input {
+  border-color: rgb(255 255 255 / 0.14);
+  background: #07070a;
+  color: #f2f1f3;
+}
+
+body .command-center-v2 .discord-settings-panel input:focus {
+  border-color: rgb(239 64 88 / 0.72);
+  box-shadow: 0 0 0 3px rgb(197 31 56 / 0.12);
+}
+
+body .command-center-v2 .discord-settings-panel .admin-toggle-field,
+body .command-center-v2 .discord-settings-panel fieldset {
+  border-color: rgb(255 255 255 / 0.12);
+  background: rgb(255 255 255 / 0.018);
+}
+
+body .command-center-v2 .discord-settings-panel legend,
+body .command-center-v2 .discord-settings-panel fieldset label {
+  color: #9e9da6;
+}
+
+body .command-center-v2 .discord-settings-panel input[type="checkbox"] {
+  accent-color: #c51f38;
+}
+
+body .command-center-v2 .audit-details-drawer pre {
+  background: #08080b;
+  color: #d8d7dc;
 }

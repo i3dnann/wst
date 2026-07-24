@@ -1242,8 +1242,12 @@ function RecordsManager({
     () => rows.filter((record) => !isRemovedRecord(record)),
     [rows],
   );
-  const gangRows = asArray<AdminRecord>(gangs.data?.data);
-  const tournamentRows = asArray<AdminRecord>(tournaments.data?.data);
+  const gangRows = asArray<AdminRecord>(gangs.data?.data).filter(
+    (record) => !isRemovedRecord(record),
+  );
+  const tournamentRows = asArray<AdminRecord>(tournaments.data?.data).filter(
+    (record) => !isRemovedRecord(record),
+  );
   const seasonRows = asArray<AdminRecord>(seasons.data?.data);
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -1557,8 +1561,12 @@ function StreamManager() {
     queryFn: api.adminTournaments,
     retry: false,
   });
-  const rows = asArray<PublicLiveStream>(streams.data?.data);
-  const tournamentRows = asArray<AdminRecord>(tournaments.data?.data);
+  const rows = asArray<PublicLiveStream>(streams.data?.data).filter(
+    (stream) => stream.status !== "ARCHIVED",
+  );
+  const tournamentRows = asArray<AdminRecord>(tournaments.data?.data).filter(
+    (record) => !isRemovedRecord(record),
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected =
     rows.find((item) => item.id === selectedId) ?? rows[0] ?? null;
@@ -2651,6 +2659,7 @@ function Overview() {
 export default function AdminCommandCenterPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const requestedSection = adminSectionFromPath(location.pathname);
   const me = useQuery({
     queryKey: ["admin-me"],
@@ -2659,7 +2668,11 @@ export default function AdminCommandCenterPage() {
   });
   const logout = useMutation({
     mutationFn: api.adminLogout,
-    onSettled: () => void navigate("/admin/login"),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ["admin-me"], exact: true });
+      void navigate("/admin/login", { replace: true });
+    },
+    onError: showMutationError,
   });
   if (me.isPending) return <PageSkeleton />;
   if (me.isError)
@@ -2727,9 +2740,11 @@ export default function AdminCommandCenterPage() {
         <button
           type="button"
           className="control-logout"
+          disabled={logout.isPending}
           onClick={() => logout.mutate()}
         >
-          <LogOut /> <span>Log out</span>
+          <LogOut />
+          <span>{logout.isPending ? "Logging out…" : "Log out"}</span>
         </button>
       </aside>
       <main className="control-main">

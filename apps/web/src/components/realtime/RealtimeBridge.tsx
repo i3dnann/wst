@@ -198,7 +198,16 @@ export function RealtimeBridge() {
         queryClient.invalidateQueries({ queryKey: ["admin-tournament"] }),
       ]);
     };
+    const invalidateChangedData = () => {
+      void queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0] !== "admin-me",
+      });
+    };
     const applyEvent = (event: RealtimeEvent) => {
+      if (event.type === "data.changed") {
+        invalidateChangedData();
+        return;
+      }
       if (event.type === "draw.started" || event.type === "draw.reset") {
         if (event.data.draw) setBroadcast({ draw: event.data.draw });
         return;
