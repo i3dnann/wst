@@ -123,6 +123,10 @@ describe("PublicLayout website settings", () => {
     expect(
       within(screen.getByRole("main")).getByText("Gangs"),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("navigation", { name: "Primary navigation" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument();
     expect(screen.queryByText("Private gang content")).not.toBeInTheDocument();
   });
 

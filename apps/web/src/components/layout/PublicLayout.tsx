@@ -209,14 +209,19 @@ function ComingSoonPage({
       <div className="coming-soon-page__grid" aria-hidden="true" />
       <section className="coming-soon-page__content">
         <div className="coming-soon-page__brand">
-          <img src={logoUrl || "/assets/wst/wst-logo.png"} alt="" />
+          <span className="coming-soon-page__brand-mark" aria-hidden="true">
+            <img src={logoUrl || "/assets/wst/wst-logo.png"} alt="" />
+          </span>
           <span>{shortName}</span>
         </div>
         <p className="coming-soon-page__eyebrow">
           <LockKeyhole aria-hidden="true" /> Public access paused
         </p>
         <span className="coming-soon-page__section">{pageName}</span>
-        <h1 id="coming-soon-title">Coming Soon</h1>
+        <h1 id="coming-soon-title">
+          <span>Coming</span>
+          <span>Soon</span>
+        </h1>
         <div className="coming-soon-page__line" aria-hidden="true">
           <i />
           <strong>COMING SOON</strong>
@@ -266,8 +271,15 @@ export function PublicLayout() {
     settings as
       { pageLocks?: Partial<Record<PublicPageKey, boolean>> } | undefined
   )?.pageLocks;
+  const previewLockedPage =
+    import.meta.env.DEV &&
+    new URLSearchParams(location.search).has("locked-page-preview")
+      ? lockedPageKey
+      : null;
   const lockedPage =
-    lockedPageKey && pageLocks?.[lockedPageKey] ? lockedPageKey : null;
+    lockedPageKey && pageLocks?.[lockedPageKey]
+      ? lockedPageKey
+      : previewLockedPage;
   useEffect(() => {
     if (!settings) return;
     document.title = settings.general.websiteName;
@@ -298,49 +310,54 @@ export function PublicLayout() {
     openGraphUrl.content = canonicalUrl;
   }, [location.pathname]);
   return (
-    <div className="site-frame" style={brandStyle}>
+    <div
+      className={`site-frame${lockedPage ? " site-frame--locked" : ""}`}
+      style={brandStyle}
+    >
       <ScrollProgress className="site-scroll-progress" />
-      {settings?.homepage.announcement ? (
+      {!lockedPage && settings?.homepage.announcement ? (
         <div className="site-announcement">
           {settings.homepage.announcement}
         </div>
       ) : null}
-      <header className="site-header">
-        <Brand logoUrl={logoUrl} name={shortName} />
-        <nav className="primary-nav" aria-label="Primary navigation">
-          <DesktopNavigation />
-        </nav>
-        <Button asChild variant="outline" className="login-button">
-          <Link to="/admin/login">
-            <LockKeyhole /> Admin Login
-          </Link>
-        </Button>
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className="mobile-menu-trigger"
-              aria-label="Open navigation"
-            >
-              <Menu />
-            </Button>
-          </SheetTrigger>
-          <SheetContent className="mobile-navigation">
-            <Brand logoUrl={logoUrl} name={shortName} />
-            <nav aria-label="Mobile navigation">
-              <NavigationLinks mobile />
-            </nav>
-            <SheetClose asChild>
-              <Button asChild className="mobile-admin-link">
-                <Link to="/admin/login">
-                  <LockKeyhole /> Admin Login
-                </Link>
+      {!lockedPage ? (
+        <header className="site-header">
+          <Brand logoUrl={logoUrl} name={shortName} />
+          <nav className="primary-nav" aria-label="Primary navigation">
+            <DesktopNavigation />
+          </nav>
+          <Button asChild variant="outline" className="login-button">
+            <Link to="/admin/login">
+              <LockKeyhole /> Admin Login
+            </Link>
+          </Button>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="mobile-menu-trigger"
+                aria-label="Open navigation"
+              >
+                <Menu />
               </Button>
-            </SheetClose>
-          </SheetContent>
-        </Sheet>
-      </header>
+            </SheetTrigger>
+            <SheetContent className="mobile-navigation">
+              <Brand logoUrl={logoUrl} name={shortName} />
+              <nav aria-label="Mobile navigation">
+                <NavigationLinks mobile />
+              </nav>
+              <SheetClose asChild>
+                <Button asChild className="mobile-admin-link">
+                  <Link to="/admin/login">
+                    <LockKeyhole /> Admin Login
+                  </Link>
+                </Button>
+              </SheetClose>
+            </SheetContent>
+          </Sheet>
+        </header>
+      ) : null}
 
       {website.isPending ? (
         <PublicAccessLoading />
@@ -356,55 +373,57 @@ export function PublicLayout() {
         <Outlet />
       )}
 
-      <footer className="site-footer">
-        <div className="footer-brand">
-          <img src={logoUrl || "/assets/wst/wst-logo.png"} alt={shortName} />
-          <p>
-            {settings?.general.description ||
-              "A modern competitive registry for gangs, tournaments, rankings, live streams, events, and verified match records."}
-          </p>
-        </div>
-        <div>
-          <strong>Navigate</strong>
-          <Link to="/gangs">Gangs</Link>
-          <Link to="/tournaments">Tournaments</Link>
-          <Link to="/events">Events</Link>
-          <Link to="/live">Live</Link>
-        </div>
-        <div>
-          <strong>Information</strong>
-          <Link to="/rules">Rules</Link>
-          <Link to="/about">About</Link>
-          <Link to="/admin/login">Administrator</Link>
-        </div>
-        {settings && Object.values(settings.social).some(Boolean) ? (
-          <div>
-            <strong>Social</strong>
-            {Object.entries(settings.social)
-              .filter((entry): entry is [string, string] => Boolean(entry[1]))
-              .map(([name, url]) => (
-                <a key={name} href={url} target="_blank" rel="noreferrer">
-                  {name.charAt(0).toUpperCase() + name.slice(1)}
-                </a>
-              ))}
+      {!lockedPage ? (
+        <footer className="site-footer">
+          <div className="footer-brand">
+            <img src={logoUrl || "/assets/wst/wst-logo.png"} alt={shortName} />
+            <p>
+              {settings?.general.description ||
+                "A modern competitive registry for gangs, tournaments, rankings, live streams, events, and verified match records."}
+            </p>
           </div>
-        ) : null}
-        <small className="site-footer__legal" data-disable-scroll-reveal>
-          <span>
-            © {new Date().getFullYear()} {shortName}. All rights reserved.
-          </span>
-          <span className="site-footer__studio-credit">
-            Created with <em>love</em> by{" "}
-            <a
-              href="https://discord.gg/eZqaNx5P7y"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              A2 Studio
-            </a>
-          </span>
-        </small>
-      </footer>
+          <div>
+            <strong>Navigate</strong>
+            <Link to="/gangs">Gangs</Link>
+            <Link to="/tournaments">Tournaments</Link>
+            <Link to="/events">Events</Link>
+            <Link to="/live">Live</Link>
+          </div>
+          <div>
+            <strong>Information</strong>
+            <Link to="/rules">Rules</Link>
+            <Link to="/about">About</Link>
+            <Link to="/admin/login">Administrator</Link>
+          </div>
+          {settings && Object.values(settings.social).some(Boolean) ? (
+            <div>
+              <strong>Social</strong>
+              {Object.entries(settings.social)
+                .filter((entry): entry is [string, string] => Boolean(entry[1]))
+                .map(([name, url]) => (
+                  <a key={name} href={url} target="_blank" rel="noreferrer">
+                    {name.charAt(0).toUpperCase() + name.slice(1)}
+                  </a>
+                ))}
+            </div>
+          ) : null}
+          <small className="site-footer__legal" data-disable-scroll-reveal>
+            <span>
+              © {new Date().getFullYear()} {shortName}. All rights reserved.
+            </span>
+            <span className="site-footer__studio-credit">
+              Created with <em>love</em> by{" "}
+              <a
+                href="https://discord.gg/eZqaNx5P7y"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                A2 Studio
+              </a>
+            </span>
+          </small>
+        </footer>
+      ) : null}
     </div>
   );
 }

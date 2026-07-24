@@ -271,3 +271,42 @@ The scoreboard and statistics empty state are both legible in the full compariso
 - [x] Browser console clean
 
 final result: passed
+
+---
+
+# Coming Soon redesign QA
+
+## Scope
+
+- Source: `C:\Users\adnan\AppData\Local\Temp\codex-clipboard-5ea3e12b-6c2c-4143-aa6e-5ab1cf6e3945.png`
+- Implementation: `C:\Users\adnan\Documents\wst\artifacts\coming-soon-implementation.png`
+- Comparison: `C:\Users\adnan\Documents\wst\artifacts\coming-soon-comparison.png`
+- Mobile: `C:\Users\adnan\Documents\wst\artifacts\coming-soon-mobile.png`
+- Desktop viewport: 1330 x 696
+- Mobile viewport: 390 x 844
+- State: Gangs page locked by the administrator
+
+## Visual review
+
+- Typography: preserved the reference's editorial serif hierarchy and made the second title line a restrained crimson outline.
+- Layout: retained the centered glass panel while giving the brand, access state, title, divider, and explanatory copy clearer spacing.
+- Color: uses the active World Star black/crimson theme without yellow accents.
+- Assets: uses the existing World Star logo and red city background assets.
+- Motion: added staged entrance motion, a slow logo float/glow, status pulse, light sweep, background drift, and grid movement.
+- Accessibility: the page keeps a semantic main heading, decorative media is hidden from assistive technology, and all motion has a reduced-motion fallback.
+
+## Browser verification
+
+- Desktop content fits the viewport without the normal site navigation or footer competing with the locked-page message.
+- Mobile content fits at 390 x 844 with no horizontal or vertical overflow.
+- Browser console contains no warnings or errors from the implementation.
+- Locked-page copy and page name remain driven by the existing website settings.
+
+## Iteration history
+
+1. Initial redesign retained the regular public header and could crop the bottom of the card at the reference viewport.
+2. Final pass makes a locked page a focused full-screen experience and confirms the full card at desktop and mobile sizes.
+
+## Final result
+
+Passed. No P0, P1, or P2 visual or functional issues remain in the verified states.
