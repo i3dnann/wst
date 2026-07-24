@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebsiteSettings } from "@mafia/shared";
@@ -50,6 +50,18 @@ const settings = {
     backgroundMediaUrl: "",
     animationIntensity: "NORMAL",
   },
+  pageLocks: {
+    home: false,
+    gangs: false,
+    players: false,
+    tournaments: false,
+    matches: false,
+    rankings: false,
+    events: false,
+    live: false,
+    rules: false,
+    about: false,
+  },
   social: {
     discord: "https://discord.gg/eZqaNx5P7y",
     youtube: "",
@@ -82,5 +94,32 @@ describe("PublicLayout website settings", () => {
       "href",
       "https://discord.gg/eZqaNx5P7y",
     );
+  });
+
+  it("replaces a locked section and all its detail routes with Coming Soon", () => {
+    publicSettings.mockReturnValue({
+      data: {
+        ...settings,
+        pageLocks: { ...settings.pageLocks, gangs: true },
+      },
+    } as unknown as ReturnType<typeof usePublicWebsiteSettings>);
+
+    render(
+      <MemoryRouter initialEntries={["/gangs/crimson-syndicate"]}>
+        <Routes>
+          <Route element={<PublicLayout />}>
+            <Route path="gangs/:slug" element={<p>Private gang content</p>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Coming Soon" }),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("main")).getByText("Gangs"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Private gang content")).not.toBeInTheDocument();
   });
 });

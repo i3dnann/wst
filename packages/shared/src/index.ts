@@ -191,6 +191,21 @@ const optionalHttpsUrl = z
   ])
   .optional();
 
+export const publicPageKeys = [
+  "home",
+  "gangs",
+  "players",
+  "tournaments",
+  "matches",
+  "rankings",
+  "events",
+  "live",
+  "rules",
+  "about",
+] as const;
+
+export type PublicPageKey = (typeof publicPageKeys)[number];
+
 export const websiteSettingsSchema = z.object({
   general: z.object({
     websiteName: z.string().trim().min(2).max(80),
@@ -231,6 +246,18 @@ export const websiteSettingsSchema = z.object({
     accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
     backgroundMediaUrl: optionalHttpsUrl,
     animationIntensity: z.enum(["NONE", "REDUCED", "NORMAL"]),
+  }),
+  pageLocks: z.object({
+    home: z.boolean(),
+    gangs: z.boolean(),
+    players: z.boolean(),
+    tournaments: z.boolean(),
+    matches: z.boolean(),
+    rankings: z.boolean(),
+    events: z.boolean(),
+    live: z.boolean(),
+    rules: z.boolean(),
+    about: z.boolean(),
   }),
   social: z.record(z.string(), optionalHttpsUrl),
 });

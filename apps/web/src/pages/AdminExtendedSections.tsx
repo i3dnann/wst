@@ -9,6 +9,8 @@ import {
   Activity,
   ArchiveRestore,
   FileImage,
+  LockKeyhole,
+  LockOpen,
   RefreshCw,
   Save,
   ShieldCheck,
@@ -16,6 +18,7 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
+import type { PublicPageKey } from "@mafia/shared";
 import { toast } from "sonner";
 import { EmptyState, ErrorState } from "@/components/data/StatusState";
 import { CloudinaryUploadField } from "@/components/admin/CloudinaryUploadField";
@@ -999,6 +1002,18 @@ const defaultSettings = {
   accentColor: "#ef4058",
   backgroundMediaUrl: "",
   animationIntensity: "NORMAL",
+  pageLocks: {
+    home: false,
+    gangs: false,
+    players: false,
+    tournaments: false,
+    matches: false,
+    rankings: false,
+    events: false,
+    live: false,
+    rules: false,
+    about: false,
+  },
   discord: "",
   youtube: "",
   twitch: "",
@@ -1007,6 +1022,76 @@ const defaultSettings = {
   twitter: "",
   instagram: "",
 };
+
+type SettingsScalarKey = Exclude<keyof typeof defaultSettings, "pageLocks">;
+
+const pageLockDefinitions: ReadonlyArray<{
+  key: PublicPageKey;
+  label: string;
+  path: string;
+  description: string;
+}> = [
+  {
+    key: "home",
+    label: "Home",
+    path: "/",
+    description: "Main landing page",
+  },
+  {
+    key: "gangs",
+    label: "Gangs",
+    path: "/gangs",
+    description: "Registry and gang profiles",
+  },
+  {
+    key: "players",
+    label: "Players",
+    path: "/players",
+    description: "Directory and player profiles",
+  },
+  {
+    key: "tournaments",
+    label: "Tournaments",
+    path: "/tournaments",
+    description: "Competitions and brackets",
+  },
+  {
+    key: "matches",
+    label: "Matches",
+    path: "/matches",
+    description: "Archive and match records",
+  },
+  {
+    key: "rankings",
+    label: "Rankings",
+    path: "/rankings",
+    description: "Official leaderboards",
+  },
+  {
+    key: "events",
+    label: "Events",
+    path: "/events",
+    description: "Published community events",
+  },
+  {
+    key: "live",
+    label: "Live",
+    path: "/live",
+    description: "Approved live streams",
+  },
+  {
+    key: "rules",
+    label: "Rules",
+    path: "/rules",
+    description: "Rules of engagement",
+  },
+  {
+    key: "about",
+    label: "About",
+    path: "/about",
+    description: "Platform information",
+  },
+];
 
 const legacySettingsColors: Record<string, string> = {
   "#b88a44": "#c51f38",
@@ -1036,6 +1121,7 @@ export function WebsiteSettingsManager() {
     const pages = relation(value, "pages");
     const tournament = relation(value, "tournament");
     const branding = relation(value, "branding");
+    const pageLocks = relation(value, "pageLocks");
     const social = relation(value, "social");
     setForm((current) => ({
       ...current,
@@ -1045,6 +1131,10 @@ export function WebsiteSettingsManager() {
       ...tournament,
       ...branding,
       ...social,
+      pageLocks: {
+        ...current.pageLocks,
+        ...pageLocks,
+      },
       heroTitle:
         typeof homepage?.heroTitle === "string"
           ? homepage.heroTitle === "WORLD STAR" ||
@@ -1114,6 +1204,7 @@ export function WebsiteSettingsManager() {
           backgroundMediaUrl: form.backgroundMediaUrl,
           animationIntensity: form.animationIntensity,
         },
+        pageLocks: form.pageLocks,
         social: {
           discord: form.discord,
           youtube: form.youtube,
@@ -1131,7 +1222,7 @@ export function WebsiteSettingsManager() {
     },
     onError: (error) => toast.error(message(error)),
   });
-  const field = (key: keyof typeof form, label: string, type = "text") => {
+  const field = (key: SettingsScalarKey, label: string, type = "text") => {
     if (type === "cloudinary-image" || type === "cloudinary-media")
       return (
         <CloudinaryUploadField
@@ -1161,6 +1252,21 @@ export function WebsiteSettingsManager() {
       </label>
     );
   };
+  const lockedPageCount = Object.values(form.pageLocks).filter(Boolean).length;
+  const setPageLock = (key: PublicPageKey, locked: boolean) => {
+    setForm((value) => ({
+      ...value,
+      pageLocks: { ...value.pageLocks, [key]: locked },
+    }));
+  };
+  const setAllPageLocks = (locked: boolean) => {
+    setForm((value) => ({
+      ...value,
+      pageLocks: Object.fromEntries(
+        pageLockDefinitions.map(({ key }) => [key, locked]),
+      ) as typeof value.pageLocks,
+    }));
+  };
   return (
     <section className="admin-dataset admin-extended-section">
       <header className="admin-dataset-heading">
@@ -1184,6 +1290,80 @@ export function WebsiteSettingsManager() {
         />
       ) : null}
       <div className="settings-card-grid">
+        <section className="admin-card page-lock-manager">
+          <header className="page-lock-manager__header">
+            <div>
+              <span className="page-lock-manager__eyebrow">
+                <LockKeyhole aria-hidden="true" /> Page access control
+              </span>
+              <h3>Public Page Locks</h3>
+              <p>
+                Temporarily replace any public section with the World Star
+                Coming Soon screen. Detail pages follow their main section.
+              </p>
+            </div>
+            <strong className="page-lock-manager__count">
+              <b>{lockedPageCount}</b>
+              <span>
+                {lockedPageCount === 1 ? "page locked" : "pages locked"}
+              </span>
+            </strong>
+          </header>
+          <div className="page-lock-manager__actions">
+            <span>Changes publish when you save Website Settings.</span>
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setAllPageLocks(false)}
+                disabled={lockedPageCount === 0}
+              >
+                <LockOpen aria-hidden="true" /> Unlock all
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setAllPageLocks(true)}
+                disabled={lockedPageCount === pageLockDefinitions.length}
+              >
+                <LockKeyhole aria-hidden="true" /> Lock all
+              </Button>
+            </div>
+          </div>
+          <div className="page-lock-grid">
+            {pageLockDefinitions.map((page) => {
+              const locked = form.pageLocks[page.key];
+              return (
+                <article
+                  className={`page-lock-card${locked ? " is-locked" : ""}`}
+                  key={page.key}
+                >
+                  <span className="page-lock-card__icon" aria-hidden="true">
+                    {locked ? <LockKeyhole /> : <LockOpen />}
+                  </span>
+                  <div className="page-lock-card__copy">
+                    <strong>{page.label}</strong>
+                    <span>{page.description}</span>
+                    <code>{page.path}</code>
+                  </div>
+                  <span className="page-lock-card__status">
+                    {locked ? "Locked" : "Public"}
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={locked}
+                    aria-label={`${locked ? "Unlock" : "Lock"} ${page.label} page`}
+                    className="page-lock-switch"
+                    onClick={() => setPageLock(page.key, !locked)}
+                  >
+                    <span />
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        </section>
         <section className="admin-card admin-form-grid">
           <h3 className="full-width">General</h3>
           {field("websiteName", "Website name")}

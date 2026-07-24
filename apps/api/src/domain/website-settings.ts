@@ -47,6 +47,18 @@ export const defaultWebsiteSettings: WebsiteSettings =
       backgroundMediaUrl: "",
       animationIntensity: "NORMAL",
     },
+    pageLocks: {
+      home: false,
+      gangs: false,
+      players: false,
+      tournaments: false,
+      matches: false,
+      rankings: false,
+      events: false,
+      live: false,
+      rules: false,
+      about: false,
+    },
     social: {
       discord: "",
       youtube: "",
@@ -123,6 +135,10 @@ export function readWebsiteSettings(value: unknown): WebsiteSettings {
     branding: {
       ...defaultWebsiteSettings.branding,
       ...record(stored.branding),
+    },
+    pageLocks: {
+      ...defaultWebsiteSettings.pageLocks,
+      ...record(stored.pageLocks),
     },
     social: {
       ...defaultWebsiteSettings.social,

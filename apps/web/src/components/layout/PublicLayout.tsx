@@ -1,5 +1,6 @@
 import { useEffect, type CSSProperties } from "react";
 import { ChevronDown, LockKeyhole, Menu, Radio } from "lucide-react";
+import type { PublicPageKey } from "@mafia/shared";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
@@ -26,6 +27,21 @@ const navigation = [
 
 const primaryNavigation = navigation.slice(0, 8);
 const moreNavigation = navigation.slice(8);
+const publicPageLabels: Record<PublicPageKey, string> = {
+  home: "Home",
+  gangs: "Gangs",
+  players: "Players",
+  tournaments: "Tournaments",
+  matches: "Matches",
+  rankings: "Rankings",
+  events: "Events",
+  live: "Live",
+  rules: "Rules",
+  about: "About",
+};
+const publicPageKeySet = new Set<PublicPageKey>(
+  Object.keys(publicPageLabels) as PublicPageKey[],
+);
 const publicSiteUrl = (
   import.meta.env.VITE_PUBLIC_SITE_URL ??
   (import.meta.env.PROD ? "https://wstgang.com" : window.location.origin)
@@ -165,6 +181,64 @@ function MaintenancePage({
   );
 }
 
+function pageKeyFromPath(pathname: string): PublicPageKey | null {
+  if (pathname === "/") return "home";
+  const segment = pathname.split("/").filter(Boolean)[0];
+  return segment && publicPageKeySet.has(segment as PublicPageKey)
+    ? (segment as PublicPageKey)
+    : null;
+}
+
+function ComingSoonPage({
+  logoUrl,
+  pageName,
+  shortName,
+}: {
+  logoUrl: string | undefined;
+  pageName: string;
+  shortName: string;
+}) {
+  return (
+    <main className="coming-soon-page" aria-labelledby="coming-soon-title">
+      <img
+        className="coming-soon-page__image"
+        src="/assets/wst-red/city-overlook-red.jpg"
+        alt=""
+      />
+      <div className="coming-soon-page__shade" aria-hidden="true" />
+      <div className="coming-soon-page__grid" aria-hidden="true" />
+      <section className="coming-soon-page__content">
+        <div className="coming-soon-page__brand">
+          <img src={logoUrl || "/assets/wst/wst-logo.png"} alt="" />
+          <span>{shortName}</span>
+        </div>
+        <p className="coming-soon-page__eyebrow">
+          <LockKeyhole aria-hidden="true" /> Public access paused
+        </p>
+        <span className="coming-soon-page__section">{pageName}</span>
+        <h1 id="coming-soon-title">Coming Soon</h1>
+        <div className="coming-soon-page__line" aria-hidden="true">
+          <i />
+          <strong>COMING SOON</strong>
+          <i />
+        </div>
+        <p className="coming-soon-page__message">
+          This section is being prepared by the World Star command center. Check
+          back soon for the official release.
+        </p>
+      </section>
+    </main>
+  );
+}
+
+function PublicAccessLoading() {
+  return (
+    <main className="public-access-loading" aria-label="Loading page access">
+      <span className="public-access-loading__mark" aria-hidden="true" />
+    </main>
+  );
+}
+
 export function PublicLayout() {
   const location = useLocation();
   const website = usePublicWebsiteSettings();
@@ -187,6 +261,9 @@ export function PublicLayout() {
     : undefined;
   const logoUrl = settings?.general.logoUrl || undefined;
   const shortName = settings?.general.shortName || "WORLD STAR";
+  const lockedPageKey = pageKeyFromPath(location.pathname);
+  const lockedPage =
+    lockedPageKey && settings?.pageLocks[lockedPageKey] ? lockedPageKey : null;
   useEffect(() => {
     if (!settings) return;
     document.title = settings.general.websiteName;
@@ -261,8 +338,16 @@ export function PublicLayout() {
         </Sheet>
       </header>
 
-      {settings?.general.maintenanceMode ? (
+      {website.isPending ? (
+        <PublicAccessLoading />
+      ) : settings?.general.maintenanceMode ? (
         <MaintenancePage logoUrl={logoUrl} shortName={shortName} />
+      ) : lockedPage ? (
+        <ComingSoonPage
+          logoUrl={logoUrl}
+          pageName={publicPageLabels[lockedPage]}
+          shortName={shortName}
+        />
       ) : (
         <Outlet />
       )}

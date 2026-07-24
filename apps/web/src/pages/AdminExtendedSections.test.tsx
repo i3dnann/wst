@@ -60,6 +60,18 @@ const savedSettings = {
     backgroundMediaUrl: "",
     animationIntensity: "NORMAL",
   },
+  pageLocks: {
+    home: false,
+    gangs: false,
+    players: false,
+    tournaments: false,
+    matches: false,
+    rankings: false,
+    events: false,
+    live: false,
+    rules: false,
+    about: false,
+  },
   social: {
     discord: "",
     youtube: "",
@@ -105,14 +117,17 @@ describe("WebsiteSettingsManager", () => {
     fireEvent.change(discord, {
       target: { value: "discord.gg/eZqaNx5P7y" },
     });
+    fireEvent.click(screen.getByRole("switch", { name: "Lock Gangs page" }));
     fireEvent.click(screen.getByRole("button", { name: "Save Settings" }));
 
     await waitFor(() => expect(updateWebsiteSettings).toHaveBeenCalledOnce());
     const payload = updateWebsiteSettings.mock.calls[0]?.[0];
     expect(payload).toBeDefined();
     const general = payload?.general as Record<string, unknown>;
+    const pageLocks = payload?.pageLocks as Record<string, unknown>;
     const social = payload?.social as Record<string, unknown>;
     expect(general.websiteName).toBe("World Star Registry");
+    expect(pageLocks.gangs).toBe(true);
     expect(social.discord).toBe("discord.gg/eZqaNx5P7y");
   });
 });

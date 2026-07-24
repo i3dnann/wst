@@ -19,6 +19,7 @@ describe("website settings", () => {
     expect(settings.homepage.heroTitle).toBe(
       defaultWebsiteSettings.homepage.heroTitle,
     );
+    expect(settings.pageLocks.gangs).toBe(false);
     expect(settings.social.discord).toBe("https://discord.gg/eZqaNx5P7y");
   });
 
@@ -48,5 +49,21 @@ describe("website settings", () => {
         social: { discord: "javascript:alert(1)" },
       }),
     ).toThrow();
+  });
+
+  it("preserves page locks when settings are saved and read again", () => {
+    const saved = parseWebsiteSettingsInput({
+      ...defaultWebsiteSettings,
+      pageLocks: {
+        ...defaultWebsiteSettings.pageLocks,
+        tournaments: true,
+        matches: true,
+      },
+    });
+    const restored = readWebsiteSettings(saved);
+
+    expect(restored.pageLocks.tournaments).toBe(true);
+    expect(restored.pageLocks.matches).toBe(true);
+    expect(restored.pageLocks.home).toBe(false);
   });
 });
