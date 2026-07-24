@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Radio, Trophy } from "lucide-react";
+import { ArrowRight, CircleCheck, Radio, Swords, Trophy } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { DrawWheelGraphic } from "@/components/tournaments/DrawWheelGraphic";
-import { api, type LiveTournamentDraw, type RealtimeEvent } from "@/lib/api";
+import {
+  api,
+  type LiveDrawParticipant,
+  type LiveTournamentDraw,
+  type RealtimeEvent,
+} from "@/lib/api";
 
 const FULL_TURN = 360;
 const SPIN_DURATION_MS = 8_000;
@@ -32,7 +37,35 @@ function wait(milliseconds: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-function LiveDrawBroadcast({ state }: { state: BroadcastState }) {
+function BroadcastGang({
+  participant,
+}: {
+  participant: LiveDrawParticipant | undefined;
+}) {
+  if (!participant) {
+    return (
+      <strong className="live-draw-broadcast__gang is-waiting">
+        <span className="live-draw-broadcast__gang-mark" aria-hidden="true" />
+        <span>Waiting for draw</span>
+      </strong>
+    );
+  }
+
+  return (
+    <strong className="live-draw-broadcast__gang">
+      {participant.gang.logoUrl ? (
+        <img src={participant.gang.logoUrl} alt="" />
+      ) : (
+        <span className="live-draw-broadcast__gang-mark" aria-hidden="true">
+          {participant.gang.tag.slice(0, 1)}
+        </span>
+      )}
+      <span>{participant.gang.name}</span>
+    </strong>
+  );
+}
+
+export function LiveDrawBroadcast({ state }: { state: BroadcastState }) {
   const { draw, spin } = state;
   const [displayedDrawnIds, setDisplayedDrawnIds] = useState(
     draw.drawnParticipantIds,
@@ -107,73 +140,147 @@ function LiveDrawBroadcast({ state }: { state: BroadcastState }) {
     gangA: participantById.get(displayedDrawnIds[index * 2] ?? ""),
     gangB: participantById.get(displayedDrawnIds[index * 2 + 1] ?? ""),
   }));
+  const drawnCount = displayedDrawnIds.length;
+  const totalParticipants = draw.participants.length;
+  const pairedMatchups = Math.floor(drawnCount / 2);
+  const activeMatchupIndex =
+    drawnCount < totalParticipants ? Math.floor(drawnCount / 2) : -1;
 
   return (
     <aside className="live-draw-broadcast" aria-live="polite">
       <div className="live-draw-broadcast__panel">
-        <header>
-          <div>
-            <span>
+        <header className="live-draw-broadcast__header">
+          <div className="live-draw-broadcast__identity">
+            <span className="live-draw-broadcast__live-label">
               <Radio /> Live tournament draw
             </span>
             <h2>{draw.tournamentName}</h2>
           </div>
-          <strong>
-            {displayedDrawnIds.length} / {draw.participants.length} drawn
-          </strong>
+          <div className="live-draw-broadcast__crest" aria-hidden="true">
+            <img src="/assets/wst/wst-logo.png" alt="" />
+          </div>
+          <div
+            className="live-draw-broadcast__progress"
+            role="progressbar"
+            aria-label="Tournament draw progress"
+            aria-valuemin={0}
+            aria-valuemax={totalParticipants}
+            aria-valuenow={drawnCount}
+          >
+            <strong>
+              <b>{drawnCount}</b>
+              <span>/ {totalParticipants} drawn</span>
+            </strong>
+            <div
+              className="live-draw-broadcast__progress-track"
+              aria-hidden="true"
+              style={{
+                gridTemplateColumns: `repeat(${String(totalParticipants)}, minmax(3px, 1fr))`,
+              }}
+            >
+              {draw.participants.map((participant, index) => (
+                <i
+                  className={index < drawnCount ? "is-filled" : undefined}
+                  key={participant.id}
+                />
+              ))}
+            </div>
+          </div>
         </header>
         <div className="live-draw-broadcast__content">
           <section className="live-draw-broadcast__wheel">
-            <DrawWheelGraphic
-              participants={remaining}
-              rotation={rotation}
-              spinning={spinning}
-              durationMs={spin?.durationMs ?? SPIN_DURATION_MS}
-            />
+            <div
+              className={`live-draw-broadcast__wheel-visual${spinning ? " is-spinning" : ""}`}
+            >
+              <div className="live-draw-broadcast__orbit" aria-hidden="true" />
+              <DrawWheelGraphic
+                participants={remaining}
+                rotation={rotation}
+                spinning={spinning}
+                durationMs={spin?.durationMs ?? SPIN_DURATION_MS}
+              />
+            </div>
             <div className="live-draw-broadcast__selection">
               {selected ? (
                 <>
-                  <Trophy />
-                  <span>
-                    Drawn gang<strong>{selected.gang.name}</strong>
-                  </span>
+                  <div className="live-draw-broadcast__selection-icon">
+                    {selected.gang.logoUrl ? (
+                      <img src={selected.gang.logoUrl} alt="" />
+                    ) : (
+                      <Trophy aria-hidden="true" />
+                    )}
+                  </div>
+                  <div>
+                    <span>Latest selection</span>
+                    <strong>{selected.gang.name}</strong>
+                  </div>
                 </>
               ) : (
-                <span>
-                  Live selection
-                  <strong>
-                    {spinning ? "Wheel spinning…" : "Waiting for admin"}
-                  </strong>
-                </span>
+                <>
+                  <div className="live-draw-broadcast__selection-icon">
+                    <Radio aria-hidden="true" />
+                  </div>
+                  <div>
+                    <span>
+                      Live selection · {drawnCount + 1} of {totalParticipants}
+                    </span>
+                    <strong>
+                      {spinning ? "Wheel spinning…" : "Waiting for admin"}
+                    </strong>
+                  </div>
+                </>
               )}
+              <div
+                className={`live-draw-broadcast__selection-state${spinning ? " is-live" : ""}`}
+              >
+                <i aria-hidden="true" />
+                <span>{spinning ? "Selecting" : "Synchronized"}</span>
+              </div>
             </div>
           </section>
-          <section className="champions-draw__matchups live-draw-broadcast__matchups">
+          <section className="live-draw-broadcast__matchups">
             <header>
-              <h4>Opening matchups</h4>
-              <span>{matchupCount} matches</span>
+              <div>
+                <Swords aria-hidden="true" />
+                <h3>Opening matchups</h3>
+              </div>
+              <span>
+                {pairedMatchups} of {matchupCount} confirmed
+              </span>
             </header>
             <ol>
-              {matchups.map((matchup, index) => (
-                <li key={index}>
-                  <span>{index + 1}</span>
-                  <strong>
-                    {matchup.gangA?.gang.name ?? "Waiting for draw"}
-                  </strong>
-                  <em>VS</em>
-                  <strong>
-                    {matchup.gangB?.gang.name ?? "Waiting for draw"}
-                  </strong>
-                </li>
-              ))}
+              {matchups.map((matchup, index) => {
+                const complete = Boolean(matchup.gangA && matchup.gangB);
+                const active = index === activeMatchupIndex && !complete;
+                return (
+                  <li
+                    className={`${complete ? "is-complete" : ""}${active ? " is-active" : ""}`}
+                    key={index}
+                  >
+                    <span className="live-draw-broadcast__match-number">
+                      {complete ? (
+                        <CircleCheck aria-hidden="true" />
+                      ) : (
+                        index + 1
+                      )}
+                    </span>
+                    <BroadcastGang participant={matchup.gangA} />
+                    <em>VS</em>
+                    <BroadcastGang participant={matchup.gangB} />
+                  </li>
+                );
+              })}
             </ol>
           </section>
         </div>
-        <footer>
+        <footer className="live-draw-broadcast__footer">
           <span>
-            Results are synchronized live from the World Star command center.
+            <i aria-hidden="true" />
+            Results synchronized live from the World Star command center
           </span>
-          <Link to={`/tournaments/${draw.tournamentSlug}`}>View bracket</Link>
+          <Link to={`/tournaments/${draw.tournamentSlug}`}>
+            View bracket <ArrowRight aria-hidden="true" />
+          </Link>
         </footer>
       </div>
     </aside>

@@ -1124,9 +1124,9 @@ export function WebsiteSettingsManager() {
           instagram: form.instagram,
         },
       }),
-    onSuccess: () => {
+    onSuccess: (response) => {
       toast.success("Website settings saved.");
-      void queryClient.invalidateQueries({ queryKey: ["website-settings"] });
+      queryClient.setQueryData(["website-settings"], response);
       void queryClient.invalidateQueries({ queryKey: ["public-settings"] });
     },
     onError: (error) => toast.error(message(error)),
@@ -1143,7 +1143,7 @@ export function WebsiteSettingsManager() {
         />
       );
     return (
-      <label>
+      <label key={key}>
         {label}
         <input
           type={type}

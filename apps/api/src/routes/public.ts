@@ -1,11 +1,12 @@
 import type { FastifyInstance } from "fastify";
-import { gangListQuerySchema, websiteSettingsSchema } from "@mafia/shared";
+import { gangListQuerySchema } from "@mafia/shared";
 import { Prisma } from "@prisma/client";
 import { envelope } from "../lib/envelope.js";
 import { HttpError } from "../lib/http-error.js";
 import { prisma } from "../lib/prisma.js";
 import { realtimeHub } from "../lib/realtime.js";
 import { refreshStaleStreams } from "../lib/stream-status.js";
+import { readWebsiteSettings } from "../domain/website-settings.js";
 
 const gangInclude = {
   memberships: { where: { active: true }, select: { id: true } },
@@ -475,9 +476,8 @@ export function publicRoutes(app: FastifyInstance): void {
       where: { key: "website.structured" },
       select: { value: true, updatedAt: true },
     });
-    const parsed = websiteSettingsSchema.safeParse(setting?.value);
     return envelope(request, {
-      value: parsed.success ? parsed.data : null,
+      value: readWebsiteSettings(setting?.value),
       updatedAt: setting?.updatedAt ?? null,
     });
   });

@@ -439,58 +439,157 @@ function MatchList({ rows }: { rows: RecordRow[] }) {
   );
 }
 
-function MatchDetail({ row }: { row: RecordRow }) {
+export function MatchDetail({ row }: { row: RecordRow }) {
   const gangA = record(row.gangA);
   const gangB = record(row.gangB);
   const winner = record(row.winnerGang);
   const tournament = record(row.tournament);
   const round = record(row.bracketRound);
   const stats = array(row.playerStats);
+  const status = readableStatus(matchStatus(row));
+  const winnerId = typeof winner?.id === "string" ? winner.id : "";
+  const winnerName = value(winner, "name", "");
+  const gangAIsWinner = Boolean(
+    winner &&
+    ((winnerId && winnerId === gangA?.id) ||
+      (winnerName && winnerName === value(gangA, "name", ""))),
+  );
+  const gangBIsWinner = Boolean(
+    winner &&
+    ((winnerId && winnerId === gangB?.id) ||
+      (winnerName && winnerName === value(gangB, "name", ""))),
+  );
   return (
-    <section className="public-dossier match-public-dossier">
-      <header>
-        <Swords />
+    <section className="match-record">
+      <header className="match-record__heading">
         <div>
-          <span>
-            {value(tournament, "name", "Independent match")} ·{" "}
-            {value(round, "name", "No round")}
-          </span>
-          <h2>
-            {value(gangA, "name", "TBD")} vs {value(gangB, "name", "TBD")}
-          </h2>
-          <p>{value(row, "status").replaceAll("_", " ")}</p>
+          <h1>Match Record</h1>
+          <p>Rosters, result, player statistics, and audit-safe status.</p>
         </div>
+        <img src="/assets/wst/wst-logo.png" alt="" aria-hidden="true" />
       </header>
-      <div className="public-match-score">
-        <strong>{displayValue(row.gangAScore)}</strong>
-        <span>
-          {winner ? `${value(winner, "name")} won` : "Result pending"}
-        </span>
-        <strong>{displayValue(row.gangBScore)}</strong>
-      </div>
-      {typeof row.resultNotes === "string" ? <p>{row.resultNotes}</p> : null}
-      <section>
-        <h3>Player statistics</h3>
+
+      <article className="match-record__stage">
+        <header className="match-record__meta">
+          <div>
+            <Swords aria-hidden="true" />
+            <span>
+              <strong>{value(tournament, "name", "Independent match")}</strong>
+              <small>{value(round, "name", "No round")}</small>
+            </span>
+          </div>
+          <span data-status={matchStatus(row)}>
+            <i aria-hidden="true" />
+            {status}
+          </span>
+        </header>
+
+        <div className="match-record__scoreboard">
+          <article
+            className={`match-record__gang${gangAIsWinner ? " is-winner" : ""}`}
+          >
+            <div className="match-record__gang-mark">
+              {typeof gangA?.logoUrl === "string" ? (
+                <img src={gangA.logoUrl} alt="" />
+              ) : (
+                <Shield aria-hidden="true" />
+              )}
+            </div>
+            <div>
+              <span>{value(gangA, "tag", "Gang A")}</span>
+              <h2>{value(gangA, "name", "TBD")}</h2>
+              {gangAIsWinner ? (
+                <small>
+                  <Trophy aria-hidden="true" /> Winner
+                </small>
+              ) : null}
+            </div>
+            <strong className="match-record__score">
+              {displayValue(row.gangAScore)}
+            </strong>
+          </article>
+
+          <div className="match-record__versus">
+            <span>Final score</span>
+            <strong>VS</strong>
+            <small>
+              {winner ? `${value(winner, "name")} won` : "Result pending"}
+            </small>
+          </div>
+
+          <article
+            className={`match-record__gang is-right${gangBIsWinner ? " is-winner" : ""}`}
+          >
+            <strong className="match-record__score">
+              {displayValue(row.gangBScore)}
+            </strong>
+            <div>
+              <span>{value(gangB, "tag", "Gang B")}</span>
+              <h2>{value(gangB, "name", "TBD")}</h2>
+              {gangBIsWinner ? (
+                <small>
+                  <Trophy aria-hidden="true" /> Winner
+                </small>
+              ) : null}
+            </div>
+            <div className="match-record__gang-mark">
+              {typeof gangB?.logoUrl === "string" ? (
+                <img src={gangB.logoUrl} alt="" />
+              ) : (
+                <Shield aria-hidden="true" />
+              )}
+            </div>
+          </article>
+        </div>
+
+        {typeof row.resultNotes === "string" ? (
+          <p className="match-record__notes">{row.resultNotes}</p>
+        ) : null}
+      </article>
+
+      <section className="match-record__statistics">
+        <header>
+          <div>
+            <span>Verified performance</span>
+            <h2>Player Statistics</h2>
+          </div>
+          <Activity aria-hidden="true" />
+        </header>
         {stats.length ? (
-          <div className="public-record-list">
+          <div className="match-record__stat-list">
             {stats.map((stat) => {
               const player = record(stat.player);
               const gang = record(stat.gang);
               return (
                 <article key={stat.id}>
-                  <strong>{value(player, "displayName")}</strong>
-                  <span>
-                    {value(gang, "tag")} · {numberValue(stat, "kills")} K /{" "}
-                    {numberValue(stat, "deaths")} D /{" "}
-                    {numberValue(stat, "assists")} A
-                  </span>
+                  <div>
+                    <strong>{value(player, "displayName")}</strong>
+                    <span>{value(gang, "tag")}</span>
+                  </div>
+                  <dl>
+                    <div>
+                      <dt>Kills</dt>
+                      <dd>{numberValue(stat, "kills")}</dd>
+                    </div>
+                    <div>
+                      <dt>Deaths</dt>
+                      <dd>{numberValue(stat, "deaths")}</dd>
+                    </div>
+                    <div>
+                      <dt>Assists</dt>
+                      <dd>{numberValue(stat, "assists")}</dd>
+                    </div>
+                  </dl>
                   {stat.mvp ? <b>MVP</b> : null}
                 </article>
               );
             })}
           </div>
         ) : (
-          <EmptyState title="No player statistics published" />
+          <EmptyState
+            title="No player statistics published"
+            message="Verified records will appear here when they are published."
+          />
         )}
       </section>
     </section>
@@ -521,9 +620,12 @@ export default function DirectoryPage({ type }: { type: keyof typeof labels }) {
   const rows = array(query.data.data);
   const detail = record(query.data.data) as RecordRow | null;
   const isMatchList = isMatch && !isDetail;
+  const isMatchDetail = isMatch && isDetail;
   return (
-    <main className={`page-shell${isMatchList ? " match-archive-page" : ""}`}>
-      {!isMatchList ? (
+    <main
+      className={`page-shell${isMatchList ? " match-archive-page" : ""}${isMatchDetail ? " match-record-page" : ""}`}
+    >
+      {!isMatchList && !isMatchDetail ? (
         <header className="page-heading">
           <div>
             <h1>{title}</h1>

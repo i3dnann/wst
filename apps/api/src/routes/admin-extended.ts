@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { v2 as cloudinary } from "cloudinary";
 import { Prisma } from "@prisma/client";
-import { permissions, websiteSettingsSchema } from "@mafia/shared";
+import { permissions } from "@mafia/shared";
 import { z } from "zod";
 import { envelope } from "../lib/envelope.js";
 import { env } from "../lib/env.js";
@@ -10,10 +10,14 @@ import { HttpError } from "../lib/http-error.js";
 import { prisma } from "../lib/prisma.js";
 import { requirePermission } from "../middleware/authorize.js";
 import { calculatePoints } from "../domain/ranking.js";
+import {
+  parseWebsiteSettingsInput,
+  readWebsiteSettings,
+  websiteSettingKey,
+} from "../domain/website-settings.js";
 
 const id = z.string().min(20).max(40);
 const recordStatus = z.enum(["ACTIVE", "INACTIVE", "SUSPENDED", "ARCHIVED"]);
-const websiteSettingKey = "website.structured";
 
 const gangRoleInput = z.object({
   name: z.string().trim().min(2).max(80),
@@ -84,53 +88,6 @@ const mediaCompleteInput = z.object({
   height: z.number().int().min(1).max(20_000).optional(),
 });
 
-const defaultWebsiteSettings = {
-  general: {
-    websiteName: "World Star Registry",
-    shortName: "WST",
-    description: "The official World Star gang and tournament registry.",
-    logoUrl: "",
-    faviconUrl: "",
-    defaultLanguage: "en",
-    timeZone: "Europe/Berlin",
-    maintenanceMode: false,
-  },
-  homepage: {
-    heroTitle: "WORLD STAR CFW",
-    heroSubtitle:
-      "Where every rivalry becomes history. Follow verified matches, live tournaments, gang rankings, events, and streams from one official command center.",
-    heroMediaUrl: "",
-    announcement: "",
-  },
-  pages: {
-    rulesTitle: "Rules of Engagement",
-    rulesIntro:
-      "Clear competition starts with one shared standard for rosters, evidence, disputes, and verified results.",
-    rulesContent:
-      "Every participant is responsible for following the published tournament and server rules. Rosters must be accurate before check-in, match evidence must be complete, and disputes must be submitted inside the allowed review window.\n\nAdministrator decisions are recorded through the protected command center so every result remains traceable and consistent.",
-    aboutTitle: "Built for the official record",
-    aboutIntro:
-      "World Star brings gangs, tournaments, rankings, events, streams, and verified match history into one trusted registry.",
-    aboutContent:
-      "The public website gives every player a clear view of competition while the protected administrator workspace controls publishing, permissions, brackets, results, and platform settings.\n\nEvery surface is connected to the same live records, creating a reliable home for rivalries, achievements, and tournament history.",
-  },
-  tournament: {
-    defaultBestOf: 1,
-    defaultParticipantCapacity: 16,
-    registrationRules: "",
-    checkInDurationMinutes: 30,
-    resultSubmissionMinutes: 60,
-  },
-  branding: {
-    primaryColor: "#c51f38",
-    secondaryColor: "#6f0d1c",
-    accentColor: "#ef4058",
-    backgroundMediaUrl: "",
-    animationIntensity: "NORMAL" as const,
-  },
-  social: {},
-};
-
 function json(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
@@ -147,18 +104,12 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
     const setting = await prisma.platformSetting.findUnique({
       where: { key: websiteSettingKey },
     });
-    const parsed = websiteSettingsSchema.safeParse(
-      setting?.value ?? defaultWebsiteSettings,
-    );
-    return envelope(
-      request,
-      parsed.success ? parsed.data : defaultWebsiteSettings,
-    );
+    return envelope(request, readWebsiteSettings(setting?.value));
   });
 
   app.put("/api/v1/admin/website-settings", async (request) => {
     const auth = requirePermission(request, "settings.manage");
-    const input = websiteSettingsSchema.parse(request.body);
+    const input = parseWebsiteSettingsInput(request.body);
     const before = await prisma.platformSetting.findUnique({
       where: { key: websiteSettingKey },
     });

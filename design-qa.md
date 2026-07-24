@@ -211,3 +211,63 @@ The final implementation uses `Bodoni Moda SC` for brand and headline surfaces. 
 - Web typecheck, lint, all 12 tests, and the production build passed.
 
 final result: passed
+
+---
+
+# Match Record redesign QA
+
+- Source visual truth: `C:\Users\adnan\.codex\generated_images\019f82cc-339a-7ed3-b84d-e33721d9f74b\call_cqU8j2un8k7nHFcQqLOIMgb0.png`
+- Browser implementation: `C:\Users\adnan\.codex\visualizations\2026\07\21\019f82cc-339a-7ed3-b84d-e33721d9f74b\match-record-redesign.png`
+- Combined comparison: `C:\Users\adnan\.codex\visualizations\2026\07\21\019f82cc-339a-7ed3-b84d-e33721d9f74b\match-record-comparison.png`
+- Browser viewport: 1280 × 720 CSS px
+- Source pixels: 1672 × 941
+- Implementation full-page pixels: 1265 × 952
+- Comparison normalization: both images scaled to 700 px height at original aspect ratio and placed side-by-side
+- State: completed Round of 16 match, Bullet 2–1 Cloud, Bullet winner, no published player statistics
+
+## Full-view comparison evidence
+
+- Information architecture matches: title, description, tournament/round/status, two-gang score stage, winner, and statistics section are all present in the same order.
+- Typography matches the intended hierarchy: tall serif display type leads the page and condensed uppercase UI type handles metadata.
+- Layout rhythm matches: cinematic heading, dominant horizontal scoreboard, then a full-width statistics panel.
+- Color tokens match: near-black surfaces, white primary text, muted gray secondary text, and crimson accents with no gold/yellow remnants.
+- Background imagery matches the noir red-city direction. The implementation intentionally uses the existing optimized World Star red city asset.
+- Score and winner affordances are clear: winner surface and score are crimson, loser score is neutral, and the center VS block names the winning gang.
+- Empty-state copy is unchanged and remains readable inside the statistics panel.
+- Above-the-fold copy diff: no material copy differences.
+
+## Focused region evidence
+
+The scoreboard and statistics empty state are both legible in the full comparison at normalized size, so an additional crop was not needed.
+
+## Findings
+
+- No actionable P0, P1, or P2 differences remain.
+- P3: the concept uses decorative mafia portraits while the product implementation uses real gang logos when supplied and a shield icon fallback otherwise. This is intentional because gang media is data-driven.
+- P3: the implementation background is darker and less luminous than the concept to protect text contrast and keep the animation lightweight.
+
+## Browser verification
+
+- Opened the local Vite preview in the Codex in-app browser.
+- Confirmed the completed status, tournament, round, gang names, scores, winner, and empty-statistics state in the accessibility tree.
+- Checked browser warnings and errors: none.
+- Verified the page at the native 1280 × 720 browser viewport and captured a full-page screenshot.
+- Responsive CSS includes tablet, mobile, and reduced-motion states; the in-app browser did not expose viewport resizing for a separate mobile capture.
+
+## Comparison history
+
+- Pass 1: the initial browser render was too tall for the 720 px viewport and only exposed the top edge of the statistics section.
+- Fix: reduced page padding, heading height, section gaps, metadata height, scoreboard height, and internal scoreboard padding.
+- Pass 2 evidence: the revised viewport exposes the statistics heading and panel, while the full-page capture shows the entire experience with no clipping or overflow.
+
+## Implementation checklist
+
+- [x] Cinematic animated background
+- [x] Responsive scoreboard stage
+- [x] Clear winner and completed states
+- [x] Data-driven gang marks
+- [x] Redesigned statistics rows and empty state
+- [x] Reduced-motion fallback
+- [x] Browser console clean
+
+final result: passed
