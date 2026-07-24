@@ -102,6 +102,24 @@ describe("AdminCommandCenterPage record actions", () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(cleanup);
 
+  it("renders the gang registry with the themed record-manager hierarchy", async () => {
+    const { container } = renderGangs([
+      "gang.read",
+      "gang.create",
+      "gang.update.any",
+      "gang.archive",
+    ]);
+
+    expect(
+      await screen.findByRole("heading", { name: "Gang records" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Gang directory")).toBeInTheDocument();
+    expect(screen.getByText("records shown")).toBeInTheDocument();
+    expect(
+      container.querySelector(".admin-records-manager--gang"),
+    ).toBeInTheDocument();
+  });
+
   it("opens and submits the gang creator with an automatic slug", async () => {
     createGang.mockResolvedValue({
       data: { id: "gang-identifier-00000001" },

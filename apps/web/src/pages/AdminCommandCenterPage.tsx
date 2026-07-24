@@ -1335,10 +1335,15 @@ function RecordsManager({
             : ["Event", "Status", "Starts", "Visibility"];
 
   return (
-    <section className="admin-dataset">
+    <section
+      className={`admin-dataset admin-records-manager admin-records-manager--${kind}`}
+    >
       <header className="admin-dataset-heading">
         <div>
-          <h2>{labels.plural}</h2>
+          <span className="admin-dataset-kicker">
+            {labels.singular} directory
+          </span>
+          <h2>{labels.singular} records</h2>
           <p>
             Create, edit, and remove every {labels.singular.toLowerCase()}{" "}
             record. Removed records are hidden after refresh.
@@ -1369,7 +1374,10 @@ function RecordsManager({
             placeholder={`Search ${labels.plural.toLowerCase()}…`}
           />
         </label>
-        <span>{visible.length} records</span>
+        <span className="admin-record-count">
+          <strong>{visible.length}</strong>
+          <small>{visible.length === 1 ? "record shown" : "records shown"}</small>
+        </span>
       </div>
       <div className="admin-table-scroll">
         <table className="admin-data-table">

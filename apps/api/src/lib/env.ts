@@ -26,7 +26,7 @@ const envSchema = z.object({
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
-  RATE_LIMIT_MAX: z.coerce.number().int().min(10).default(100),
+  RATE_LIMIT_MAX: z.coerce.number().int().min(10).max(10_000).default(600),
   RATE_LIMIT_WINDOW: z.string().default("1 minute"),
   TWITCH_CLIENT_ID: optionalString,
   TWITCH_CLIENT_SECRET: optionalString,

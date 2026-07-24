@@ -20,6 +20,17 @@ export interface DiscordAuditConfig {
   categories: DiscordAuditCategory[];
 }
 
+interface DiscordAuditEntry {
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  createdAt: Date;
+  actor: {
+    displayName: string;
+    email: string | null;
+  } | null;
+}
+
 const defaultCategories = [...discordAuditCategories];
 
 function asJson(value: unknown): Prisma.InputJsonValue {
@@ -89,6 +100,41 @@ export async function executeDiscordWebhook(
   }
 }
 
+export function buildDiscordAuditPayload(
+  audit: DiscordAuditEntry,
+  category: DiscordAuditCategory,
+): Record<string, unknown> {
+  return {
+    username: "World Star Audit",
+    embeds: [
+      {
+        title: audit.action.replaceAll(".", " ").toUpperCase(),
+        color: category === "archive" ? 10_033_224 : 13_147_218,
+        fields: [
+          {
+            name: "Administrator",
+            value: audit.actor?.displayName ?? "System",
+            inline: true,
+          },
+          {
+            name: "Administrator Email",
+            value: audit.actor ? (audit.actor.email ?? "Not available") : "System",
+            inline: true,
+          },
+          { name: "Record", value: audit.entityType, inline: true },
+          {
+            name: "Record ID",
+            value: audit.entityId ?? "Not available",
+            inline: false,
+          },
+        ],
+        footer: { text: "World Star administration" },
+        timestamp: audit.createdAt.toISOString(),
+      },
+    ],
+  };
+}
+
 async function dispatchAuditWebhook(auditId: string): Promise<void> {
   const [config, audit] = await Promise.all([
     getDiscordAuditConfig(),
@@ -103,30 +149,10 @@ async function dispatchAuditWebhook(auditId: string): Promise<void> {
   const category = categoryForAction(audit.action);
   if (!config.categories.includes(category)) return;
 
-  await executeDiscordWebhook(config.webhookUrl, {
-    username: "World Star Audit",
-    embeds: [
-      {
-        title: audit.action.replaceAll(".", " ").toUpperCase(),
-        color: category === "archive" ? 10_033_224 : 13_147_218,
-        fields: [
-          {
-            name: "Administrator",
-            value: audit.actor?.displayName ?? audit.actor?.email ?? "System",
-            inline: true,
-          },
-          { name: "Record", value: audit.entityType, inline: true },
-          {
-            name: "Record ID",
-            value: audit.entityId ?? "Not available",
-            inline: false,
-          },
-        ],
-        footer: { text: "World Star administration" },
-        timestamp: audit.createdAt.toISOString(),
-      },
-    ],
-  });
+  await executeDiscordWebhook(
+    config.webhookUrl,
+    buildDiscordAuditPayload(audit, category),
+  );
 }
 
 export async function recordAudit(input: {

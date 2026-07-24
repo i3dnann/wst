@@ -16645,3 +16645,352 @@ body [data-sonner-toast] [data-description] {
 body [data-sonner-toast][data-type="success"] {
   border-color: rgb(239 64 88 / 0.38) !important;
 }
+
+/* Modern command-center record registry.
+   Shared by gangs, players, tournaments, matches, and events. */
+body .command-center-v2 .control-heading {
+  margin-bottom: clamp(16px, 2vw, 24px) !important;
+  padding-bottom: clamp(16px, 1.8vw, 22px) !important;
+}
+
+body .command-center-v2 .control-heading h1 {
+  color: #f7f7f8 !important;
+  font-size: clamp(40px, 3.5vw, 58px) !important;
+  line-height: 0.92 !important;
+}
+
+body .command-center-v2 .control-heading p {
+  max-width: 680px;
+  margin-top: 10px;
+  color: #8f9099 !important;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+body .command-center-v2 .admin-records-manager {
+  overflow: hidden;
+  padding: 0;
+  border-color: rgb(239 64 88 / 0.24);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 92% -8%, rgb(197 31 56 / 0.14), transparent 30rem),
+    linear-gradient(145deg, #0d0d11 0%, #08080b 72%);
+  box-shadow:
+    0 22px 70px rgb(0 0 0 / 0.26),
+    inset 0 1px 0 rgb(255 255 255 / 0.025);
+}
+
+body .command-center-v2 .admin-records-manager .admin-dataset-heading {
+  align-items: center;
+  min-height: 132px;
+  margin: 0;
+  padding: clamp(22px, 2.2vw, 32px);
+  border-bottom: 1px solid rgb(255 255 255 / 0.085);
+}
+
+body .command-center-v2 .admin-dataset-kicker {
+  display: block;
+  margin-bottom: 9px;
+  color: #ef4058;
+  font: 800 9px/1 var(--ui);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+body .command-center-v2 .admin-records-manager .admin-dataset-heading h2 {
+  color: #f7f7f8;
+  font-size: clamp(27px, 2.4vw, 38px);
+  letter-spacing: 0.012em !important;
+}
+
+body .command-center-v2 .admin-records-manager .admin-dataset-heading p {
+  max-width: 720px;
+  margin-top: 9px;
+  color: #92939d;
+  font: 500 12px/1.55 var(--ui);
+  letter-spacing: 0.01em;
+}
+
+body
+  .command-center-v2
+  .admin-records-manager
+  .admin-dataset-heading
+  > [data-slot="button"] {
+  min-height: 46px;
+  padding-inline: 18px;
+  border: 1px solid rgb(255 112 132 / 0.32);
+  border-radius: 10px;
+  background: linear-gradient(135deg, #9f162b, #d0203d);
+  box-shadow: 0 10px 30px rgb(197 31 56 / 0.2);
+  color: #fff;
+}
+
+body .command-center-v2 .admin-records-manager .admin-table-toolbar {
+  min-height: 74px;
+  margin: 0;
+  padding: 14px clamp(18px, 2vw, 28px);
+  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+  background: rgb(255 255 255 / 0.012);
+}
+
+body .command-center-v2 .admin-records-manager .admin-table-toolbar label {
+  width: min(500px, 72%);
+  min-height: 46px;
+  border-color: rgb(255 255 255 / 0.12);
+  border-radius: 10px;
+  background: #09090c;
+  color: #ef4058;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+
+body
+  .command-center-v2
+  .admin-records-manager
+  .admin-table-toolbar
+  label:focus-within {
+  border-color: rgb(239 64 88 / 0.64);
+  background: #0b0b0f;
+  box-shadow: 0 0 0 3px rgb(197 31 56 / 0.12);
+}
+
+body .command-center-v2 .admin-records-manager .admin-table-toolbar input {
+  color: #f5f5f7;
+  font: 550 13px/1 var(--ui);
+}
+
+body
+  .command-center-v2
+  .admin-records-manager
+  .admin-table-toolbar
+  input::placeholder {
+  color: #666771;
+}
+
+body .command-center-v2 .admin-record-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 11px;
+  border: 1px solid rgb(239 64 88 / 0.18);
+  border-radius: 999px;
+  background: rgb(197 31 56 / 0.07);
+}
+
+body .command-center-v2 .admin-record-count strong {
+  color: #ef4058;
+  font: 800 14px/1 var(--ui);
+}
+
+body .command-center-v2 .admin-record-count small {
+  color: #8d8e97;
+  font: 650 10px/1 var(--ui);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+body .command-center-v2 .admin-records-manager .admin-table-scroll {
+  width: 100%;
+  max-height: min(64svh, 760px);
+  min-height: 350px;
+  overflow: auto;
+  border: 0;
+  border-radius: 0;
+  background: #09090c;
+  scrollbar-color: #681124 #121216;
+  scrollbar-width: thin;
+}
+
+body .command-center-v2 .admin-records-manager .admin-data-table {
+  min-width: 920px;
+  background: transparent;
+}
+
+body .command-center-v2 .admin-records-manager .admin-data-table thead {
+  position: sticky;
+  z-index: 4;
+  top: 0;
+}
+
+body .command-center-v2 .admin-records-manager .admin-data-table th {
+  height: 44px;
+  padding: 0 18px;
+  border-bottom-color: rgb(239 64 88 / 0.24);
+  background: rgb(11 11 15 / 0.97);
+  color: #ef4058;
+  font: 800 9px/1 var(--ui);
+  letter-spacing: 0.14em;
+  backdrop-filter: blur(12px);
+}
+
+body .command-center-v2 .admin-records-manager .admin-data-table td {
+  height: 62px;
+  padding: 10px 18px;
+  border-bottom-color: rgb(255 255 255 / 0.075);
+  color: #aaaab3;
+  font: 550 12px/1.35 var(--ui);
+}
+
+body
+  .command-center-v2
+  .admin-records-manager
+  .admin-data-table
+  tbody
+  tr {
+  background: transparent;
+  transition:
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+body
+  .command-center-v2
+  .admin-records-manager
+  .admin-data-table
+  tbody
+  tr:nth-child(even) {
+  background: rgb(255 255 255 / 0.012);
+}
+
+body
+  .command-center-v2
+  .admin-records-manager
+  .admin-data-table
+  tbody
+  tr:hover {
+  background: linear-gradient(
+    90deg,
+    rgb(197 31 56 / 0.1),
+    rgb(197 31 56 / 0.025) 46%,
+    transparent
+  );
+  box-shadow: inset 3px 0 #d0203d;
+}
+
+body
+  .command-center-v2
+  .admin-records-manager
+  .admin-data-table
+  td
+  strong {
+  color: #f3f3f5;
+  font: 700 14px/1.15 var(--ui);
+  letter-spacing: 0.005em;
+}
+
+body
+  .command-center-v2
+  .admin-records-manager
+  .admin-data-table
+  td
+  small {
+  margin-top: 5px;
+  color: #71727c;
+  font: 550 10px/1.1 var(--ui);
+}
+
+body .command-center-v2 .admin-records-manager .record-status {
+  padding: 5px 8px;
+  border: 1px solid rgb(239 64 88 / 0.2);
+  border-radius: 999px;
+  background: rgb(197 31 56 / 0.07);
+  color: #d8d8dd;
+  font: 750 9px/1 var(--ui);
+  letter-spacing: 0.07em;
+}
+
+body .command-center-v2 .admin-records-manager .record-status::before {
+  width: 5px;
+  height: 5px;
+}
+
+body .command-center-v2 .admin-records-manager .admin-row-actions {
+  align-items: center;
+  min-width: 94px;
+}
+
+body .command-center-v2 .admin-records-manager .admin-row-actions button {
+  width: 38px;
+  height: 38px;
+  border-color: rgb(255 255 255 / 0.11);
+  border-radius: 9px;
+  background: #0e0e12;
+  color: #ef4058;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+body
+  .command-center-v2
+  .admin-records-manager
+  .admin-row-actions
+  button:hover {
+  border-color: rgb(239 64 88 / 0.52);
+  background: rgb(197 31 56 / 0.13);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+body
+  .command-center-v2
+  .admin-records-manager
+  .admin-row-actions
+  button.danger {
+  border-color: rgb(208 32 61 / 0.28) !important;
+  background: rgb(208 32 61 / 0.09) !important;
+  color: #f05a70 !important;
+}
+
+@media (max-width: 900px) {
+  body .command-center-v2 .admin-records-manager .admin-dataset-heading {
+    align-items: flex-start;
+  }
+
+  body .command-center-v2 .admin-records-manager .admin-table-scroll {
+    max-height: none;
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 700px) {
+  body .command-center-v2 .control-main {
+    padding: 18px 12px 28px !important;
+  }
+
+  body .command-center-v2 .control-heading h1 {
+    font-size: clamp(34px, 12vw, 46px) !important;
+  }
+
+  body .command-center-v2 .admin-records-manager .admin-dataset-heading {
+    min-height: 0;
+    flex-direction: column;
+    padding: 20px 16px;
+  }
+
+  body
+    .command-center-v2
+    .admin-records-manager
+    .admin-dataset-heading
+    > [data-slot="button"] {
+    width: 100%;
+  }
+
+  body .command-center-v2 .admin-records-manager .admin-table-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 14px 16px;
+  }
+
+  body .command-center-v2 .admin-records-manager .admin-table-toolbar label {
+    width: 100%;
+  }
+
+  body .command-center-v2 .admin-record-count {
+    align-self: flex-start;
+  }
+}
