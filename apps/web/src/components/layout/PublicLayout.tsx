@@ -262,8 +262,12 @@ export function PublicLayout() {
   const logoUrl = settings?.general.logoUrl || undefined;
   const shortName = settings?.general.shortName || "WORLD STAR";
   const lockedPageKey = pageKeyFromPath(location.pathname);
+  const pageLocks = (
+    settings as
+      { pageLocks?: Partial<Record<PublicPageKey, boolean>> } | undefined
+  )?.pageLocks;
   const lockedPage =
-    lockedPageKey && settings?.pageLocks[lockedPageKey] ? lockedPageKey : null;
+    lockedPageKey && pageLocks?.[lockedPageKey] ? lockedPageKey : null;
   useEffect(() => {
     if (!settings) return;
     document.title = settings.general.websiteName;

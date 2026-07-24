@@ -122,4 +122,27 @@ describe("PublicLayout website settings", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("Private gang content")).not.toBeInTheDocument();
   });
+
+  it("keeps public pages available while an older API response has no page locks", () => {
+    const legacySettings: Partial<WebsiteSettings> = { ...settings };
+    delete legacySettings.pageLocks;
+    publicSettings.mockReturnValue({
+      data: legacySettings,
+    } as unknown as ReturnType<typeof usePublicWebsiteSettings>);
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route element={<PublicLayout />}>
+            <Route index element={<p>Legacy home content</p>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Legacy home content")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Coming Soon" }),
+    ).not.toBeInTheDocument();
+  });
 });
