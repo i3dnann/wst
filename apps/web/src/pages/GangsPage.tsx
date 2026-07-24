@@ -1,9 +1,4 @@
-import {
-  ArrowRight,
-  Search,
-  ShieldCheck,
-  X,
-} from "lucide-react";
+import { ArrowRight, Search, ShieldCheck, X } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -30,11 +25,11 @@ export default function GangsPage() {
   const gangs = useQuery({
     queryKey: ["gangs", queryString],
     queryFn: () => api.gangs(queryString),
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
-  const resultCount = Math.max(
-    gangs.data?.meta.total ?? 0,
-    gangs.data?.data.length ?? 0,
-  );
+  const gangRecords = gangs.data?.data ?? [];
+  const resultCount = Math.max(gangs.data?.meta.total ?? 0, gangRecords.length);
 
   const reset = () => {
     setSearch("");
@@ -112,18 +107,30 @@ export default function GangsPage() {
         <span>Approved public records</span>
       </div>
 
+      {gangs.error && gangs.data ? (
+        <div className="gang-registry-v3__refresh-note" role="status">
+          <span>
+            The latest refresh could not be completed. Showing the last
+            available registry.
+          </span>
+          <Button variant="outline" onClick={() => void gangs.refetch()}>
+            Retry refresh
+          </Button>
+        </div>
+      ) : null}
+
       {gangs.isPending ? (
         <PageSkeleton />
-      ) : gangs.isError ? (
+      ) : gangs.isError && !gangs.data ? (
         <ErrorState retry={() => void gangs.refetch()} />
-      ) : gangs.data.data.length === 0 ? (
+      ) : gangRecords.length === 0 ? (
         <EmptyState
           title="No gangs found"
           message="Try adjusting the search or filters. No unapproved gangs are exposed."
         />
       ) : (
         <section className="gang-registry-v3__list">
-          {gangs.data.data.map((gang) => {
+          {gangRecords.map((gang) => {
             return (
               <article className="gang-registry-card" key={gang.id}>
                 <div className="gang-registry-card__media">

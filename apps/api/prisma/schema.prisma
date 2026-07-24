@@ -444,6 +444,7 @@ model Event {
   slug            String      @unique
   title           String
   description     String?     @db.Text
+  rules           String?     @db.LongText
   imageUrl        String?     @db.Text
   location        String?
   startsAt        DateTime

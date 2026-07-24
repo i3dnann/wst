@@ -319,6 +319,7 @@ export interface PublicEvent {
   slug: string;
   title: string;
   description: string | null;
+  rules: string | null;
   imageUrl: string | null;
   location: string | null;
   startsAt: string;

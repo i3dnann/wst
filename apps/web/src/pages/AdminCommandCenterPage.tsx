@@ -500,6 +500,7 @@ function valuesFromRecord(kind: RecordKind, record: AdminRecord): FormValues {
     title: valueOf(record, "title"),
     slug: valueOf(record, "slug"),
     description: valueOf(record, "description"),
+    rules: valueOf(record, "rules"),
     imageUrl: valueOf(record, "imageUrl"),
     location: valueOf(record, "location"),
     startsAt: dateTimeInput(record.startsAt),
@@ -580,6 +581,7 @@ function payloadFor(kind: RecordKind, values: FormValues) {
       optional(String(values.slug ?? "")) ??
       slugify(String(values.title ?? "")),
     description: optional(String(values.description ?? "")),
+    rules: optional(String(values.rules ?? "")),
     imageUrl: optional(String(values.imageUrl ?? "")),
     location: optional(String(values.location ?? "")),
     startsAt: toIso(String(values.startsAt ?? "")),
@@ -1176,6 +1178,14 @@ function RecordEditorFields({
           onChange={(event) => setValue("description", event.target.value)}
         />
       </label>
+      <label className="full-width">
+        Event rules
+        <textarea
+          value={String(values.rules ?? "")}
+          onChange={(event) => setValue("rules", event.target.value)}
+          placeholder="Publish attendance, participation, conduct, or tournament rules for this event."
+        />
+      </label>
     </>
   );
 }
@@ -1376,7 +1386,9 @@ function RecordsManager({
         </label>
         <span className="admin-record-count">
           <strong>{visible.length}</strong>
-          <small>{visible.length === 1 ? "record shown" : "records shown"}</small>
+          <small>
+            {visible.length === 1 ? "record shown" : "records shown"}
+          </small>
         </span>
       </div>
       <div className="admin-table-scroll">

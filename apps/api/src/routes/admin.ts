@@ -209,6 +209,7 @@ const eventInputSchema = z
     title: z.string().trim().min(2).max(160),
     slug: slugSchema,
     description: z.string().trim().max(5000).optional(),
+    rules: z.string().trim().max(20_000).optional(),
     imageUrl: httpsUrlSchema.optional(),
     location: z.string().trim().max(160).optional(),
     startsAt: z.coerce.date(),
