@@ -10,7 +10,7 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
-    "test": "pnpm -r test && node --test netlify/functions/*.test.mts",
+    "test": "pnpm -r test && node --test netlify/tests/*.test.mts",
     "prisma:validate": "pnpm --filter @mafia/api prisma:validate",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

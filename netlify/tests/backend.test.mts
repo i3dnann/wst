@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildProxyDestination } from "./backend.mts";
+import { buildProxyDestination } from "../functions/backend.mts";
 
 test("keeps normal proxy paths on the configured API origin", () => {
   const destination = buildProxyDestination(
