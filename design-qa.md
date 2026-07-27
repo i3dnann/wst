@@ -109,3 +109,18 @@ final result: passed
 - Keyboard focus begins on the email field and remains visibly indicated.
 
 final result: passed
+
+# Homepage hero media visibility — 2026-07-27
+
+- Reference: `C:\Users\adnan\AppData\Local\Temp\codex-clipboard-3436c980-1314-4cde-91b5-30d9f9dbfe17.png`
+- Browser implementation: `http://127.0.0.1:5174/`
+- Viewports checked: 1280 × 720 and 390 × 844 CSS pixels.
+- The skyline, central tower, smoke, balcony, and figure are now readable behind
+  the unchanged emblem, title, description, and actions.
+- Desktop media opacity and brightness were increased while the right-side
+  gradient remains strong enough to preserve headline contrast.
+- Mobile uses a slightly stronger vertical fade to protect text readability.
+- No navigation, copy, content order, typography, or action labels changed.
+- No horizontal overflow was detected at either tested viewport.
+
+final result: passed

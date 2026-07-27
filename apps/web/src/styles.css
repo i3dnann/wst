@@ -4886,6 +4886,43 @@ body .admin-login-panel .admin-session-check {
   }
 }
 
+/* Homepage hero media visibility — preserve contrast without hiding the scene. */
+html body .gold-home .gold-hero-image {
+  opacity: 0.94 !important;
+  filter: grayscale(0.45) sepia(0.38) hue-rotate(175deg) saturate(1.75)
+    contrast(1.1) brightness(1.04) !important;
+}
+
+html body .gold-home .gold-hero-shade {
+  background:
+    linear-gradient(
+      90deg,
+      rgb(7 11 30 / 0.2) 0%,
+      rgb(7 11 30 / 0.06) 44%,
+      rgb(7 11 30 / 0.7) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgb(7 11 30 / 0.01) 0%,
+      rgb(7 11 30 / 0.08) 68%,
+      #070b1e 100%
+    ) !important;
+}
+
+@media (max-width: 760px) {
+  html body .gold-home .gold-hero-image {
+    opacity: 0.78 !important;
+    filter: grayscale(0.5) sepia(0.4) hue-rotate(175deg) saturate(1.6)
+      contrast(1.08) brightness(0.9) !important;
+  }
+
+  html body .gold-home .gold-hero-shade {
+    background:
+      linear-gradient(180deg, rgb(7 11 30 / 0.12), rgb(7 11 30 / 0.76) 82%),
+      linear-gradient(90deg, rgb(7 11 30 / 0.14), rgb(7 11 30 / 0.38)) !important;
+  }
+}
+
 /* World Star steel-blue palette — authoritative across public and admin UI. */
 :root {
   --background: #070b1e;
