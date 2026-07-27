@@ -125,7 +125,7 @@ function renderTournaments() {
         description: "Sixteen gangs compete for the title.",
         bannerUrl: null,
         format: "SINGLE_ELIMINATION",
-        status: "DRAFT",
+        status: "IN_PROGRESS",
         startAt: "2026-08-12T18:00:00.000Z",
         endAt: null,
         registrationOpenAt: null,
@@ -269,7 +269,7 @@ describe("AdminCommandCenterPage record actions", () => {
     await waitFor(() =>
       expect(updateTournament).toHaveBeenCalledWith(
         "tournament-identifier-0001",
-        expect.objectContaining({ rules: null }),
+        { rules: null },
       ),
     );
   });

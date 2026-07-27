@@ -915,7 +915,7 @@ export function adminRoutes(app: FastifyInstance): void {
       const before = await prisma.tournament.findUniqueOrThrow({
         where: { id: request.params.id },
       });
-      if (input.status) {
+      if (input.status && input.status !== before.status) {
         assertTournamentTransition(before.status, input.status);
         if (input.status === "IN_PROGRESS") {
           await assertTournamentCanStart(prisma, before.id);

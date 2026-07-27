@@ -708,6 +708,23 @@ function payloadFor(kind: RecordKind, values: FormValues) {
   };
 }
 
+function changedPayloadFor(
+  kind: RecordKind,
+  values: FormValues,
+  record: AdminRecord,
+): Record<string, unknown> {
+  const next = payloadFor(kind, values) as Record<string, unknown>;
+  const previous = payloadFor(
+    kind,
+    valuesFromRecord(kind, record),
+  ) as Record<string, unknown>;
+  return Object.fromEntries(
+    Object.entries(next).filter(
+      ([key, value]) => JSON.stringify(value) !== JSON.stringify(previous[key]),
+    ),
+  );
+}
+
 function RecordTableCells({
   kind,
   record,
@@ -1338,13 +1355,13 @@ function RecordsManager({
     retry: false,
   });
   const gangs = useQuery({
-    queryKey: ["admin-records", "gang"],
+    queryKey: ["admin-record-options", "gang"],
     queryFn: api.adminGangs,
     enabled: kind === "match",
     retry: false,
   });
   const tournaments = useQuery({
-    queryKey: ["admin-records", "tournament"],
+    queryKey: ["admin-record-options", "tournament"],
     queryFn: api.adminTournaments,
     enabled: kind === "match",
     retry: false,
@@ -1381,8 +1398,11 @@ function RecordsManager({
 
   const save = useMutation({
     mutationFn: async () => {
-      const payload = payloadFor(kind, values);
+      const payload = selected
+        ? changedPayloadFor(kind, values, selected)
+        : payloadFor(kind, values);
       if (selected) {
+        if (Object.keys(payload).length === 0) return null;
         if (kind === "gang") return api.updateGang(selected.id, payload);
         if (kind === "player") return api.updatePlayer(selected.id, payload);
         if (kind === "tournament")
@@ -1688,7 +1708,7 @@ function StreamManager() {
     retry: false,
   });
   const tournaments = useQuery({
-    queryKey: ["admin-records", "tournament"],
+    queryKey: ["admin-record-options", "tournament"],
     queryFn: api.adminTournaments,
     retry: false,
   });
