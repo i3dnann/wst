@@ -126,7 +126,7 @@ const tournamentInputSchema = z
     registrationCloseAt: z.coerce.date().optional(),
     seasonId: z.string().min(20).max(40).nullable().optional(),
     maximumParticipants: z.number().int().min(2).max(256),
-    rules: z.string().trim().max(20_000).optional(),
+    rules: z.string().trim().max(20_000).nullable().optional(),
     prizeDescription: z.string().trim().max(1000).optional(),
     featured: z.boolean().default(false),
     publicVisible: z.boolean().default(true),

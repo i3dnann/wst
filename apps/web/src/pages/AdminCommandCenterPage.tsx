@@ -1,6 +1,7 @@
 import { Component, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  BookOpen,
   CalendarDays,
   FileClock,
   Gavel,
@@ -10,6 +11,7 @@ import {
   Plus,
   Radio,
   RefreshCw,
+  Save,
   Search,
   Settings,
   Shield,
@@ -407,6 +409,75 @@ function ToggleField({
   );
 }
 
+function TournamentRulesEditor({
+  values,
+  setValue,
+}: {
+  values: FormValues;
+  setValue: (name: string, value: string | boolean) => void;
+}) {
+  const rules = String(values.rules ?? "");
+  const hasRules = Boolean(rules.trim());
+
+  return (
+    <section className="tournament-rules-editor full-width">
+      <header>
+        <span className="tournament-rules-editor__icon">
+          <BookOpen aria-hidden="true" />
+        </span>
+        <div>
+          <span className="tournament-rules-editor__eyebrow">
+            Public tournament guide
+          </span>
+          <h3>Tournament Rules</h3>
+          <p>
+            Write one rule per line. Saved rules appear in a numbered section on
+            this tournament&apos;s public page.
+          </p>
+        </div>
+        <span
+          className={
+            hasRules
+              ? "tournament-rules-editor__status is-published"
+              : "tournament-rules-editor__status"
+          }
+        >
+          {hasRules ? "Ready to publish" : "No rules added"}
+        </span>
+      </header>
+      <label>
+        <span>Rules and requirements</span>
+        <textarea
+          aria-label="Tournament rules"
+          value={rules}
+          maxLength={20_000}
+          onChange={(event) => setValue("rules", event.target.value)}
+          placeholder={
+            "All gangs must check in 15 minutes before the match.\nRoster changes must be approved before the tournament starts.\nAdministrator decisions are final."
+          }
+        />
+      </label>
+      <footer>
+        <span>{rules.length.toLocaleString()} / 20,000 characters</span>
+        <div>
+          <Button
+            type="button"
+            variant="outline"
+            className="tournament-rules-editor__remove"
+            disabled={!hasRules}
+            onClick={() => setValue("rules", "")}
+          >
+            <Trash2 /> Delete rules
+          </Button>
+          <Button type="submit">
+            <Save /> Save rules
+          </Button>
+        </div>
+      </footer>
+    </section>
+  );
+}
+
 function blankValues(kind: RecordKind): FormValues {
   if (kind === "gang")
     return {
@@ -559,7 +630,7 @@ function payloadFor(kind: RecordKind, values: FormValues) {
       registrationCloseAt: toIso(String(values.registrationCloseAt ?? "")),
       seasonId: optional(String(values.seasonId ?? "")),
       maximumParticipants: Number(values.maximumParticipants),
-      rules: optional(String(values.rules ?? "")),
+      rules: optional(String(values.rules ?? "")) ?? null,
       prizeDescription: optional(String(values.prizeDescription ?? "")),
       featured: Boolean(values.featured),
       publicVisible: Boolean(values.publicVisible),
@@ -997,13 +1068,7 @@ function RecordEditorFields({
             onChange={(event) => setValue("description", event.target.value)}
           />
         </label>
-        <label className="full-width">
-          Rules
-          <textarea
-            value={String(values.rules ?? "")}
-            onChange={(event) => setValue("rules", event.target.value)}
-          />
-        </label>
+        <TournamentRulesEditor values={values} setValue={setValue} />
         <Field
           label="Prize description"
           name="prizeDescription"

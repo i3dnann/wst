@@ -2,7 +2,9 @@ import { useState, type CSSProperties } from "react";
 import { useQueries } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  BookOpen,
   CalendarDays,
+  Check,
   Shield,
   Swords,
   Trophy,
@@ -124,6 +126,10 @@ export default function TournamentDetailPage() {
         dateStyle: "medium",
       })
     : null;
+  const rules = (data.rules ?? "")
+    .split(/\r?\n+/)
+    .map((rule) => rule.trim().replace(/^(?:[-*•]\s+|\d+[.)]\s*)/, ""))
+    .filter(Boolean);
 
   return (
     <main className="gold-content-page tournament-detail-gold">
@@ -162,6 +168,54 @@ export default function TournamentDetailPage() {
         </div>
         <img src="/assets/wst/wst-logo.png" alt="World Star" />
       </header>
+
+      <section
+        className={
+          rules.length
+            ? "tournament-rules-public"
+            : "tournament-rules-public tournament-rules-public--empty"
+        }
+        aria-labelledby="tournament-rules-heading"
+      >
+        <header>
+          <span className="tournament-rules-public__icon">
+            <BookOpen aria-hidden="true" />
+          </span>
+          <div>
+            <span>Official competition guide</span>
+            <h2 id="tournament-rules-heading">Tournament Rules</h2>
+            <p>
+              Review the tournament requirements before registration and
+              check-in.
+            </p>
+          </div>
+          <strong>
+            {rules.length ? `${String(rules.length)} rules` : "Pending"}
+          </strong>
+        </header>
+        {rules.length ? (
+          <ol>
+            {rules.map((rule, index) => (
+              <li key={`${String(index)}-${rule}`}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <p>{rule}</p>
+                <Check aria-hidden="true" />
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <div className="tournament-rules-public__empty">
+            <BookOpen aria-hidden="true" />
+            <div>
+              <strong>Rules have not been published yet</strong>
+              <p>
+                The tournament administrator will publish the official rules
+                here before competition begins.
+              </p>
+            </div>
+          </div>
+        )}
+      </section>
 
       {rounds.length ? (
         <>

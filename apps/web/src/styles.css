@@ -3783,6 +3783,293 @@ video.gold-hero-image {
   }
 }
 
+/* Tournament-specific rule management and public tournament guide */
+.tournament-rules-editor {
+  position: relative;
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  overflow: hidden;
+  border: 1px solid rgb(239 64 88 / 0.28);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 100% 0, rgb(197 31 56 / 0.16), transparent 38%),
+    linear-gradient(145deg, rgb(18 10 13 / 0.96), rgb(8 8 11 / 0.98));
+}
+
+.tournament-rules-editor::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(#ef4058, #7d1021);
+}
+
+.tournament-rules-editor > header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+}
+
+.tournament-rules-editor__icon,
+.tournament-rules-public__icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgb(239 64 88 / 0.32);
+  border-radius: 12px;
+  background: rgb(197 31 56 / 0.1);
+  color: #ef4058;
+}
+
+.tournament-rules-editor__icon svg,
+.tournament-rules-public__icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.tournament-rules-editor__eyebrow,
+.tournament-rules-public > header > div > span {
+  color: #ef4058;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.tournament-rules-editor h3 {
+  margin: 5px 0 4px;
+  color: #fff;
+  font: 500 23px/1.05 var(--display);
+}
+
+.tournament-rules-editor header p {
+  max-width: 520px;
+  margin: 0;
+  color: #938b90;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.tournament-rules-editor__status {
+  padding: 7px 10px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 999px;
+  color: #827b80;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tournament-rules-editor__status.is-published {
+  border-color: rgb(239 64 88 / 0.35);
+  background: rgb(197 31 56 / 0.1);
+  color: #ff8b9c;
+}
+
+.admin-drawer-form .tournament-rules-editor label {
+  gap: 9px;
+  color: #d9d3d6;
+  font-size: 10px;
+}
+
+.admin-drawer-form .tournament-rules-editor textarea {
+  min-height: 210px;
+  padding: 15px 16px;
+  border-color: rgb(239 64 88 / 0.24);
+  background: rgb(4 4 7 / 0.76);
+  color: #f6f3f4;
+  font: 500 13px/1.7 var(--body);
+}
+
+.tournament-rules-editor > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.tournament-rules-editor > footer > span {
+  color: #756f73;
+  font-size: 10px;
+}
+
+.tournament-rules-editor > footer > div {
+  display: flex;
+  gap: 9px;
+}
+
+.tournament-rules-editor__remove {
+  color: #b7afb4;
+}
+
+.tournament-rules-public {
+  grid-column: 1 / -1;
+  position: relative;
+  display: grid;
+  gap: 22px;
+  padding: clamp(22px, 3vw, 38px);
+  overflow: hidden;
+  border: 1px solid rgb(239 64 88 / 0.25);
+  border-radius: 22px;
+  background:
+    linear-gradient(110deg, rgb(197 31 56 / 0.08), transparent 42%),
+    radial-gradient(circle at 96% 2%, rgb(197 31 56 / 0.18), transparent 30%),
+    rgb(8 8 11 / 0.98);
+}
+
+.tournament-rules-public::after {
+  content: "";
+  position: absolute;
+  top: -90px;
+  right: -40px;
+  width: 260px;
+  height: 260px;
+  border: 1px solid rgb(239 64 88 / 0.08);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 34px rgb(239 64 88 / 0.025),
+    0 0 0 68px rgb(239 64 88 / 0.018);
+  pointer-events: none;
+}
+
+.tournament-rules-public > header {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 15px;
+}
+
+.tournament-rules-public h2 {
+  margin: 5px 0 4px;
+  color: #fff;
+  font: 500 clamp(25px, 3vw, 38px) / 1 var(--display);
+}
+
+.tournament-rules-public > header p {
+  margin: 0;
+  color: #918a8f;
+  font-size: 12px;
+}
+
+.tournament-rules-public > header > strong {
+  padding: 8px 12px;
+  border: 1px solid rgb(239 64 88 / 0.24);
+  border-radius: 999px;
+  color: #ff7c90;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tournament-rules-public ol {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tournament-rules-public li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 12px;
+  min-height: 66px;
+  padding: 12px 14px;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 13px;
+  background: rgb(255 255 255 / 0.025);
+}
+
+.tournament-rules-public li > span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgb(239 64 88 / 0.25);
+  border-radius: 9px;
+  background: rgb(197 31 56 / 0.09);
+  color: #ef4058;
+  font: 700 11px/1 var(--body);
+}
+
+.tournament-rules-public li p {
+  margin: 0;
+  color: #d1cbd0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.tournament-rules-public li > svg {
+  width: 16px;
+  color: #ef4058;
+  opacity: 0.72;
+}
+
+.tournament-rules-public__empty {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px dashed rgb(239 64 88 / 0.22);
+  border-radius: 13px;
+  color: #ef4058;
+}
+
+.tournament-rules-public__empty > svg {
+  width: 24px;
+  flex: 0 0 auto;
+}
+
+.tournament-rules-public__empty strong {
+  color: #e8e3e6;
+  font-size: 13px;
+}
+
+.tournament-rules-public__empty p {
+  margin: 4px 0 0;
+  color: #8f888d;
+  font-size: 11px;
+}
+
+@media (max-width: 760px) {
+  .tournament-rules-editor > header,
+  .tournament-rules-public > header {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .tournament-rules-editor__status,
+  .tournament-rules-public > header > strong {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .tournament-rules-editor > footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .tournament-rules-editor > footer > div {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tournament-rules-public ol {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Website settings: public page access controls */
 .settings-card-grid > .page-lock-manager {
   grid-column: 1 / -1;

@@ -21,6 +21,8 @@ vi.mock("@/lib/api", () => ({
     publicSeasons: vi.fn(),
     disputeAssignees: vi.fn(),
     createGang: vi.fn(),
+    createTournament: vi.fn(),
+    updateTournament: vi.fn(),
     adminLiveStreams: vi.fn(),
     createLiveStream: vi.fn(),
     updateLiveStream: vi.fn(),
@@ -37,6 +39,7 @@ const adminPlayers = vi.mocked(api.adminPlayers);
 const adminMatches = vi.mocked(api.adminMatches);
 const disputeAssignees = vi.mocked(api.disputeAssignees);
 const createGang = vi.mocked(api.createGang);
+const updateTournament = vi.mocked(api.updateTournament);
 const adminLiveStreams = vi.mocked(api.adminLiveStreams);
 const createLiveStream = vi.mocked(api.createLiveStream);
 const refreshLiveStream = vi.mocked(api.refreshLiveStream);
@@ -92,6 +95,62 @@ function renderStreams() {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={["/admin/live-streams"]}>
+        <AdminCommandCenterPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+function renderTournaments() {
+  adminMe.mockResolvedValue({
+    data: {
+      id: "admin-user-identifier-001",
+      email: "admin@example.com",
+      displayName: "Administrator",
+      permissions: [
+        "tournament.read",
+        "tournament.create",
+        "tournament.update",
+        "tournament.archive",
+      ],
+    },
+    meta: { requestId: "test", timestamp: new Date().toISOString() },
+  });
+  vi.mocked(api.adminTournaments).mockResolvedValue({
+    data: [
+      {
+        id: "tournament-identifier-0001",
+        name: "World Star Cup",
+        slug: "world-star-cup",
+        description: "Sixteen gangs compete for the title.",
+        bannerUrl: null,
+        format: "SINGLE_ELIMINATION",
+        status: "DRAFT",
+        startAt: "2026-08-12T18:00:00.000Z",
+        endAt: null,
+        registrationOpenAt: null,
+        registrationCloseAt: null,
+        seasonId: null,
+        maximumParticipants: 16,
+        rules: "Check in before the match.\nRespect administrator decisions.",
+        prizeDescription: null,
+        featured: false,
+        publicVisible: true,
+        _count: { participants: 0, matches: 0 },
+      },
+    ],
+    meta: { requestId: "test", timestamp: new Date().toISOString() },
+  });
+  vi.mocked(api.publicSeasons).mockResolvedValue({
+    data: [],
+    meta: { requestId: "test", timestamp: new Date().toISOString() },
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={["/admin/tournaments"]}>
         <AdminCommandCenterPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -174,6 +233,30 @@ describe("AdminCommandCenterPage record actions", () => {
     expect(
       screen.queryByRole("button", { name: "Add Gang" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("edits and deletes tournament rules with an explicit null update", async () => {
+    updateTournament.mockResolvedValue({
+      data: { id: "tournament-identifier-0001", rules: null },
+      meta: { requestId: "test", timestamp: new Date().toISOString() },
+    });
+    renderTournaments();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Edit Tournament" }),
+    );
+    expect(screen.getByLabelText("Tournament rules")).toHaveValue(
+      "Check in before the match.\nRespect administrator decisions.",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Delete rules" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save rules" }));
+
+    await waitFor(() =>
+      expect(updateTournament).toHaveBeenCalledWith(
+        "tournament-identifier-0001",
+        expect.objectContaining({ rules: null }),
+      ),
+    );
   });
 
   it("creates a Kick stream from only the channel name", async () => {
