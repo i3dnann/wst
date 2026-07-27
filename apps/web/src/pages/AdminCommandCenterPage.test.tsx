@@ -235,7 +235,7 @@ describe("AdminCommandCenterPage record actions", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("edits and deletes tournament rules with an explicit null update", async () => {
+  it("manages up to 20 tournament rules and deletes them with a null update", async () => {
     updateTournament.mockResolvedValue({
       data: { id: "tournament-identifier-0001", rules: null },
       meta: { requestId: "test", timestamp: new Date().toISOString() },
@@ -245,10 +245,25 @@ describe("AdminCommandCenterPage record actions", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Edit Tournament" }),
     );
-    expect(screen.getByLabelText("Tournament rules")).toHaveValue(
-      "Check in before the match.\nRespect administrator decisions.",
+    expect(screen.getByLabelText("Rule 1")).toHaveValue(
+      "Check in before the match.",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Delete rules" }));
+    expect(screen.getByLabelText("Rule 2")).toHaveValue(
+      "Respect administrator decisions.",
+    );
+
+    for (let ruleNumber = 3; ruleNumber <= 20; ruleNumber += 1) {
+      fireEvent.click(screen.getByRole("button", { name: "Add Rule" }));
+      fireEvent.change(screen.getByLabelText(`Rule ${String(ruleNumber)}`), {
+        target: { value: `Tournament rule ${String(ruleNumber)}` },
+      });
+    }
+
+    expect(screen.getByText("20 / 20 added")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add Rule" })).toBeDisabled();
+    expect(screen.getAllByLabelText(/^Rule \d+$/)).toHaveLength(20);
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete all" }));
     fireEvent.click(screen.getByRole("button", { name: "Save rules" }));
 
     await waitFor(() =>

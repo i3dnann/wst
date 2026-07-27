@@ -416,8 +416,26 @@ function TournamentRulesEditor({
   values: FormValues;
   setValue: (name: string, value: string | boolean) => void;
 }) {
-  const rules = String(values.rules ?? "");
-  const hasRules = Boolean(rules.trim());
+  const serializedRules = String(values.rules ?? "");
+  const rules = (serializedRules ? serializedRules.split(/\r?\n/) : [""]).slice(
+    0,
+    20,
+  );
+  const ruleCount = rules.filter((rule) => Boolean(rule.trim())).length;
+  const hasRules = ruleCount > 0;
+  const updateRules = (nextRules: string[]) =>
+    setValue("rules", nextRules.slice(0, 20).join("\n"));
+  const updateRule = (index: number, value: string) => {
+    const nextRules = [...rules];
+    nextRules[index] = value.replace(/\r?\n/g, " ");
+    updateRules(nextRules);
+  };
+  const removeRule = (index: number) => {
+    const nextRules = rules.filter((_, ruleIndex) => ruleIndex !== index);
+    updateRules(nextRules.length ? nextRules : [""]);
+  };
+  const canAddRule =
+    rules.length < 20 && Boolean(rules[rules.length - 1]?.trim());
 
   return (
     <section className="tournament-rules-editor full-width">
@@ -431,7 +449,7 @@ function TournamentRulesEditor({
           </span>
           <h3>Tournament Rules</h3>
           <p>
-            Write one rule per line. Saved rules appear in a numbered section on
+            Add up to 20 separate rules. They publish as a numbered guide on
             this tournament&apos;s public page.
           </p>
         </div>
@@ -442,23 +460,43 @@ function TournamentRulesEditor({
               : "tournament-rules-editor__status"
           }
         >
-          {hasRules ? "Ready to publish" : "No rules added"}
+          {hasRules ? `${String(ruleCount)} / 20 added` : "No rules added"}
         </span>
       </header>
-      <label>
-        <span>Rules and requirements</span>
-        <textarea
-          aria-label="Tournament rules"
-          value={rules}
-          maxLength={20_000}
-          onChange={(event) => setValue("rules", event.target.value)}
-          placeholder={
-            "All gangs must check in 15 minutes before the match.\nRoster changes must be approved before the tournament starts.\nAdministrator decisions are final."
-          }
-        />
-      </label>
+      <div className="tournament-rule-list">
+        {rules.map((rule, index) => (
+          <article className="tournament-rule-row" key={String(index)}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <label>
+              <span>Rule {String(index + 1)}</span>
+              <textarea
+                aria-label={`Rule ${String(index + 1)}`}
+                value={rule}
+                rows={2}
+                maxLength={950}
+                onChange={(event) => updateRule(index, event.target.value)}
+                placeholder={
+                  index === 0
+                    ? "Example: All gangs must check in 15 minutes before the match."
+                    : "Write the next tournament rule."
+                }
+              />
+            </label>
+            <button
+              type="button"
+              aria-label={`Delete rule ${String(index + 1)}`}
+              onClick={() => removeRule(index)}
+            >
+              <Trash2 aria-hidden="true" />
+            </button>
+          </article>
+        ))}
+      </div>
       <footer>
-        <span>{rules.length.toLocaleString()} / 20,000 characters</span>
+        <span>
+          {String(ruleCount)} of 20 rules ·{" "}
+          {serializedRules.length.toLocaleString()} characters
+        </span>
         <div>
           <Button
             type="button"
@@ -467,7 +505,15 @@ function TournamentRulesEditor({
             disabled={!hasRules}
             onClick={() => setValue("rules", "")}
           >
-            <Trash2 /> Delete rules
+            <Trash2 /> Delete all
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!canAddRule}
+            onClick={() => updateRules([...rules, ""])}
+          >
+            <Plus /> Add Rule
           </Button>
           <Button type="submit">
             <Save /> Save rules

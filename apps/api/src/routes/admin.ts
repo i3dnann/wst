@@ -57,6 +57,17 @@ const recordStatusSchema = z.enum([
 const httpsUrlSchema = z.url().refine((value) => value.startsWith("https://"), {
   message: "Only HTTPS URLs are allowed.",
 });
+const tournamentRulesSchema = z
+  .string()
+  .trim()
+  .max(20_000)
+  .refine(
+    (value) =>
+      value.split(/\r?\n/).filter((rule) => Boolean(rule.trim())).length <= 20,
+    "A tournament can have a maximum of 20 rules.",
+  )
+  .nullable()
+  .optional();
 const gangInputSchema = z.object({
   name: z.string().trim().min(2).max(100),
   slug: slugSchema,
@@ -126,7 +137,7 @@ const tournamentInputSchema = z
     registrationCloseAt: z.coerce.date().optional(),
     seasonId: z.string().min(20).max(40).nullable().optional(),
     maximumParticipants: z.number().int().min(2).max(256),
-    rules: z.string().trim().max(20_000).nullable().optional(),
+    rules: tournamentRulesSchema,
     prizeDescription: z.string().trim().max(1000).optional(),
     featured: z.boolean().default(false),
     publicVisible: z.boolean().default(true),

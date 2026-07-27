@@ -65,6 +65,17 @@ describe("TournamentDetailPage rules", () => {
     expect(
       screen.getByText("Respect administrator decisions."),
     ).toBeInTheDocument();
+
+    const bracketHeading = screen.getByRole("heading", {
+      name: "The bracket has not been seeded",
+    });
+    const rulesHeading = screen.getByRole("heading", {
+      name: "Tournament Rules",
+    });
+    expect(
+      bracketHeading.compareDocumentPosition(rulesHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("keeps the rules section visible before rules are published", async () => {
