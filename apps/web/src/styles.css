@@ -9229,6 +9229,31 @@ textarea:focus-visible {
   width: 15px;
 }
 
+.admin-data-table .season-actions-cell {
+  width: 310px;
+  min-width: 310px;
+}
+
+.season-row-actions {
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.season-row-actions select {
+  width: 138px;
+  min-width: 138px;
+}
+
+.admin-row-actions.season-row-actions button {
+  display: inline-flex;
+  width: auto;
+  min-width: 142px;
+  height: 42px;
+  padding: 0 16px;
+  gap: 8px;
+  white-space: nowrap;
+}
+
 .admin-drawer-backdrop,
 .admin-confirm-backdrop {
   position: fixed;

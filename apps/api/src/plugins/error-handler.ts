@@ -54,7 +54,14 @@ export function registerErrorHandler(app: FastifyInstance): void {
                   code: "DEPENDENCY_CONFLICT",
                   message: "This operation is blocked by a related record.",
                 }
-              : null;
+              : error.code === "P2021" || error.code === "P2022"
+                ? {
+                    status: 503,
+                    code: "DATABASE_SCHEMA_OUTDATED",
+                    message:
+                      "The database schema is out of date. Apply the latest migrations and restart the API.",
+                  }
+                : null;
       if (mapped) {
         return reply.code(mapped.status).send({
           error: {

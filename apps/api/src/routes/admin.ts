@@ -7,6 +7,11 @@ import {
   generateOpeningRound,
   openingRoundSeedOrder,
 } from "../domain/bracket.js";
+import {
+  tournamentBannerInputSchema,
+  tournamentInputSchema,
+  tournamentUpdateInputSchema,
+} from "../domain/tournament-input.js";
 import { canManageTournamentParticipants } from "../domain/tournament.js";
 import { envelope } from "../lib/envelope.js";
 import {
@@ -58,20 +63,6 @@ const recordStatusSchema = z.enum([
 const httpsUrlSchema = z.url().refine((value) => value.startsWith("https://"), {
   message: "Only HTTPS URLs are allowed.",
 });
-const tournamentRulesSchema = z
-  .string()
-  .trim()
-  .max(20_000)
-  .refine(
-    (value) =>
-      value.split(/\r?\n/).filter((rule) => Boolean(rule.trim())).length <= 20,
-    "A tournament can have a maximum of 20 rules.",
-  )
-  .nullable()
-  .optional();
-const tournamentBannerInputSchema = z.object({
-  bannerUrl: httpsUrlSchema.nullable(),
-});
 const gangInputSchema = z.object({
   name: z.string().trim().min(2).max(100),
   slug: slugSchema,
@@ -111,71 +102,6 @@ const playerInputSchema = z.object({
   externalFivemId: z.string().trim().min(2).max(128).optional(),
   status: recordStatusSchema.default("ACTIVE"),
 });
-const tournamentInputSchema = z
-  .object({
-    name: z.string().trim().min(2).max(140),
-    slug: slugSchema,
-    description: z.string().trim().max(4000).optional(),
-    bannerUrl: httpsUrlSchema.optional(),
-    format: z.enum([
-      "SINGLE_ELIMINATION",
-      "DOUBLE_ELIMINATION",
-      "ROUND_ROBIN",
-      "GROUP_KNOCKOUT",
-      "CUSTOM",
-    ]),
-    status: z
-      .enum([
-        "DRAFT",
-        "REGISTRATION_OPEN",
-        "REGISTRATION_CLOSED",
-        "IN_PROGRESS",
-        "COMPLETED",
-        "CANCELLED",
-        "ARCHIVED",
-      ])
-      .default("DRAFT"),
-    startAt: z.coerce.date(),
-    endAt: z.coerce.date().optional(),
-    registrationOpenAt: z.coerce.date().optional(),
-    registrationCloseAt: z.coerce.date().optional(),
-    seasonId: z.string().min(20).max(40).nullable().optional(),
-    maximumParticipants: z.number().int().min(2).max(256),
-    rules: tournamentRulesSchema,
-    prizeDescription: z.string().trim().max(1000).optional(),
-    featured: z.boolean().default(false),
-    publicVisible: z.boolean().default(true),
-  })
-  .superRefine((value, context) => {
-    if (value.endAt && value.endAt <= value.startAt) {
-      context.addIssue({
-        code: "custom",
-        path: ["endAt"],
-        message: "End time must be after the start time.",
-      });
-    }
-    if (
-      value.registrationOpenAt &&
-      value.registrationCloseAt &&
-      value.registrationCloseAt <= value.registrationOpenAt
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["registrationCloseAt"],
-        message: "Registration close time must be after registration opens.",
-      });
-    }
-    if (
-      value.registrationCloseAt &&
-      value.registrationCloseAt > value.startAt
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["registrationCloseAt"],
-        message: "Registration must close before the tournament starts.",
-      });
-    }
-  });
 const matchInputSchema = z.object({
   tournamentId: z.string().min(20).max(40).optional(),
   gangAId: z.string().min(20).max(40).optional(),
@@ -915,7 +841,7 @@ export function adminRoutes(app: FastifyInstance): void {
     "/api/v1/admin/tournaments/:id",
     async (request) => {
       const auth = requirePermission(request, "tournament.update");
-      const input = tournamentInputSchema.partial().parse(request.body);
+      const input = tournamentUpdateInputSchema.parse(request.body);
       const before = await prisma.tournament.findUniqueOrThrow({
         where: { id: request.params.id },
       });

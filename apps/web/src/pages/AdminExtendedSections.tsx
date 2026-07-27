@@ -799,11 +799,11 @@ export function SeasonsManager() {
                   </td>
                   <td>{text(season, "status")}</td>
                   <td>
-                    {numberValue(count, "gangStats")} gangs ·{" "}
+                    {numberValue(count, "gangStats")} gangs {"\u00b7"}{" "}
                     {numberValue(count, "playerStats")} players
                   </td>
-                  <td>
-                    <div className="admin-row-actions">
+                  <td className="season-actions-cell">
+                    <div className="admin-row-actions season-row-actions">
                       <select
                         value={text(season, "status")}
                         onChange={(event) =>

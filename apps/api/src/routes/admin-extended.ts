@@ -3,6 +3,11 @@ import { v2 as cloudinary } from "cloudinary";
 import { Prisma } from "@prisma/client";
 import { permissions } from "@mafia/shared";
 import { z } from "zod";
+import {
+  seasonInputSchema,
+  seasonScoringConfigSchema,
+  seasonUpdateInputSchema,
+} from "../domain/season-input.js";
 import { envelope } from "../lib/envelope.js";
 import { env } from "../lib/env.js";
 import { recordAudit } from "../lib/audit.js";
@@ -42,37 +47,6 @@ const membershipUpdate = z.object({
   joinedAt: z.coerce.date().optional(),
   active: z.boolean().optional(),
 });
-
-const seasonInput = z
-  .object({
-    name: z.string().trim().min(2).max(120),
-    slug: z
-      .string()
-      .trim()
-      .min(2)
-      .max(80)
-      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-    status: z.enum(["DRAFT", "ACTIVE", "CLOSED", "ARCHIVED"]).default("DRAFT"),
-    startsAt: z.coerce.date(),
-    endsAt: z.coerce.date().nullable().optional(),
-    scoringConfigSnapshot: z.object({
-      win: z.number().int().min(-1_000).max(1_000),
-      draw: z.number().int().min(-1_000).max(1_000),
-      loss: z.number().int().min(-1_000).max(1_000),
-      kill: z.number().int().min(-1_000).max(1_000),
-      mvp: z.number().int().min(-1_000).max(1_000),
-      tournamentVictory: z.number().int().min(-10_000).max(10_000),
-    }),
-  })
-  .superRefine((value, context) => {
-    if (value.endsAt && value.endsAt <= value.startsAt) {
-      context.addIssue({
-        code: "custom",
-        path: ["endsAt"],
-        message: "Season end time must be after its start time.",
-      });
-    }
-  });
 
 const roleInput = z.object({
   name: z.string().trim().min(2).max(100),
@@ -416,7 +390,7 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
 
   app.post("/api/v1/admin/seasons", async (request, reply) => {
     const auth = requirePermission(request, "season.manage");
-    const input = seasonInput.parse(request.body);
+    const input = seasonInputSchema.parse(request.body);
     const season = await prisma.$transaction(async (tx) => {
       if (input.status === "ACTIVE")
         await tx.season.updateMany({
@@ -445,11 +419,21 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
     "/api/v1/admin/seasons/:id",
     async (request) => {
       const auth = requirePermission(request, "season.manage");
-      const input = seasonInput.partial().parse(request.body);
+      const input = seasonUpdateInputSchema.parse(request.body);
       const result = await prisma.$transaction(async (tx) => {
         const before = await tx.season.findUniqueOrThrow({
           where: { id: request.params.id },
         });
+        const startsAt = input.startsAt ?? before.startsAt;
+        const endsAt =
+          input.endsAt === undefined ? before.endsAt : input.endsAt;
+        if (endsAt && endsAt <= startsAt) {
+          throw new HttpError(
+            422,
+            "SEASON_DATES_INVALID",
+            "Season end time must be after its start time.",
+          );
+        }
         if (input.status === "ACTIVE")
           await tx.season.updateMany({
             where: { status: "ACTIVE", id: { not: before.id } },
@@ -499,7 +483,7 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
               "SEASON_NOT_FOUND",
               "Season was not found.",
             );
-          const config = seasonInput.shape.scoringConfigSnapshot.parse(
+          const config = seasonScoringConfigSchema.parse(
             season.scoringConfigSnapshot,
           );
           const matches = await tx.match.findMany({

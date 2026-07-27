@@ -8,18 +8,27 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/lib/api";
-import { WebsiteSettingsManager } from "./AdminExtendedSections";
+import {
+  SeasonsManager,
+  WebsiteSettingsManager,
+} from "./AdminExtendedSections";
 
 vi.mock("@/lib/api", () => ({
   api: {
     websiteSettings: vi.fn(),
     updateWebsiteSettings: vi.fn(),
+    seasons: vi.fn(),
+    createSeason: vi.fn(),
+    updateSeason: vi.fn(),
+    recalculateSeason: vi.fn(),
   },
   ApiError: class extends Error {},
 }));
 
 const websiteSettings = vi.mocked(api.websiteSettings);
 const updateWebsiteSettings = vi.mocked(api.updateWebsiteSettings);
+const seasons = vi.mocked(api.seasons);
+const updateSeason = vi.mocked(api.updateSeason);
 
 const savedSettings = {
   general: {
@@ -129,5 +138,56 @@ describe("WebsiteSettingsManager", () => {
     expect(general.websiteName).toBe("World Star Registry");
     expect(pageLocks.gangs).toBe(true);
     expect(social.discord).toBe("discord.gg/eZqaNx5P7y");
+  });
+});
+
+describe("SeasonsManager", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    seasons.mockResolvedValue({
+      data: [
+        {
+          id: "season-world-star-2026",
+          name: "World Star",
+          slug: "world-star",
+          status: "DRAFT",
+          startsAt: "2026-07-22T00:00:00.000Z",
+          _count: { tournaments: 0, gangStats: 0, playerStats: 0 },
+        },
+      ],
+      meta: { requestId: "test", timestamp: new Date().toISOString() },
+    });
+    updateSeason.mockResolvedValue({
+      data: { id: "season-world-star-2026", status: "ACTIVE" },
+      meta: { requestId: "test", timestamp: new Date().toISOString() },
+    });
+  });
+  afterEach(cleanup);
+
+  it("updates status and keeps both season actions readable", async () => {
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <SeasonsManager />
+      </QueryClientProvider>,
+    );
+
+    const status = await screen.findByDisplayValue("DRAFT");
+    const recalculate = screen.getByRole("button", { name: /recalculate/i });
+    expect(status.closest(".season-row-actions")).toContainElement(recalculate);
+    expect(status.closest("td")).toHaveClass("season-actions-cell");
+
+    fireEvent.change(status, { target: { value: "ACTIVE" } });
+
+    await waitFor(() =>
+      expect(updateSeason).toHaveBeenCalledWith("season-world-star-2026", {
+        status: "ACTIVE",
+      }),
+    );
   });
 });
