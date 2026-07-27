@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, LoaderCircle, LockKeyhole } from "lucide-react";
+import {
+  ArrowLeft,
+  KeyRound,
+  LoaderCircle,
+  LockKeyhole,
+  Mail,
+} from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ApiError, api } from "@/lib/api";
@@ -36,7 +42,7 @@ export default function LoginPage() {
   }, [navigate, returnTo, session.isSuccess]);
 
   const login = useMutation({
-    mutationFn: () => api.adminLogin(email, password),
+    mutationFn: () => api.adminLogin(email.trim(), password),
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: ["admin-me"] });
       void navigate(returnTo, { replace: true });
@@ -48,8 +54,10 @@ export default function LoginPage() {
     <main className="admin-login-page">
       <div className="admin-login-media" aria-hidden="true">
         <img src="/assets/wst-red/admin-office-red.jpg" alt="" />
+        <span className="admin-login-media-scan" />
       </div>
       <section className="admin-login-panel">
+        <span className="admin-login-panel-beam" aria-hidden="true" />
         <Link to="/" className="login-back">
           <ArrowLeft /> Return to public registry
         </Link>
@@ -58,7 +66,7 @@ export default function LoginPage() {
           src="/assets/wst/wst-logo.png"
           alt="World Star"
         />
-        <div>
+        <div className="admin-login-copy">
           <h1>ADMINISTRATOR ACCESS</h1>
           <p>Private credentials are required to edit published records.</p>
         </div>
@@ -79,25 +87,35 @@ export default function LoginPage() {
               }}
             >
               <label>
-                Email address
-                <input
-                  type="email"
-                  autoComplete="username"
-                  required
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
+                <span>Email address</span>
+                <span className="admin-login-field">
+                  <Mail aria-hidden="true" />
+                  <input
+                    type="email"
+                    autoComplete="username"
+                    inputMode="email"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    autoFocus
+                    required
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                  />
+                </span>
               </label>
               <label>
-                Password
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  minLength={12}
-                  required
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
+                <span>Password</span>
+                <span className="admin-login-field">
+                  <KeyRound aria-hidden="true" />
+                  <input
+                    type="password"
+                    autoComplete="current-password"
+                    minLength={12}
+                    required
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                </span>
               </label>
               {login.isError ? (
                 <p className="form-error" role="alert">

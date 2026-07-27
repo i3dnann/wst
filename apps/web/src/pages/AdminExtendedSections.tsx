@@ -997,9 +997,9 @@ const defaultSettings = {
   registrationRules: "",
   checkInDurationMinutes: 30,
   resultSubmissionMinutes: 60,
-  primaryColor: "#c51f38",
-  secondaryColor: "#6f0d1c",
-  accentColor: "#ef4058",
+  primaryColor: "#274272",
+  secondaryColor: "#171f55",
+  accentColor: "#6c90c3",
   backgroundMediaUrl: "",
   animationIntensity: "NORMAL",
   pageLocks: {
@@ -1094,11 +1094,17 @@ const pageLockDefinitions: ReadonlyArray<{
 ];
 
 const legacySettingsColors: Record<string, string> = {
-  "#b88a44": "#c51f38",
-  "#c89a52": "#c51f38",
-  "#5b3a20": "#6f0d1c",
-  "#d3ad68": "#ef4058",
-  "#d7c7a1": "#ef4058",
+  "#b88a44": "#274272",
+  "#c89a52": "#274272",
+  "#5b3a20": "#171f55",
+  "#d3ad68": "#6c90c3",
+  "#d7c7a1": "#6c90c3",
+  "#c51f38": "#274272",
+  "#ef4058": "#6c90c3",
+  "#6f0d1c": "#171f55",
+  "#e32046": "#274272",
+  "#ff496b": "#6c90c3",
+  "#760e25": "#171f55",
 };
 
 function modernSettingsColor(value: unknown, fallback: string) {

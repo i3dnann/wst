@@ -529,8 +529,8 @@ function blankValues(kind: RecordKind): FormValues {
     return {
       status: "ACTIVE",
       recruitmentStatus: "CLOSED",
-      primaryColor: "#c51f38",
-      secondaryColor: "#2f241a",
+      primaryColor: "#274272",
+      secondaryColor: "#171f55",
       verified: false,
       featured: false,
     };
@@ -559,8 +559,8 @@ function valuesFromRecord(kind: RecordKind, record: AdminRecord): FormValues {
       logoUrl: valueOf(record, "logoUrl"),
       bannerUrl: valueOf(record, "bannerUrl"),
       territory: valueOf(record, "territory"),
-      primaryColor: valueOf(record, "primaryColor") || "#c51f38",
-      secondaryColor: valueOf(record, "secondaryColor") || "#2f241a",
+      primaryColor: valueOf(record, "primaryColor") || "#274272",
+      secondaryColor: valueOf(record, "secondaryColor") || "#171f55",
       foundedAt: dateTimeInput(record.foundedAt).slice(0, 10),
       status: valueOf(record, "status"),
       recruitmentStatus: valueOf(record, "recruitmentStatus"),

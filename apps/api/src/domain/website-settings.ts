@@ -41,9 +41,9 @@ export const defaultWebsiteSettings: WebsiteSettings =
       resultSubmissionMinutes: 60,
     },
     branding: {
-      primaryColor: "#c51f38",
-      secondaryColor: "#6f0d1c",
-      accentColor: "#ef4058",
+      primaryColor: "#274272",
+      secondaryColor: "#171f55",
+      accentColor: "#6c90c3",
       backgroundMediaUrl: "",
       animationIntensity: "NORMAL",
     },

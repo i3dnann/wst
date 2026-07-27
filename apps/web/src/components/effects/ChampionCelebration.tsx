@@ -4,7 +4,7 @@ import { Trophy } from "lucide-react";
 
 const CELEBRATION_DURATION_MS = 3_000;
 const OVERLAY_DURATION_MS = 4_200;
-const CONFETTI_COLORS = ["#6f0d1c", "#c51f38", "#ef4058", "#ffffff"];
+const CONFETTI_COLORS = ["#0d1433", "#171f55", "#274272", "#6c90c3"];
 
 interface ChampionCelebrationProps {
   celebrationId: string;

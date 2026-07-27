@@ -48,11 +48,19 @@ const publicSiteUrl = (
 ).replace(/\/+$/, "");
 
 const legacyBrandColors: Record<string, string> = {
-  "#b88a44": "#c51f38",
-  "#c89a52": "#c51f38",
-  "#d3ad68": "#ef4058",
-  "#d7c7a1": "#ef4058",
-  "#5b3a20": "#6f0d1c",
+  "#b88a44": "#274272",
+  "#c89a52": "#274272",
+  "#d3ad68": "#6c90c3",
+  "#d7c7a1": "#6c90c3",
+  "#5b3a20": "#171f55",
+  "#c51f38": "#274272",
+  "#ef4058": "#6c90c3",
+  "#6f0d1c": "#171f55",
+  "#e32046": "#274272",
+  "#ff496b": "#6c90c3",
+  "#760e25": "#171f55",
+  "#d2273f": "#274272",
+  "#ff3b5c": "#6c90c3",
 };
 
 function currentBrandColor(value: string, fallback: string) {
@@ -244,15 +252,15 @@ export function PublicLayout() {
     ? ({
         "--brand-primary": currentBrandColor(
           settings.branding.primaryColor,
-          "#c51f38",
+          "#274272",
         ),
         "--brand-secondary": currentBrandColor(
           settings.branding.secondaryColor,
-          "#6f0d1c",
+          "#171f55",
         ),
         "--brand-accent": currentBrandColor(
           settings.branding.accentColor,
-          "#ef4058",
+          "#6c90c3",
         ),
       } as CSSProperties)
     : undefined;
