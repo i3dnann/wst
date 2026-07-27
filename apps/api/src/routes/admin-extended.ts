@@ -6,6 +6,7 @@ import { z } from "zod";
 import { envelope } from "../lib/envelope.js";
 import { env } from "../lib/env.js";
 import { recordAudit } from "../lib/audit.js";
+import { assertPermissionSuperset } from "../lib/authorization.js";
 import { HttpError } from "../lib/http-error.js";
 import { prisma } from "../lib/prisma.js";
 import { requirePermission } from "../middleware/authorize.js";
@@ -795,16 +796,25 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
       const input = roleInput.partial().parse(request.body);
       const before = await prisma.role.findUniqueOrThrow({
         where: { id: request.params.id },
+        include: {
+          permissions: {
+            select: { permission: { select: { key: true } } },
+          },
+        },
       });
+      assertPermissionSuperset(
+        auth.permissions,
+        before.permissions.map((relation) => relation.permission.key),
+      );
       if (
         before.name === "Super Administrator" &&
-        input.status &&
-        input.status !== "ACTIVE"
+        ((input.name !== undefined && input.name !== before.name) ||
+          (input.status !== undefined && input.status !== "ACTIVE"))
       )
         throw new HttpError(
           409,
           "SUPER_ROLE_PROTECTED",
-          "The Super Administrator role cannot be disabled.",
+          "The Super Administrator role cannot be renamed or disabled.",
         );
       const role = await prisma.role.update({
         where: { id: before.id },
@@ -833,6 +843,11 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
         .parse(request.body);
       const role = await prisma.role.findUniqueOrThrow({
         where: { id: request.params.id },
+        include: {
+          permissions: {
+            select: { permission: { select: { key: true } } },
+          },
+        },
       });
       if (role.name === "Super Administrator")
         throw new HttpError(
@@ -840,6 +855,24 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
           "SUPER_ROLE_PROTECTED",
           "The Super Administrator role always receives every permission from the seed.",
         );
+      const selectedPermissions = await prisma.permission.findMany({
+        where: { id: { in: input.permissionIds } },
+        select: { id: true, key: true },
+      });
+      if (selectedPermissions.length !== input.permissionIds.length)
+        throw new HttpError(
+          422,
+          "PERMISSION_INVALID",
+          "One or more selected permissions are unavailable.",
+        );
+      assertPermissionSuperset(
+        auth.permissions,
+        role.permissions.map((relation) => relation.permission.key),
+      );
+      assertPermissionSuperset(
+        auth.permissions,
+        selectedPermissions.map((permission) => permission.key),
+      );
       await prisma.$transaction(async (tx) => {
         await tx.rolePermission.deleteMany({ where: { roleId: role.id } });
         if (input.permissionIds.length)
@@ -868,6 +901,7 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
     "/api/v1/admin/administrators/:id/roles",
     async (request) => {
       const auth = requirePermission(request, "role.manage");
+      requirePermission(request, "user.manage");
       const input = z
         .object({
           roleIds: z
@@ -884,7 +918,21 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
         async (tx) => {
           const target = await tx.user.findUnique({
             where: { id: request.params.id },
-            select: { id: true },
+            select: {
+              id: true,
+              roles: {
+                where: { gangId: null, role: { status: "ACTIVE" } },
+                select: {
+                  role: {
+                    select: {
+                      permissions: {
+                        select: { permission: { select: { key: true } } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           });
           if (!target)
             throw new HttpError(
@@ -892,15 +940,35 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
               "ADMIN_NOT_FOUND",
               "Administrator not found.",
             );
-          const validRoles = await tx.role.count({
+          assertPermissionSuperset(
+            auth.permissions,
+            target.roles.flatMap((assignment) =>
+              assignment.role.permissions.map(
+                (relation) => relation.permission.key,
+              ),
+            ),
+          );
+          const validRoles = await tx.role.findMany({
             where: { id: { in: input.roleIds }, status: "ACTIVE" },
+            select: {
+              id: true,
+              permissions: {
+                select: { permission: { select: { key: true } } },
+              },
+            },
           });
-          if (validRoles !== input.roleIds.length)
+          if (validRoles.length !== input.roleIds.length)
             throw new HttpError(
               422,
               "ROLE_INVALID",
               "One or more selected roles are unavailable.",
             );
+          assertPermissionSuperset(
+            auth.permissions,
+            validRoles.flatMap((role) =>
+              role.permissions.map((relation) => relation.permission.key),
+            ),
+          );
           const superRole = await tx.role.findUnique({
             where: { name: "Super Administrator" },
             select: { id: true },
@@ -965,6 +1033,32 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
     "/api/v1/admin/administrators/:id/sessions",
     async (request, reply) => {
       const auth = requirePermission(request, "user.manage");
+      const target = await prisma.user.findUniqueOrThrow({
+        where: { id: request.params.id },
+        select: {
+          roles: {
+            where: { gangId: null, role: { status: "ACTIVE" } },
+            select: {
+              role: {
+                select: {
+                  permissions: {
+                    select: { permission: { select: { key: true } } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      if (request.params.id !== auth.userId)
+        assertPermissionSuperset(
+          auth.permissions,
+          target.roles.flatMap((assignment) =>
+            assignment.role.permissions.map(
+              (relation) => relation.permission.key,
+            ),
+          ),
+        );
       const result = await prisma.refreshToken.updateMany({
         where: { userId: request.params.id, revokedAt: null },
         data: { revokedAt: new Date() },
@@ -1016,6 +1110,15 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
         "MEDIA_UPLOAD_MISMATCH",
         "The Cloudinary upload does not match this media request.",
       );
+    const expectedResourceType = before.mimeType.startsWith("video/")
+      ? "video"
+      : "image";
+    if (input.resourceType !== expectedResourceType)
+      throw new HttpError(
+        400,
+        "MEDIA_TYPE_MISMATCH",
+        "The uploaded Cloudinary resource type does not match this media request.",
+      );
     if (!env.CLOUDINARY_CLOUD_NAME)
       throw new HttpError(
         503,
@@ -1024,10 +1127,18 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
       );
     const publicUrl = new URL(input.publicUrl);
     const expectedPrefix = `/${env.CLOUDINARY_CLOUD_NAME}/${input.resourceType}/upload/`;
+    const decodedPath = publicUrl.pathname;
+    const expectedAssetMarker = `/${input.publicId}.`;
     if (
       publicUrl.protocol !== "https:" ||
       publicUrl.hostname !== "res.cloudinary.com" ||
-      !publicUrl.pathname.startsWith(expectedPrefix)
+      !publicUrl.pathname.startsWith(expectedPrefix) ||
+      !decodedPath.includes(expectedAssetMarker) ||
+      decodedPath
+        .slice(
+          decodedPath.indexOf(expectedAssetMarker) + expectedAssetMarker.length,
+        )
+        .includes("/")
     )
       throw new HttpError(
         400,
@@ -1114,10 +1225,7 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
       const usedByWebsiteSettings =
         websiteSettings !== null &&
         JSON.stringify(websiteSettings.value).includes(before.publicUrl);
-      if (
-        references.some((count) => count > 0) ||
-        usedByWebsiteSettings
-      )
+      if (references.some((count) => count > 0) || usedByWebsiteSettings)
         throw new HttpError(
           409,
           "MEDIA_IN_USE",
@@ -1155,7 +1263,8 @@ export function adminExtendedRoutes(app: FastifyInstance): void {
         entityType: "MediaAsset",
         entityId: before.id,
         beforeData: before,
-        reason: "Unreferenced Cloudinary asset and media record permanently deleted.",
+        reason:
+          "Unreferenced Cloudinary asset and media record permanently deleted.",
       });
       return reply.code(204).send();
     },

@@ -236,14 +236,6 @@ function ComingSoonPage({
   );
 }
 
-function PublicAccessLoading() {
-  return (
-    <main className="public-access-loading" aria-label="Loading page access">
-      <span className="public-access-loading__mark" aria-hidden="true" />
-    </main>
-  );
-}
-
 export function PublicLayout() {
   const location = useLocation();
   const website = usePublicWebsiteSettings();
@@ -359,9 +351,7 @@ export function PublicLayout() {
         </header>
       ) : null}
 
-      {website.isPending ? (
-        <PublicAccessLoading />
-      ) : settings?.general.maintenanceMode ? (
+      {settings?.general.maintenanceMode ? (
         <MaintenancePage logoUrl={logoUrl} shortName={shortName} />
       ) : lockedPage ? (
         <ComingSoonPage

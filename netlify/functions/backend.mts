@@ -24,7 +24,7 @@ const ignoredResponseHeaders = new Set([
   "set-cookie",
 ]);
 
-function inferRequestedPath(event: NetlifyEvent) {
+export function inferRequestedPath(event: NetlifyEvent) {
   const queryPath = event.queryStringParameters?.path;
   if (queryPath) return queryPath;
 
@@ -45,6 +45,39 @@ function inferRequestedPath(event: NetlifyEvent) {
   }
 
   return "";
+}
+
+export function buildProxyDestination(
+  target: URL,
+  requestedPath: string,
+  query: Record<string, string | undefined> | null,
+): URL {
+  /*
+   * Assign the request path to URL.pathname instead of passing it to
+   * `new URL(path, base)`. The latter treats absolute and protocol-relative
+   * attacker input as a new origin, turning the function into an SSRF/open
+   * proxy and forwarding the visitor's cookies to that origin.
+   */
+  const destination = new URL(target);
+  const targetOrigin = destination.origin;
+  const targetBasePath = destination.pathname.replace(/\/+$/, "");
+  const relativePath = requestedPath.replace(/^\/+/, "");
+
+  destination.username = "";
+  destination.password = "";
+  destination.pathname = `${targetBasePath}/${relativePath}`;
+  destination.search = "";
+  destination.hash = "";
+
+  for (const [name, value] of Object.entries(query ?? {})) {
+    if (name !== "path" && value !== undefined)
+      destination.searchParams.append(name, value);
+  }
+
+  if (destination.origin !== targetOrigin) {
+    throw new Error("The API proxy destination escaped its configured origin.");
+  }
+  return destination;
 }
 
 function extractSetCookieHeaders(headers: Headers) {
@@ -101,16 +134,11 @@ export async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
     };
   }
   const requestedPath = inferRequestedPath(event);
-  const destination = new URL(
-    requestedPath.replace(/^\/+/, ""),
-    `${target.toString().replace(/\/$/, "")}/`,
+  const destination = buildProxyDestination(
+    target,
+    requestedPath,
+    event.queryStringParameters,
   );
-  for (const [name, value] of Object.entries(
-    event.queryStringParameters ?? {},
-  )) {
-    if (name !== "path" && value !== undefined)
-      destination.searchParams.append(name, value);
-  }
   const headers = new Headers();
   for (const [name, value] of Object.entries(event.headers)) {
     if (value && !ignoredRequestHeaders.has(name.toLowerCase()))

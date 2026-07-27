@@ -16,8 +16,12 @@ const app = Fastify({
   logger: { level: env.LOG_LEVEL },
   bodyLimit: 1_048_576,
   requestIdHeader: "x-request-id",
-  genReqId: (request) =>
-    request.headers["x-request-id"]?.toString() ?? crypto.randomUUID(),
+  genReqId: (request) => {
+    const supplied = request.headers["x-request-id"]?.toString();
+    return supplied && /^[A-Za-z0-9._:-]{1,128}$/.test(supplied)
+      ? supplied
+      : crypto.randomUUID();
+  },
   trustProxy: env.NODE_ENV === "production",
 });
 

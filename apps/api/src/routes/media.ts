@@ -15,11 +15,7 @@ const imageMimeTypes = [
   "image/webp",
   "image/gif",
 ] as const;
-const videoMimeTypes = [
-  "video/mp4",
-  "video/webm",
-  "video/quicktime",
-] as const;
+const videoMimeTypes = ["video/mp4", "video/webm", "video/quicktime"] as const;
 const acceptedMimeTypes = [...imageMimeTypes, ...videoMimeTypes] as const;
 
 const uploadRequestSchema = z
@@ -37,14 +33,15 @@ const uploadRequestSchema = z
     ]),
     filename: z.string().trim().min(1).max(180),
     mimeType: z.enum(acceptedMimeTypes),
-    size: z.number().int().positive().max(100 * 1024 * 1024),
+    size: z
+      .number()
+      .int()
+      .positive()
+      .max(100 * 1024 * 1024),
     gangId: z.string().min(20).max(40).optional(),
   })
   .superRefine((value, context) => {
-    if (
-      value.mimeType.startsWith("image/") &&
-      value.size > 12 * 1024 * 1024
-    ) {
+    if (value.mimeType.startsWith("image/") && value.size > 12 * 1024 * 1024) {
       context.addIssue({
         code: "custom",
         path: ["size"],
@@ -73,53 +70,57 @@ function cloudinaryCredentials() {
 }
 
 export function mediaRoutes(app: FastifyInstance): void {
-  app.post("/api/v1/media/upload-intent", async (request) => {
-    const auth = requirePermission(request, "media.upload");
-    const input = uploadRequestSchema.parse(request.body);
-    const credentials = cloudinaryCredentials();
-    const resourceType = input.mimeType.startsWith("video/")
-      ? "video"
-      : "image";
-    const date = new Date().toISOString().slice(0, 10);
-    const publicId = `${env.CLOUDINARY_FOLDER}/${input.category}/${date}/${crypto.randomUUID()}`;
-    const timestamp = Math.floor(Date.now() / 1000);
-    const signature = cloudinary.utils.api_sign_request(
-      { public_id: publicId, timestamp },
-      credentials.apiSecret,
-    );
+  app.post(
+    "/api/v1/media/upload-intent",
+    { config: { rateLimit: { max: 30, timeWindow: "10 minutes" } } },
+    async (request) => {
+      const auth = requirePermission(request, "media.upload");
+      const input = uploadRequestSchema.parse(request.body);
+      const credentials = cloudinaryCredentials();
+      const resourceType = input.mimeType.startsWith("video/")
+        ? "video"
+        : "image";
+      const date = new Date().toISOString().slice(0, 10);
+      const publicId = `${env.CLOUDINARY_FOLDER}/${input.category}/${date}/${crypto.randomUUID()}`;
+      const timestamp = Math.floor(Date.now() / 1000);
+      const signature = cloudinary.utils.api_sign_request(
+        { public_id: publicId, timestamp },
+        credentials.apiSecret,
+      );
 
-    const media = await prisma.mediaAsset.create({
-      data: {
-        uploaderUserId: auth.userId,
-        gangId: input.gangId ?? null,
-        category: input.category,
-        originalFilename: input.filename,
-        storageKey: publicId,
-        publicUrl: `pending:${publicId}`,
-        mimeType: input.mimeType,
-        size: input.size,
-      },
-    });
-    await recordAudit({
-      actorUserId: auth.userId,
-      action: "media.upload.intent.create",
-      entityType: "MediaAsset",
-      entityId: media.id,
-      afterData: media,
-    });
+      const media = await prisma.mediaAsset.create({
+        data: {
+          uploaderUserId: auth.userId,
+          gangId: input.gangId ?? null,
+          category: input.category,
+          originalFilename: input.filename,
+          storageKey: publicId,
+          publicUrl: `pending:${publicId}`,
+          mimeType: input.mimeType,
+          size: input.size,
+        },
+      });
+      await recordAudit({
+        actorUserId: auth.userId,
+        action: "media.upload.intent.create",
+        entityType: "MediaAsset",
+        entityId: media.id,
+        afterData: media,
+      });
 
-    return envelope(request, {
-      mediaAssetId: media.id,
-      uploadUrl: `https://api.cloudinary.com/v1_1/${encodeURIComponent(credentials.cloudName)}/${resourceType}/upload`,
-      cloudName: credentials.cloudName,
-      apiKey: credentials.apiKey,
-      publicId,
-      resourceType,
-      timestamp,
-      signature,
-      acceptedMimeTypes,
-      maximumBytes:
-        resourceType === "video" ? 100 * 1024 * 1024 : 12 * 1024 * 1024,
-    });
-  });
+      return envelope(request, {
+        mediaAssetId: media.id,
+        uploadUrl: `https://api.cloudinary.com/v1_1/${encodeURIComponent(credentials.cloudName)}/${resourceType}/upload`,
+        cloudName: credentials.cloudName,
+        apiKey: credentials.apiKey,
+        publicId,
+        resourceType,
+        timestamp,
+        signature,
+        acceptedMimeTypes,
+        maximumBytes:
+          resourceType === "video" ? 100 * 1024 * 1024 : 12 * 1024 * 1024,
+      });
+    },
+  );
 }

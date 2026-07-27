@@ -90,7 +90,7 @@ function setSessionCookies(
     path: "/",
     secure: env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 900,
+    maxAge: 30 * 24 * 60 * 60,
   });
 }
 
@@ -175,40 +175,61 @@ export function authRoutes(app: FastifyInstance): void {
       const stored = await prisma.refreshToken.findUnique({
         where: { tokenHash: hashToken(current) },
       });
-      if (!stored || stored.revokedAt || stored.expiresAt <= new Date())
+      if (!stored || stored.expiresAt <= new Date())
         throw new HttpError(
           401,
           "REFRESH_INVALID",
           "Refresh session is invalid or expired.",
         );
+      if (stored.revokedAt) {
+        await prisma.refreshToken.updateMany({
+          where: { userId: stored.userId, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+        throw new HttpError(
+          401,
+          "REFRESH_REUSED",
+          "This refresh session was already rotated. Sign in again.",
+        );
+      }
       const replacement = crypto.randomBytes(48).toString("base64url");
-      await prisma.$transaction(
-        async (tx) => {
-          const revoked = await tx.refreshToken.updateMany({
-            where: {
-              id: stored.id,
-              revokedAt: null,
-              expiresAt: { gt: new Date() },
-            },
+      try {
+        await prisma.$transaction(
+          async (tx) => {
+            const revoked = await tx.refreshToken.updateMany({
+              where: {
+                id: stored.id,
+                revokedAt: null,
+                expiresAt: { gt: new Date() },
+              },
+              data: { revokedAt: new Date() },
+            });
+            if (revoked.count !== 1)
+              throw new HttpError(
+                401,
+                "REFRESH_REUSED",
+                "This refresh session was already rotated. Sign in again.",
+              );
+            await tx.refreshToken.create({
+              data: {
+                userId: stored.userId,
+                tokenHash: hashToken(replacement),
+                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                metadata: { rotatedFrom: stored.id },
+              },
+            });
+          },
+          { isolationLevel: "Serializable" },
+        );
+      } catch (error) {
+        if (error instanceof HttpError && error.code === "REFRESH_REUSED") {
+          await prisma.refreshToken.updateMany({
+            where: { userId: stored.userId, revokedAt: null },
             data: { revokedAt: new Date() },
           });
-          if (revoked.count !== 1)
-            throw new HttpError(
-              401,
-              "REFRESH_REUSED",
-              "This refresh session was already rotated. Sign in again.",
-            );
-          await tx.refreshToken.create({
-            data: {
-              userId: stored.userId,
-              tokenHash: hashToken(replacement),
-              expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-              metadata: { rotatedFrom: stored.id },
-            },
-          });
-        },
-        { isolationLevel: "Serializable" },
-      );
+        }
+        throw error;
+      }
       const accessToken = await createAccessToken(stored.userId);
       const csrf = crypto.randomBytes(24).toString("base64url");
       setSessionCookies(reply, accessToken, replacement, csrf);

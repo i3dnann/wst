@@ -23,6 +23,7 @@ vi.mock("@/lib/api", () => ({
     createGang: vi.fn(),
     createTournament: vi.fn(),
     updateTournament: vi.fn(),
+    updateTournamentBanner: vi.fn(),
     adminLiveStreams: vi.fn(),
     createLiveStream: vi.fn(),
     updateLiveStream: vi.fn(),
@@ -40,6 +41,7 @@ const adminMatches = vi.mocked(api.adminMatches);
 const disputeAssignees = vi.mocked(api.disputeAssignees);
 const createGang = vi.mocked(api.createGang);
 const updateTournament = vi.mocked(api.updateTournament);
+const updateTournamentBanner = vi.mocked(api.updateTournamentBanner);
 const adminLiveStreams = vi.mocked(api.adminLiveStreams);
 const createLiveStream = vi.mocked(api.createLiveStream);
 const refreshLiveStream = vi.mocked(api.refreshLiveStream);
@@ -272,6 +274,40 @@ describe("AdminCommandCenterPage record actions", () => {
         { rules: null },
       ),
     );
+  });
+
+  it("updates a tournament banner through the isolated banner endpoint", async () => {
+    updateTournamentBanner.mockResolvedValue({
+      data: {
+        id: "tournament-identifier-0001",
+        bannerUrl:
+          "https://res.cloudinary.com/world-star/image/upload/v1/tournaments/cup.webp",
+      },
+      meta: { requestId: "test", timestamp: new Date().toISOString() },
+    });
+    renderTournaments();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Edit Tournament" }),
+    );
+    fireEvent.change(
+      screen.getByLabelText("Tournament banner Cloudinary URL"),
+      {
+        target: {
+          value:
+            "https://res.cloudinary.com/world-star/image/upload/v1/tournaments/cup.webp",
+        },
+      },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    await waitFor(() =>
+      expect(updateTournamentBanner).toHaveBeenCalledWith(
+        "tournament-identifier-0001",
+        "https://res.cloudinary.com/world-star/image/upload/v1/tournaments/cup.webp",
+      ),
+    );
+    expect(updateTournament).not.toHaveBeenCalled();
   });
 
   it("creates a Kick stream from only the channel name", async () => {

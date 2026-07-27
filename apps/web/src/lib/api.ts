@@ -17,6 +17,14 @@ const API_BASE_URL =
   (import.meta.env.DEV ? DEV_API_BASE_URL : "/backend");
 
 let refreshPromise: Promise<boolean> | null = null;
+const DEFAULT_REQUEST_TIMEOUT_MS = 8_000;
+
+function csrfToken(): string | undefined {
+  return document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith("wst_csrf="))
+    ?.split("=")[1];
+}
 
 export class ApiError extends Error {
   constructor(
@@ -30,10 +38,42 @@ export class ApiError extends Error {
   }
 }
 
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutError = new ApiError(
+    408,
+    "The registry took too long to respond. Please try again.",
+    "REQUEST_TIMEOUT",
+  );
+  const abortFromCaller = () => {
+    controller.abort();
+  };
+  if (init?.signal?.aborted) abortFromCaller();
+  else init?.signal?.addEventListener("abort", abortFromCaller, { once: true });
+  const timeout = window.setTimeout(() => {
+    controller.abort(timeoutError);
+  }, timeoutMs);
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.reason === timeoutError) throw timeoutError;
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+    init?.signal?.removeEventListener("abort", abortFromCaller);
+  }
+}
+
 export async function apiRequest<T>(
   path: string,
   init?: RequestInit,
   retryAfterRefresh = true,
+  timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
 ): Promise<T> {
   const headers = new Headers(init?.headers);
   const isFormData =
@@ -44,18 +84,19 @@ export async function apiRequest<T>(
     headers.set("content-type", "application/json");
   }
   if (init?.method && !["GET", "HEAD"].includes(init.method.toUpperCase())) {
-    const csrf = document.cookie
-      .split("; ")
-      .find((entry) => entry.startsWith("wst_csrf="))
-      ?.split("=")[1];
+    const csrf = csrfToken();
     if (csrf) headers.set("x-csrf-token", decodeURIComponent(csrf));
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    credentials: "include",
-    headers,
-  });
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}${path}`,
+    {
+      ...init,
+      credentials: "include",
+      headers,
+    },
+    timeoutMs,
+  );
   const body = (await response.json().catch(() => null)) as {
     error?: {
       code?: string;
@@ -70,16 +111,27 @@ export async function apiRequest<T>(
     !path.endsWith("/auth/login") &&
     !path.endsWith("/auth/refresh")
   ) {
-    refreshPromise ??= fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+    const refreshCsrf = csrfToken();
+    const refreshInit: RequestInit = {
       method: "POST",
       credentials: "include",
-    })
+    };
+    if (refreshCsrf)
+      refreshInit.headers = {
+        "x-csrf-token": decodeURIComponent(refreshCsrf),
+      };
+    refreshPromise ??= fetchWithTimeout(
+      `${API_BASE_URL}/api/v1/auth/refresh`,
+      refreshInit,
+      timeoutMs,
+    )
       .then((refresh) => refresh.ok)
       .catch(() => false)
       .finally(() => {
         refreshPromise = null;
       });
-    if (await refreshPromise) return apiRequest<T>(path, init, false);
+    if (await refreshPromise)
+      return apiRequest<T>(path, init, false, timeoutMs);
   }
   if (!response.ok)
     throw new ApiError(
@@ -250,12 +302,14 @@ export const api = {
     apiRequest<ApiEnvelope<RealtimeSnapshot>>(
       `/api/v1/realtime?cursor=${encodeURIComponent(String(cursor))}`,
       signal ? { signal } : undefined,
+      true,
+      30_000,
     ),
   home: () => apiRequest<ApiEnvelope<HomeData>>("/api/v1/public/home"),
-  publicSettings: () =>
+  publicSettings: (signal?: AbortSignal) =>
     apiRequest<
       ApiEnvelope<{ value: WebsiteSettings | null; updatedAt: string | null }>
-    >("/api/v1/public/settings"),
+    >("/api/v1/public/settings", signal ? { signal } : undefined),
   gangs: (query = "") =>
     apiRequest<ApiEnvelope<GangListItem[]>>(
       `/api/v1/gangs${query ? `?${query}` : ""}`,
@@ -365,6 +419,11 @@ export const api = {
     apiRequest<ApiEnvelope<Record<string, unknown>>>(
       `/api/v1/admin/tournaments/${encodeURIComponent(id)}`,
       { method: "PATCH", body: JSON.stringify(input) },
+    ),
+  updateTournamentBanner: (id: string, bannerUrl: string | null) =>
+    apiRequest<ApiEnvelope<Record<string, unknown>>>(
+      `/api/v1/admin/tournaments/${encodeURIComponent(id)}/banner`,
+      { method: "PATCH", body: JSON.stringify({ bannerUrl }) },
     ),
   archiveTournament: (id: string) =>
     apiRequest<unknown>(`/api/v1/admin/tournaments/${encodeURIComponent(id)}`, {

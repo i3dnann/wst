@@ -1,6 +1,5 @@
 import { lazy, Suspense, type KeyboardEvent, type WheelEvent } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { AnimatePresence, motion } from "motion/react";
 import { PublicLayout } from "./components/layout/PublicLayout";
 import { PageSkeleton } from "./components/data/StatusState";
 import { RealtimeBridge } from "./components/realtime/RealtimeBridge";
@@ -57,75 +56,61 @@ export function App() {
       <ScrollRevealController routeKey={location.pathname} />
       <div className="global-atmosphere" aria-hidden="true">
         <span />
-        <span />
-        <span />
       </div>
-      <AnimatePresence mode="wait">
-        <motion.div
-          className="route-stage"
-          key={admin ? "admin" : "public"}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.22 }}
-          onKeyDownCapture={guardIntegerInput}
-          onWheelCapture={preventNumberWheelChange}
-        >
-          <Suspense fallback={<PageSkeleton />}>
-            <Routes location={location}>
-              <Route element={<PublicLayout />}>
-                <Route index element={<HomePage />} />
-                <Route path="gangs" element={<GangsPage />} />
-                <Route path="gangs/:slug" element={<GangDetailPage />} />
-                <Route
-                  path="players"
-                  element={<DirectoryPage type="players" />}
-                />
-                <Route
-                  path="players/:slug"
-                  element={<DirectoryPage type="player-profile" />}
-                />
-                <Route path="tournaments" element={<TournamentsPage />} />
-                <Route
-                  path="tournaments/:slug"
-                  element={<TournamentDetailPage />}
-                />
-                <Route path="rankings" element={<RankingsPage />} />
-                <Route path="events" element={<EventsPage />} />
-                <Route path="live" element={<LivePage />} />
-                <Route
-                  path="matches"
-                  element={<DirectoryPage type="matches" />}
-                />
-                <Route
-                  path="matches/:id"
-                  element={<DirectoryPage type="match-detail" />}
-                />
-                <Route
-                  path="login"
-                  element={<Navigate to="/admin/login" replace />}
-                />
-                <Route
-                  path="rules"
-                  element={<InformationPage kind="rules" />}
-                />
-                <Route
-                  path="about"
-                  element={<InformationPage kind="about" />}
-                />
-                <Route
-                  path="dashboard/*"
-                  element={<InformationPage kind="dashboard" />}
-                />
-                <Route path="*" element={<Navigate to="/404" replace />} />
-              </Route>
-              <Route path="404" element={<NotFoundPage />} />
-              <Route path="admin/login" element={<LoginPage />} />
-              <Route path="admin/*" element={<AdminPage />} />
-            </Routes>
-          </Suspense>
-        </motion.div>
-      </AnimatePresence>
+      <div
+        className="route-stage"
+        key={admin ? "admin" : "public"}
+        onKeyDownCapture={guardIntegerInput}
+        onWheelCapture={preventNumberWheelChange}
+      >
+        <Suspense fallback={<PageSkeleton />}>
+          <Routes location={location}>
+            <Route element={<PublicLayout />}>
+              <Route index element={<HomePage />} />
+              <Route path="gangs" element={<GangsPage />} />
+              <Route path="gangs/:slug" element={<GangDetailPage />} />
+              <Route
+                path="players"
+                element={<DirectoryPage type="players" />}
+              />
+              <Route
+                path="players/:slug"
+                element={<DirectoryPage type="player-profile" />}
+              />
+              <Route path="tournaments" element={<TournamentsPage />} />
+              <Route
+                path="tournaments/:slug"
+                element={<TournamentDetailPage />}
+              />
+              <Route path="rankings" element={<RankingsPage />} />
+              <Route path="events" element={<EventsPage />} />
+              <Route path="live" element={<LivePage />} />
+              <Route
+                path="matches"
+                element={<DirectoryPage type="matches" />}
+              />
+              <Route
+                path="matches/:id"
+                element={<DirectoryPage type="match-detail" />}
+              />
+              <Route
+                path="login"
+                element={<Navigate to="/admin/login" replace />}
+              />
+              <Route path="rules" element={<InformationPage kind="rules" />} />
+              <Route path="about" element={<InformationPage kind="about" />} />
+              <Route
+                path="dashboard/*"
+                element={<InformationPage kind="dashboard" />}
+              />
+              <Route path="*" element={<Navigate to="/404" replace />} />
+            </Route>
+            <Route path="404" element={<NotFoundPage />} />
+            <Route path="admin/login" element={<LoginPage />} />
+            <Route path="admin/*" element={<AdminPage />} />
+          </Routes>
+        </Suspense>
+      </div>
     </>
   );
 }

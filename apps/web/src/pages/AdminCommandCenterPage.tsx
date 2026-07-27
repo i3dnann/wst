@@ -714,10 +714,10 @@ function changedPayloadFor(
   record: AdminRecord,
 ): Record<string, unknown> {
   const next = payloadFor(kind, values) as Record<string, unknown>;
-  const previous = payloadFor(
-    kind,
-    valuesFromRecord(kind, record),
-  ) as Record<string, unknown>;
+  const previous = payloadFor(kind, valuesFromRecord(kind, record)) as Record<
+    string,
+    unknown
+  >;
   return Object.fromEntries(
     Object.entries(next).filter(
       ([key, value]) => JSON.stringify(value) !== JSON.stringify(previous[key]),
@@ -1405,8 +1405,24 @@ function RecordsManager({
         if (Object.keys(payload).length === 0) return null;
         if (kind === "gang") return api.updateGang(selected.id, payload);
         if (kind === "player") return api.updatePlayer(selected.id, payload);
-        if (kind === "tournament")
-          return api.updateTournament(selected.id, payload);
+        if (kind === "tournament") {
+          const hasBannerUpdate = Object.prototype.hasOwnProperty.call(
+            payload,
+            "bannerUrl",
+          );
+          const bannerUrl =
+            typeof payload.bannerUrl === "string" ? payload.bannerUrl : null;
+          const tournamentPayload = { ...payload };
+          delete tournamentPayload.bannerUrl;
+          let result: unknown = null;
+          if (Object.keys(tournamentPayload).length > 0) {
+            result = await api.updateTournament(selected.id, tournamentPayload);
+          }
+          if (hasBannerUpdate) {
+            result = await api.updateTournamentBanner(selected.id, bannerUrl);
+          }
+          return result;
+        }
         if (kind === "match") {
           return api.updateMatch(selected.id, payload);
         }

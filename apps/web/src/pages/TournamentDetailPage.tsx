@@ -285,11 +285,6 @@ export default function TournamentDetailPage() {
         <section className="bracket-empty-gold">
           <Trophy />
           <h2>The bracket has not been seeded</h2>
-          <p>
-            The administrator can add any approved number of gangs, set their
-            seeds, and generate the complete elimination bracket with automatic
-            byes.
-          </p>
         </section>
       )}
 

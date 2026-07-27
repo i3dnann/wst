@@ -5,17 +5,16 @@ import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import type { FastifyInstance } from "fastify";
 import { jwtVerify } from "jose";
-import { permissions, type Permission } from "@mafia/shared";
 import { z } from "zod";
+import { currentAuthorization } from "../lib/authorization.js";
 import { env } from "../lib/env.js";
+import { prisma } from "../lib/prisma.js";
 
 const accessClaimsSchema = z.object({
   sub: z.string().min(20).max(40),
   permissions: z.array(z.string()).max(200),
   gangScopes: z.array(z.string().min(20).max(40)).max(500),
 });
-const permissionKeys = new Set<string>(Object.values(permissions));
-
 export async function registerSecurity(app: FastifyInstance): Promise<void> {
   await app.register(cookie, { secret: env.SESSION_SECRET, hook: "onRequest" });
   await app.register(cors, {
@@ -54,17 +53,30 @@ export async function registerSecurity(app: FastifyInstance): Promise<void> {
           },
         );
         const claims = accessClaimsSchema.parse(verified.payload);
-        const granted = claims.permissions.filter(
-          (permission): permission is Permission =>
-            permissionKeys.has(permission),
-        );
-        if (granted.length !== claims.permissions.length)
-          throw new Error("JWT contains an unknown permission.");
-        request.auth = {
-          userId: claims.sub,
-          permissions: new Set(granted),
-          gangScopes: new Set(claims.gangScopes),
-        };
+        const user = await prisma.user.findUnique({
+          where: { id: claims.sub },
+          select: {
+            status: true,
+            roles: {
+              where: { role: { status: "ACTIVE" } },
+              select: {
+                gangId: true,
+                role: {
+                  select: {
+                    permissions: {
+                      select: {
+                        permission: { select: { key: true } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+        const authorization = currentAuthorization(claims.sub, user);
+        if (!authorization) throw new Error("Administrator is unavailable.");
+        request.auth = authorization;
       } catch {
         reply.clearCookie("wst_access", { path: "/" });
       }
@@ -81,7 +93,10 @@ export async function registerSecurity(app: FastifyInstance): Promise<void> {
           Buffer.from(csrfCookie),
           Buffer.from(csrfHeader),
         );
-      if (request.auth && !csrfMatches) {
+      const path = request.url.split("?", 1)[0];
+      const sessionMutation =
+        path === "/api/v1/auth/refresh" || path === "/api/v1/auth/logout";
+      if ((request.auth || sessionMutation) && !csrfMatches) {
         return reply.code(403).send({
           error: {
             code: "CSRF_INVALID",

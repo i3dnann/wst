@@ -16,8 +16,6 @@ const revealSelector = [
   ".control-main > section",
   ".control-main > div",
   ".control-metrics > article",
-  ".admin-data-table tbody tr",
-  ".bracket-match-card",
 ].join(",");
 
 export function ScrollRevealController({ routeKey }: { routeKey: string }) {
@@ -27,45 +25,19 @@ export function ScrollRevealController({ routeKey }: { routeKey: string }) {
       "(prefers-reduced-motion: reduce)",
     ).matches;
     const observed = new Set<Element>();
-    let lastScrollY = window.scrollY;
-    let scrollTick = 0;
     let scanTick = 0;
 
     root.classList.add("ws-motion-ready");
-    root.dataset.scrollDirection = "down";
-
-    const updateDirection = () => {
-      scrollTick = 0;
-      const currentScrollY = window.scrollY;
-      if (Math.abs(currentScrollY - lastScrollY) > 2) {
-        root.dataset.scrollDirection =
-          currentScrollY > lastScrollY ? "down" : "up";
-        lastScrollY = currentScrollY;
-      }
-    };
-
-    const onScroll = () => {
-      if (!scrollTick) {
-        scrollTick = window.requestAnimationFrame(updateDirection);
-      }
-    };
 
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           const element = entry.target as HTMLElement;
-          const direction = root.dataset.scrollDirection ?? "down";
           if (entry.isIntersecting || reducedMotion) {
-            element.dataset.revealFrom = direction;
             window.requestAnimationFrame(() => {
               element.classList.add("is-revealed");
             });
-          } else if (
-            entry.boundingClientRect.bottom < -24 ||
-            entry.boundingClientRect.top > window.innerHeight + 24
-          ) {
-            element.dataset.revealFrom = direction;
-            element.classList.remove("is-revealed");
+            observer.unobserve(element);
           }
         }
       },
@@ -93,7 +65,7 @@ export function ScrollRevealController({ routeKey }: { routeKey: string }) {
         htmlElement.classList.add("ws-scroll-reveal");
         htmlElement.style.setProperty(
           "--ws-reveal-delay",
-          `${String((index % 6) * 45)}ms`,
+          `${String((index % 4) * 35)}ms`,
         );
         if (reducedMotion) htmlElement.classList.add("is-revealed");
         observer.observe(element);
@@ -116,16 +88,11 @@ export function ScrollRevealController({ routeKey }: { routeKey: string }) {
       childList: true,
       subtree: true,
     });
-    window.addEventListener("scroll", onScroll, { passive: true });
-
     return () => {
-      if (scrollTick) window.cancelAnimationFrame(scrollTick);
       if (scanTick) window.cancelAnimationFrame(scanTick);
-      window.removeEventListener("scroll", onScroll);
       mutationObserver.disconnect();
       observer.disconnect();
       root.classList.remove("ws-motion-ready");
-      delete root.dataset.scrollDirection;
     };
   }, [routeKey]);
 

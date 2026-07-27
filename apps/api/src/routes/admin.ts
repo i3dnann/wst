@@ -17,6 +17,7 @@ import {
   maskWebhookUrl,
   recordAudit as writeAudit,
 } from "../lib/audit.js";
+import { assertPermissionSuperset } from "../lib/authorization.js";
 import { HttpError } from "../lib/http-error.js";
 import { hashPassword } from "../lib/password.js";
 import { prisma } from "../lib/prisma.js";
@@ -68,6 +69,9 @@ const tournamentRulesSchema = z
   )
   .nullable()
   .optional();
+const tournamentBannerInputSchema = z.object({
+  bannerUrl: httpsUrlSchema.nullable(),
+});
 const gangInputSchema = z.object({
   name: z.string().trim().min(2).max(100),
   slug: slugSchema,
@@ -968,6 +972,30 @@ export function adminRoutes(app: FastifyInstance): void {
         entityId: tournament.id,
         beforeData: before,
         afterData: tournament,
+      });
+      return envelope(request, tournament);
+    },
+  );
+
+  app.patch<{ Params: { id: string } }>(
+    "/api/v1/admin/tournaments/:id/banner",
+    async (request) => {
+      const auth = requirePermission(request, "tournament.update");
+      const input = tournamentBannerInputSchema.parse(request.body);
+      const before = await prisma.tournament.findUniqueOrThrow({
+        where: { id: request.params.id },
+      });
+      const tournament = await prisma.tournament.update({
+        where: { id: request.params.id },
+        data: { bannerUrl: input.bannerUrl },
+      });
+      await writeAudit({
+        actorUserId: auth.userId,
+        action: "tournament.banner.update",
+        entityType: "Tournament",
+        entityId: tournament.id,
+        beforeData: { bannerUrl: before.bannerUrl },
+        afterData: { bannerUrl: tournament.bannerUrl },
       });
       return envelope(request, tournament);
     },
@@ -2507,6 +2535,11 @@ export function adminRoutes(app: FastifyInstance): void {
     const passwordHash = await hashPassword(input.password);
     const roles = await prisma.role.findMany({
       where: { id: { in: input.roleIds }, status: "ACTIVE" },
+      include: {
+        permissions: {
+          select: { permission: { select: { key: true } } },
+        },
+      },
     });
     if (roles.length !== input.roleIds.length)
       throw new HttpError(
@@ -2514,6 +2547,12 @@ export function adminRoutes(app: FastifyInstance): void {
         "ADMIN_ROLE_INVALID",
         "Select one or more active administrator roles.",
       );
+    assertPermissionSuperset(
+      auth.permissions,
+      roles.flatMap((role) =>
+        role.permissions.map((relation) => relation.permission.key),
+      ),
+    );
     const administrator = await prisma.user.create({
       data: {
         email: input.email,
@@ -2566,13 +2605,34 @@ export function adminRoutes(app: FastifyInstance): void {
           status: true,
           lastLoginAt: true,
           roles: {
-            where: { gangId: null, role: { name: "Super Administrator" } },
-            select: { id: true },
+            where: { gangId: null },
+            select: {
+              id: true,
+              role: {
+                select: {
+                  name: true,
+                  permissions: {
+                    select: { permission: { select: { key: true } } },
+                  },
+                },
+              },
+            },
           },
         },
       });
+      if (before.id !== auth.userId)
+        assertPermissionSuperset(
+          auth.permissions,
+          before.roles.flatMap((assignment) =>
+            assignment.role.permissions.map(
+              (relation) => relation.permission.key,
+            ),
+          ),
+        );
       if (
-        before.roles.length > 0 &&
+        before.roles.some(
+          (assignment) => assignment.role.name === "Super Administrator",
+        ) &&
         input.status &&
         input.status !== "ACTIVE"
       ) {
@@ -2644,12 +2704,33 @@ export function adminRoutes(app: FastifyInstance): void {
         where: { id: request.params.id },
         select: {
           roles: {
-            where: { gangId: null, role: { name: "Super Administrator" } },
-            select: { id: true },
+            where: { gangId: null },
+            select: {
+              role: {
+                select: {
+                  name: true,
+                  permissions: {
+                    select: { permission: { select: { key: true } } },
+                  },
+                },
+              },
+            },
           },
         },
       });
-      if (target.roles.length > 0) {
+      assertPermissionSuperset(
+        auth.permissions,
+        target.roles.flatMap((assignment) =>
+          assignment.role.permissions.map(
+            (relation) => relation.permission.key,
+          ),
+        ),
+      );
+      if (
+        target.roles.some(
+          (assignment) => assignment.role.name === "Super Administrator",
+        )
+      ) {
         const otherActiveSuperAdministrators = await prisma.user.count({
           where: {
             id: { not: request.params.id },

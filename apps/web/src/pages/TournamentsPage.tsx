@@ -48,10 +48,6 @@ export default function TournamentsPage() {
       <header className="page-heading tournament-ledger-heading">
         <div>
           <h1>Tournament Ledger</h1>
-          <p>
-            Every bracket is a proving ground: gangs enter, rivalries are
-            settled, and only one name leaves with the crown.
-          </p>
         </div>
         <Trophy className="page-heading-icon" />
       </header>

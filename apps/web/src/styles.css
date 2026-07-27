@@ -19876,3 +19876,159 @@ body .event-directory__summary .event-meta {
     transition: none;
   }
 }
+
+/* Shared cinematic backdrop for every public and administrator route. */
+body {
+  background: #050507;
+}
+
+.global-atmosphere {
+  background:
+    linear-gradient(
+      180deg,
+      rgb(5 5 7 / 0.76) 0%,
+      rgb(5 5 7 / 0.9) 42%,
+      #050507 100%
+    ),
+    linear-gradient(90deg, rgb(5 5 7 / 0.82), rgb(111 13 28 / 0.16)),
+    url("/assets/wst-red/city-overlook-red.jpg") center top / cover no-repeat;
+}
+
+.global-atmosphere::before {
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.022) 1px, transparent 1px),
+    radial-gradient(circle at 50% 8%, rgb(239 64 88 / 0.12), transparent 38%);
+  background-size:
+    64px 64px,
+    64px 64px,
+    auto;
+  mask-image: linear-gradient(#000 0%, rgb(0 0 0 / 0.68) 58%, transparent 100%);
+  opacity: 0.72;
+}
+
+body
+  :is(
+    .site-frame,
+    .gold-home,
+    .gold-content-page,
+    .page-shell,
+    .registry-page,
+    .directory-page,
+    .information-page,
+    .gang-detail-page,
+    .tournaments-page
+  ) {
+  background: transparent !important;
+}
+
+body .page-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+body .page-shell::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0 calc(var(--wst-page-gutter) * -1);
+  background:
+    radial-gradient(circle at 12% 8%, rgb(197 31 56 / 0.09), transparent 30rem),
+    radial-gradient(circle at 88% 34%, rgb(111 13 28 / 0.07), transparent 28rem);
+  content: "";
+  pointer-events: none;
+}
+
+body .control-shell.command-center-v2 {
+  background:
+    linear-gradient(
+      90deg,
+      rgb(5 5 7 / 0.97) 0%,
+      rgb(5 5 7 / 0.9) 52%,
+      rgb(5 5 7 / 0.82) 100%
+    ),
+    linear-gradient(180deg, transparent 0%, #050507 100%),
+    url("/assets/wst-red/admin-office-red.jpg") center top / cover fixed
+      no-repeat !important;
+}
+
+@media (max-width: 760px) {
+  .global-atmosphere {
+    background-position: 62% top;
+  }
+}
+
+/* Performance and depth cleanup: flat panels, crisp marks, no heavy glow. */
+.global-atmosphere > span {
+  opacity: 0.3;
+  animation: none;
+  transform: translate3d(0, 0, 0);
+}
+
+.site-scroll-progress {
+  filter: none !important;
+  box-shadow: none !important;
+  will-change: transform;
+}
+
+body
+  :is(
+    .site-frame,
+    .control-shell,
+    .admin-login-page,
+    .bracket-admin-shell,
+    .live-draw-broadcast
+  )
+  :is(
+    article,
+    section,
+    aside,
+    [role="dialog"],
+    [class*="-panel"],
+    [class*="-card"],
+    [class*="-drawer"],
+    [class*="-dialog"],
+    [class*="-dataset"]
+  ) {
+  box-shadow: none !important;
+}
+
+body
+  :is(
+    .site-header,
+    .site-footer,
+    .nav-more-menu,
+    .mobile-navigation,
+    .admin-command-bar
+  ) {
+  box-shadow: none !important;
+}
+
+body
+  :is(
+    .wst-brand img,
+    .wst-hero-mark,
+    .gold-hero-mark,
+    .footer-brand img,
+    .admin-login-logo,
+    .control-brand img,
+    .admin-command-brand img,
+    .coming-soon-page__brand-mark img,
+    .champion-celebration__card img,
+    .live-draw-broadcast__crest img,
+    .live-draw-broadcast__wheel .champions-draw__wheel img
+  ) {
+  box-shadow: none !important;
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+:where(
+  .gang-registry-card,
+  .match-archive__row,
+  .public-directory-card,
+  .tournament-ledger-list > article,
+  .event-directory > li
+) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 180px;
+}

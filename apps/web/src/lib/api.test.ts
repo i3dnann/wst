@@ -8,29 +8,35 @@ afterEach(() => {
 
 describe("API session reliability", () => {
   it("queues concurrent unauthorized requests behind one token refresh", async () => {
+    document.cookie = "wst_csrf=refresh-csrf; Path=/";
     let protectedCalls = 0;
     let refreshCalls = 0;
-    const fetchMock = vi.fn(async (input: string | URL | Request) => {
-      const url =
-        typeof input === "string"
-          ? input
-          : input instanceof URL
-            ? input.toString()
-            : input.url;
-      if (url.endsWith("/api/v1/auth/refresh")) {
-        refreshCalls += 1;
-        await new Promise((resolve) => setTimeout(resolve, 5));
-        return new Response(null, { status: 204 });
-      }
-      protectedCalls += 1;
-      if (protectedCalls <= 2) {
-        return Response.json(
-          { error: { code: "AUTH_REQUIRED", message: "Expired" } },
-          { status: 401 },
-        );
-      }
-      return Response.json({ data: { ok: true } });
-    });
+    const fetchMock = vi.fn(
+      async (input: string | URL | Request, init?: RequestInit) => {
+        const url =
+          typeof input === "string"
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+        if (url.endsWith("/api/v1/auth/refresh")) {
+          refreshCalls += 1;
+          expect(new Headers(init?.headers).get("x-csrf-token")).toBe(
+            "refresh-csrf",
+          );
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          return new Response(null, { status: 204 });
+        }
+        protectedCalls += 1;
+        if (protectedCalls <= 2) {
+          return Response.json(
+            { error: { code: "AUTH_REQUIRED", message: "Expired" } },
+            { status: 401 },
+          );
+        }
+        return Response.json({ data: { ok: true } });
+      },
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const [first, second] = await Promise.all([
@@ -149,6 +155,33 @@ describe("API session reliability", () => {
     expect(error).toMatchObject({
       status: 200,
       code: "INVALID_API_RESPONSE",
+    });
+  });
+
+  it("turns a hung request into a retryable timeout error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_input: string | URL | Request, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener(
+              "abort",
+              () => {
+                reject(new DOMException("Aborted", "AbortError"));
+              },
+              { once: true },
+            );
+          }),
+      ),
+    );
+
+    const error = await apiRequest("/api/v1/gangs", undefined, false, 5).catch(
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({
+      status: 408,
+      code: "REQUEST_TIMEOUT",
     });
   });
 });
