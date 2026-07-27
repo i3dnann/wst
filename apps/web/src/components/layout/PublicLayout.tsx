@@ -77,10 +77,7 @@ function Brand({
   return (
     <Link to="/" className="wst-brand" aria-label="World Star home">
       <img src={logoUrl || "/assets/wst/wst-logo.png"} alt="" />
-      <span>
-        {name}
-        <small>Competitive Gang Registry</small>
-      </span>
+      <span>{name}</span>
     </Link>
   );
 }
