@@ -54,7 +54,11 @@ function BroadcastGang({
   return (
     <strong className="live-draw-broadcast__gang">
       {participant.gang.logoUrl ? (
-        <img src={participant.gang.logoUrl} alt="" />
+        <img
+          className="user-media-original"
+          src={participant.gang.logoUrl}
+          alt=""
+        />
       ) : (
         <span className="live-draw-broadcast__gang-mark" aria-hidden="true">
           {participant.gang.tag.slice(0, 1)}
@@ -205,7 +209,11 @@ export function LiveDrawBroadcast({ state }: { state: BroadcastState }) {
                 <>
                   <div className="live-draw-broadcast__selection-icon">
                     {selected.gang.logoUrl ? (
-                      <img src={selected.gang.logoUrl} alt="" />
+                      <img
+                        className="user-media-original"
+                        src={selected.gang.logoUrl}
+                        alt=""
+                      />
                     ) : (
                       <Trophy aria-hidden="true" />
                     )}

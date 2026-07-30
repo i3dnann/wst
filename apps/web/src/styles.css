@@ -23298,3 +23298,12 @@ body .gold-home > .gold-live-strip p {
     grid-template-columns: 42px minmax(0, 1fr) !important;
   }
 }
+
+/*
+ * Uploaded artwork is content, not theme chrome. This final override must
+ * follow the global palette filters so gang banners, gang logos, and upload
+ * previews retain the exact colors supplied by administrators.
+ */
+html body img.user-media-original {
+  filter: none !important;
+}

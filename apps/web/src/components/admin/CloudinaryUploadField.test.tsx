@@ -43,6 +43,9 @@ describe("CloudinaryUploadField", () => {
 
     expect(input).toHaveValue("https://cdn.example.com/gang-logo.png");
     expect(screen.getByText("Media link ready")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Gang logo preview" })).toHaveClass(
+      "user-media-original",
+    );
   });
 
   it("automatically fills the secure Cloudinary URL after upload", async () => {

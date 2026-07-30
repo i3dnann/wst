@@ -160,7 +160,7 @@ export function CloudinaryUploadField({
       ) : null}
       {value && previewType !== "video" ? (
         <img
-          className="cloudinary-upload-field__preview"
+          className="cloudinary-upload-field__preview user-media-original"
           src={value}
           alt={`${label} preview`}
         />

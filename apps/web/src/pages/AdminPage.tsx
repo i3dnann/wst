@@ -999,7 +999,11 @@ export function BracketManager() {
                     />
                     <div>
                       {participant.gang.logoUrl ? (
-                        <img src={participant.gang.logoUrl} alt="" />
+                        <img
+                          className="user-media-original"
+                          src={participant.gang.logoUrl}
+                          alt=""
+                        />
                       ) : (
                         <Shield />
                       )}

@@ -107,7 +107,7 @@ export default function GangDetailPage() {
       <section className="gang-profile-v3__hero">
         {typeof data.bannerUrl === "string" ? (
           <img
-            className="gang-profile-v3__banner"
+            className="gang-profile-v3__banner user-media-original"
             src={data.bannerUrl}
             alt=""
           />
@@ -121,6 +121,7 @@ export default function GangDetailPage() {
             <div className="gang-profile-v3__crest">
               {typeof data.logoUrl === "string" ? (
                 <img
+                  className="user-media-original"
                   src={data.logoUrl}
                   alt={`${readString(data, "name")} logo`}
                 />

@@ -490,7 +490,11 @@ export function MatchDetail({ row }: { row: RecordRow }) {
           >
             <div className="match-record__gang-mark">
               {typeof gangA?.logoUrl === "string" ? (
-                <img src={gangA.logoUrl} alt="" />
+                <img
+                  className="user-media-original"
+                  src={gangA.logoUrl}
+                  alt=""
+                />
               ) : (
                 <Shield aria-hidden="true" />
               )}
@@ -534,7 +538,11 @@ export function MatchDetail({ row }: { row: RecordRow }) {
             </div>
             <div className="match-record__gang-mark">
               {typeof gangB?.logoUrl === "string" ? (
-                <img src={gangB.logoUrl} alt="" />
+                <img
+                  className="user-media-original"
+                  src={gangB.logoUrl}
+                  alt=""
+                />
               ) : (
                 <Shield aria-hidden="true" />
               )}

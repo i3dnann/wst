@@ -27,8 +27,8 @@ describe("GangsPage background refresh", () => {
             name: "Crimson Syndicate",
             tag: "CS",
             motto: "Loyalty above all",
-            logoUrl: null,
-            bannerUrl: null,
+            logoUrl: "https://cdn.example.com/crimson-logo.png",
+            bannerUrl: "https://cdn.example.com/crimson-banner.png",
             status: "ACTIVE",
             recruitmentStatus: "CLOSED",
             verified: true,
@@ -73,6 +73,14 @@ describe("GangsPage background refresh", () => {
     expect(
       await screen.findByRole("heading", { name: "Crimson Syndicate" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Crimson Syndicate logo" }),
+    ).toHaveClass("user-media-original");
+    expect(
+      document.querySelector<HTMLImageElement>(
+        'img[src="https://cdn.example.com/crimson-banner.png"]',
+      ),
+    ).toHaveClass("user-media-original");
 
     await act(async () => {
       await queryClient.invalidateQueries({ queryKey: ["gangs"] });

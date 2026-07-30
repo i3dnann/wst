@@ -77,8 +77,7 @@ export default function HomePage() {
   const heroTitlePrimary =
     heroTitleWords.length > 0 ? heroTitleWords.join(" ") : heroTitle;
   const heroMediaUrl =
-    settings?.homepage.heroMediaUrl ||
-    "/assets/wst-red/city-overlook-red.jpg";
+    settings?.homepage.heroMediaUrl || "/assets/wst-red/city-overlook-red.jpg";
 
   const stats = [
     [Shield, "Registered Gangs", summary?.registeredGangs ?? 0, "Total"],
@@ -226,8 +225,7 @@ export default function HomePage() {
                       </time>
                       <strong>{event.title}</strong>
                       <p>
-                        {event.description ??
-                          "Details will be announced soon."}
+                        {event.description ?? "Details will be announced soon."}
                       </p>
                     </li>
                   ))}
@@ -290,7 +288,11 @@ export default function HomePage() {
                     </strong>
                     <span className="home-ranking-gang">
                       {gang.logoUrl ? (
-                        <img src={gang.logoUrl} alt="" />
+                        <img
+                          className="user-media-original"
+                          src={gang.logoUrl}
+                          alt=""
+                        />
                       ) : (
                         <img src="/assets/wst/wst-logo.png" alt="" />
                       )}

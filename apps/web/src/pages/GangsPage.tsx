@@ -136,7 +136,7 @@ export default function GangsPage() {
                 <div className="gang-registry-card__media">
                   {gang.bannerUrl ? (
                     <img
-                      className="gang-registry-card__banner"
+                      className="gang-registry-card__banner user-media-original"
                       src={gang.bannerUrl}
                       alt=""
                     />
@@ -145,7 +145,11 @@ export default function GangsPage() {
                   <div className="gang-registry-card__identity">
                     <div className="gang-registry-card__crest">
                       {gang.logoUrl ? (
-                        <img src={gang.logoUrl} alt={`${gang.name} logo`} />
+                        <img
+                          className="user-media-original"
+                          src={gang.logoUrl}
+                          alt={`${gang.name} logo`}
+                        />
                       ) : (
                         <span>{gang.tag.slice(0, 1)}</span>
                       )}

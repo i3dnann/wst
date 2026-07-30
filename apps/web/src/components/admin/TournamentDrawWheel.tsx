@@ -225,7 +225,11 @@ export function TournamentDrawWheel({
               <>
                 <div>
                   {selected.gang.logoUrl ? (
-                    <img src={selected.gang.logoUrl} alt="" />
+                    <img
+                      className="user-media-original"
+                      src={selected.gang.logoUrl}
+                      alt=""
+                    />
                   ) : (
                     <Trophy />
                   )}

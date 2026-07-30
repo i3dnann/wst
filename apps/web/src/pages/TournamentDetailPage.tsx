@@ -68,7 +68,11 @@ function TeamRow({
     <div
       className={winner ? "bracket-team bracket-team--winner" : "bracket-team"}
     >
-      {gang?.logoUrl ? <img src={gang.logoUrl} alt="" /> : <Shield />}
+      {gang?.logoUrl ? (
+        <img className="user-media-original" src={gang.logoUrl} alt="" />
+      ) : (
+        <Shield />
+      )}
       <span>{gang?.name ?? "TBD"}</span>
       <strong>{score ?? "—"}</strong>
     </div>
