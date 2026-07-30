@@ -7,6 +7,7 @@ import {
   generateOpeningRound,
   openingRoundSeedOrder,
 } from "../domain/bracket.js";
+import { archivedGangIdentity } from "../domain/gang-identity.js";
 import {
   tournamentBannerInputSchema,
   tournamentInputSchema,
@@ -582,6 +583,7 @@ export function adminRoutes(app: FastifyInstance): void {
   app.get("/api/v1/admin/gangs", async (request) => {
     requirePermission(request, "gang.read");
     const gangs = await prisma.gang.findMany({
+      where: { status: { not: "ARCHIVED" } },
       orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
       include: {
         _count: { select: { memberships: { where: { active: true } } } },
@@ -729,8 +731,34 @@ export function adminRoutes(app: FastifyInstance): void {
   app.post("/api/v1/admin/gangs", async (request, reply) => {
     const auth = requirePermission(request, "gang.create");
     const input = gangInputSchema.parse(request.body);
-    const gang = await prisma.gang.create({
-      data: compact(input) as Prisma.GangCreateInput,
+    const gang = await prisma.$transaction(async (tx) => {
+      const conflicts = await tx.gang.findMany({
+        where: {
+          OR: [{ slug: input.slug }, { tag: input.tag }],
+        },
+        select: { id: true, slug: true, tag: true, status: true },
+      });
+      const activeConflict = conflicts.find(
+        (candidate) => candidate.status !== "ARCHIVED",
+      );
+      if (activeConflict) {
+        const field =
+          activeConflict.slug === input.slug ? "URL slug" : "gang tag";
+        throw new HttpError(
+          409,
+          "GANG_IDENTITY_CONFLICT",
+          `This ${field} is already used by an active gang.`,
+        );
+      }
+      for (const conflict of conflicts) {
+        await tx.gang.update({
+          where: { id: conflict.id },
+          data: archivedGangIdentity(conflict.id),
+        });
+      }
+      return tx.gang.create({
+        data: compact(input) as Prisma.GangCreateInput,
+      });
     });
     await recordAudit(auth.userId, "gang.create", "Gang", gang.id, gang);
     return reply.code(201).send(envelope(request, gang));
@@ -754,9 +782,16 @@ export function adminRoutes(app: FastifyInstance): void {
     "/api/v1/admin/gangs/:id",
     async (request, reply) => {
       const auth = requirePermission(request, "gang.archive");
+      const before = await prisma.gang.findUniqueOrThrow({
+        where: { id: request.params.id },
+      });
       const gang = await prisma.gang.update({
         where: { id: request.params.id },
-        data: { status: "ARCHIVED", archivedAt: new Date() },
+        data: {
+          status: "ARCHIVED",
+          archivedAt: new Date(),
+          ...archivedGangIdentity(before.id),
+        },
       });
       await recordAudit(auth.userId, "gang.archive", "Gang", gang.id, gang);
       return reply.code(204).send();
