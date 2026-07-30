@@ -103,6 +103,7 @@ export default function TournamentsPage() {
             <article key={item.id}>
               <div className="tournament-ledger-media">
                 <img
+                  className={item.bannerUrl ? "user-media-original" : undefined}
                   src={item.bannerUrl ?? "/assets/wst-red/vintage-car-red.jpg"}
                   loading="lazy"
                   decoding="async"

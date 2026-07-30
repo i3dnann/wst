@@ -74,7 +74,7 @@ describe("EventsPage details", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("img", { name: "World Star Night event artwork" }),
-    ).toBeInTheDocument();
+    ).toHaveClass("user-media-original");
 
     fireEvent.keyDown(window, { key: "Escape" });
 

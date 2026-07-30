@@ -1671,7 +1671,11 @@ export function MediaManager() {
                 preload="metadata"
               />
             ) : text(item, "publicUrl", "").startsWith("https://") ? (
-              <img src={text(item, "publicUrl", "")} alt="" />
+              <img
+                className="user-media-original"
+                src={text(item, "publicUrl", "")}
+                alt=""
+              />
             ) : (
               <div className="media-admin-grid__pending">Upload incomplete</div>
             )}

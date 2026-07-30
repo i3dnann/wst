@@ -225,7 +225,11 @@ export default function GangDetailPage() {
                       <div className="gang-profile-v3__member-identity">
                         <div>
                           {typeof player.avatarUrl === "string" ? (
-                            <img src={player.avatarUrl} alt="" />
+                            <img
+                              className="user-media-original"
+                              src={player.avatarUrl}
+                              alt=""
+                            />
                           ) : (
                             <span>{displayName.slice(0, 1)}</span>
                           )}

@@ -46,6 +46,7 @@ function EventMedia({
 
   return (
     <img
+      className={event.imageUrl ? "user-media-original" : undefined}
       src={event.imageUrl ?? fallbackEventImage}
       alt={detailed ? `${event.title} event artwork` : ""}
       loading={detailed ? "eager" : "lazy"}

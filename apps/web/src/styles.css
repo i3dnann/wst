@@ -5116,10 +5116,6 @@ html
   filter: var(--wst-logo-blue-filter) !important;
 }
 
-html body img:not([src*="wst-logo"]):not([src*="/logo"]):not([class*="logo"]) {
-  filter: var(--wst-media-blue-filter) !important;
-}
-
 html body :is(.gold-hero-image, .maintenance-page__image, .coming-soon-page__image) {
   filter: var(--wst-media-blue-filter) !important;
 }
@@ -23120,10 +23116,6 @@ html body img[class*="logo"],
 html body .gold-hero-mark,
 html body .wst-brand img {
   filter: var(--wst-logo-blue-filter) !important;
-}
-
-html body img:not([src*="wst-logo"]):not([src*="/logo"]):not([class*="logo"]) {
-  filter: var(--wst-media-blue-filter) !important;
 }
 
 html body :is(.gold-hero-image, .maintenance-page__image, .coming-soon-page__image) {

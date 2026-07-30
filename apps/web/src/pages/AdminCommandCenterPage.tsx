@@ -1921,6 +1921,9 @@ function StreamManager() {
             ) : (
               <div className="live-player-empty">
                 <img
+                  className={
+                    selected?.thumbnailUrl ? "user-media-original" : undefined
+                  }
                   src={
                     selected?.thumbnailUrl ??
                     "/assets/wst-red/city-overlook-red.jpg"

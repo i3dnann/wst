@@ -128,7 +128,11 @@ function PlayerList({ rows }: { rows: RecordRow[] }) {
             key={player.id}
           >
             {typeof player.avatarUrl === "string" ? (
-              <img src={player.avatarUrl} alt="" />
+              <img
+                className="user-media-original"
+                src={player.avatarUrl}
+                alt=""
+              />
             ) : (
               <UserRound />
             )}
@@ -173,7 +177,7 @@ function PlayerProfile({ row }: { row: RecordRow }) {
     <section className="public-dossier">
       <header>
         {typeof row.avatarUrl === "string" ? (
-          <img src={row.avatarUrl} alt="" />
+          <img className="user-media-original" src={row.avatarUrl} alt="" />
         ) : (
           <UserRound />
         )}
