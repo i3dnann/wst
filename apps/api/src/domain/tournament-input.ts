@@ -35,6 +35,7 @@ const tournamentRulesSchema = z
 
 export const tournamentPrizeSchema = z.object({
   placement: z.number().int().min(1).max(3),
+  itemOrder: z.number().int().min(0).max(9),
   title: z.string().trim().min(1).max(120),
   amount: z.string().trim().min(1).max(120),
   imageUrl: httpsUrlSchema.nullable().optional(),
@@ -42,18 +43,31 @@ export const tournamentPrizeSchema = z.object({
 
 export const tournamentPrizesSchema = z
   .array(tournamentPrizeSchema)
-  .max(3)
+  .max(30)
   .superRefine((prizes, context) => {
-    const placements = new Set<number>();
+    const itemKeys = new Set<string>();
+    const placementCounts = new Map<number, number>();
     for (const [index, prize] of prizes.entries()) {
-      if (placements.has(prize.placement)) {
+      const itemKey = `${String(prize.placement)}:${String(prize.itemOrder)}`;
+      if (itemKeys.has(itemKey)) {
+        context.addIssue({
+          code: "custom",
+          path: [index, "itemOrder"],
+          message:
+            "Each reward item must have a unique order within its placement.",
+        });
+      }
+      itemKeys.add(itemKey);
+      const count = (placementCounts.get(prize.placement) ?? 0) + 1;
+      placementCounts.set(prize.placement, count);
+      if (count > 10) {
         context.addIssue({
           code: "custom",
           path: [index, "placement"],
-          message: "Each tournament placement can only have one prize.",
+          message:
+            "Each tournament placement can have a maximum of 10 reward items.",
         });
       }
-      placements.add(prize.placement);
     }
   });
 

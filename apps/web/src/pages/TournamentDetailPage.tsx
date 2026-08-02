@@ -6,6 +6,7 @@ import {
   CalendarDays,
   Check,
   Gift,
+  Medal,
   Shield,
   Swords,
   Trophy,
@@ -60,6 +61,7 @@ interface TournamentRecord {
 interface TournamentPrizeRecord {
   id: string;
   placement: number;
+  itemOrder?: number;
   title: string;
   amount: string;
   imageUrl: string | null;
@@ -161,13 +163,24 @@ export default function TournamentDetailPage() {
     .slice(0, 20);
   const prizes = [...(Array.isArray(data.prizes) ? data.prizes : [])]
     .filter((prize) => [1, 2, 3].includes(prize.placement))
-    .sort((left, right) => left.placement - right.placement);
+    .sort(
+      (left, right) =>
+        left.placement - right.placement ||
+        (left.itemOrder ?? 0) - (right.itemOrder ?? 0),
+    );
   const placementLabel = (placement: number) =>
     placement === 1
       ? "First place"
       : placement === 2
         ? "Second place"
         : "Third place";
+  const prizeGroups = [1, 2, 3]
+    .map((placement) => ({
+      placement,
+      label: placementLabel(placement),
+      items: prizes.filter((prize) => prize.placement === placement),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <main className="gold-content-page tournament-detail-gold">
@@ -343,32 +356,54 @@ export default function TournamentDetailPage() {
             <p>The rewards waiting at the end of the bracket.</p>
           </div>
           <strong>
-            {prizes.length ? `${String(prizes.length)} places` : "Pending"}
+            {prizes.length ? `${String(prizes.length)} rewards` : "Pending"}
           </strong>
         </header>
         {prizes.length ? (
           <div className="tournament-prize-podium">
-            {prizes.map((prize) => (
+            {prizeGroups.map((group) => (
               <article
-                className={`tournament-prize-card tournament-prize-card--place-${String(prize.placement)}`}
-                key={prize.id || String(prize.placement)}
+                className={`tournament-prize-card tournament-prize-card--place-${String(group.placement)}`}
+                key={group.placement}
               >
-                <div className="tournament-prize-card__media">
-                  {prize.imageUrl ? (
-                    <img
-                      className="user-media-original"
-                      src={prize.imageUrl}
-                      alt={`${prize.title} prize`}
-                    />
-                  ) : (
-                    <Trophy aria-hidden="true" />
-                  )}
-                  <span>{String(prize.placement).padStart(2, "0")}</span>
-                </div>
-                <div className="tournament-prize-card__copy">
-                  <span>{placementLabel(prize.placement)}</span>
-                  <h3>{prize.title}</h3>
-                  <strong>{prize.amount}</strong>
+                <header className="tournament-prize-card__header">
+                  <span>{String(group.placement).padStart(2, "0")}</span>
+                  <div>
+                    <strong>{group.label}</strong>
+                    <small>
+                      {String(group.items.length)} reward
+                      {group.items.length === 1 ? "" : "s"}
+                    </small>
+                  </div>
+                  <Medal aria-hidden="true" />
+                </header>
+                <div className="tournament-prize-card__items">
+                  {group.items.map((prize) => (
+                    <section
+                      className="tournament-prize-public-item"
+                      key={
+                        prize.id ||
+                        `${String(prize.placement)}-${String(prize.itemOrder)}`
+                      }
+                    >
+                      <div className="tournament-prize-public-item__media">
+                        {prize.imageUrl ? (
+                          <img
+                            className="user-media-original"
+                            src={prize.imageUrl}
+                            alt={`${prize.title} prize`}
+                          />
+                        ) : (
+                          <Gift aria-hidden="true" />
+                        )}
+                      </div>
+                      <div>
+                        <span>Reward {String((prize.itemOrder ?? 0) + 1)}</span>
+                        <h3>{prize.title}</h3>
+                        <strong>{prize.amount}</strong>
+                      </div>
+                    </section>
+                  ))}
                 </div>
               </article>
             ))}

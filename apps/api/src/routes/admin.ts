@@ -618,7 +618,7 @@ export function adminRoutes(app: FastifyInstance): void {
       where: { status: { not: "ARCHIVED" } },
       orderBy: { updatedAt: "desc" },
       include: {
-        prizes: { orderBy: { placement: "asc" } },
+        prizes: { orderBy: [{ placement: "asc" }, { itemOrder: "asc" }] },
         _count: {
           select: {
             participants: {
@@ -644,7 +644,7 @@ export function adminRoutes(app: FastifyInstance): void {
         },
         include: {
           season: { select: { id: true, name: true } },
-          prizes: { orderBy: { placement: "asc" } },
+          prizes: { orderBy: [{ placement: "asc" }, { itemOrder: "asc" }] },
           participants: {
             where: { gang: { status: { not: "ARCHIVED" } } },
             orderBy: [{ seed: "asc" }, { registeredAt: "asc" }],
@@ -871,6 +871,7 @@ export function adminRoutes(app: FastifyInstance): void {
           data: prizes.map((prize) => ({
             tournamentId: created.id,
             placement: prize.placement,
+            itemOrder: prize.itemOrder,
             title: prize.title,
             amount: prize.amount,
             imageUrl: prize.imageUrl ?? null,
@@ -879,7 +880,11 @@ export function adminRoutes(app: FastifyInstance): void {
       }
       return tx.tournament.findUniqueOrThrow({
         where: { id: created.id },
-        include: { prizes: { orderBy: { placement: "asc" } } },
+        include: {
+          prizes: {
+            orderBy: [{ placement: "asc" }, { itemOrder: "asc" }],
+          },
+        },
       });
     });
     await recordAudit(
@@ -900,7 +905,11 @@ export function adminRoutes(app: FastifyInstance): void {
       const { prizes, ...tournamentInput } = input;
       const before = await prisma.tournament.findUniqueOrThrow({
         where: { id: request.params.id },
-        include: { prizes: { orderBy: { placement: "asc" } } },
+        include: {
+          prizes: {
+            orderBy: [{ placement: "asc" }, { itemOrder: "asc" }],
+          },
+        },
       });
       if (tournamentInput.status && tournamentInput.status !== before.status) {
         assertTournamentTransition(before.status, tournamentInput.status);
@@ -958,6 +967,7 @@ export function adminRoutes(app: FastifyInstance): void {
               data: prizes.map((prize) => ({
                 tournamentId: request.params.id,
                 placement: prize.placement,
+                itemOrder: prize.itemOrder,
                 title: prize.title,
                 amount: prize.amount,
                 imageUrl: prize.imageUrl ?? null,
@@ -967,7 +977,11 @@ export function adminRoutes(app: FastifyInstance): void {
         }
         return tx.tournament.findUniqueOrThrow({
           where: { id: request.params.id },
-          include: { prizes: { orderBy: { placement: "asc" } } },
+          include: {
+            prizes: {
+              orderBy: [{ placement: "asc" }, { itemOrder: "asc" }],
+            },
+          },
         });
       });
       await writeAudit({

@@ -116,14 +116,24 @@ describe("TournamentDetailPage rules", () => {
         {
           id: "first-prize",
           placement: 1,
+          itemOrder: 0,
           title: "Championship package",
           amount: "$5,000",
           imageUrl:
             "https://res.cloudinary.com/world-star/image/upload/prizes/champion.webp",
         },
         {
+          id: "first-prize-vehicle",
+          placement: 1,
+          itemOrder: 1,
+          title: "Custom vehicle",
+          amount: "1 vehicle",
+          imageUrl: null,
+        },
+        {
           id: "second-prize",
           placement: 2,
+          itemOrder: 0,
           title: "Runner-up package",
           amount: "$2,500",
           imageUrl: null,
@@ -131,6 +141,7 @@ describe("TournamentDetailPage rules", () => {
         {
           id: "third-prize",
           placement: 3,
+          itemOrder: 0,
           title: "Third-place package",
           amount: "$1,000",
           imageUrl: null,
@@ -142,6 +153,7 @@ describe("TournamentDetailPage rules", () => {
       await screen.findByRole("heading", { name: "Tournament Prizes" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Championship package")).toBeInTheDocument();
+    expect(screen.getByText("Custom vehicle")).toBeInTheDocument();
     expect(screen.getByText("$5,000")).toBeInTheDocument();
     expect(screen.getByAltText("Championship package prize")).toHaveAttribute(
       "src",

@@ -4,6 +4,7 @@ import {
   BookOpen,
   CalendarDays,
   FileClock,
+  Gift,
   Gavel,
   LayoutDashboard,
   LogOut,
@@ -602,6 +603,66 @@ const tournamentPrizePlacements = [
   { placement: 3, label: "Third place", shortLabel: "3rd", tone: "third" },
 ] as const;
 
+type TournamentPrizeFormItem = {
+  placement: number;
+  itemOrder: number;
+  title: string;
+  amount: string;
+  imageUrl: string;
+};
+
+const maxTournamentPrizeItemsPerPlace = 10;
+
+function parseTournamentPrizeItems(value: unknown): TournamentPrizeFormItem[] {
+  if (typeof value !== "string" || !value.trim()) return [];
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .flatMap((item, index) => {
+        if (!item || typeof item !== "object") return [];
+        const source = item as Record<string, unknown>;
+        const placement = Number(source.placement);
+        const itemOrder = Number(source.itemOrder ?? index);
+        if (
+          ![1, 2, 3].includes(placement) ||
+          !Number.isInteger(itemOrder) ||
+          itemOrder < 0 ||
+          itemOrder >= maxTournamentPrizeItemsPerPlace
+        ) {
+          return [];
+        }
+        return [
+          {
+            placement,
+            itemOrder,
+            title: typeof source.title === "string" ? source.title : "",
+            amount: typeof source.amount === "string" ? source.amount : "",
+            imageUrl:
+              typeof source.imageUrl === "string" ? source.imageUrl : "",
+          },
+        ];
+      })
+      .sort(
+        (left, right) =>
+          left.placement - right.placement || left.itemOrder - right.itemOrder,
+      );
+  } catch {
+    return [];
+  }
+}
+
+function normalizeTournamentPrizeItems(
+  items: TournamentPrizeFormItem[],
+): TournamentPrizeFormItem[] {
+  return tournamentPrizePlacements.flatMap(({ placement }) =>
+    items
+      .filter((item) => item.placement === placement)
+      .slice(0, maxTournamentPrizeItemsPerPlace)
+      .map((item, itemOrder) => ({ ...item, placement, itemOrder })),
+  );
+}
+
 function TournamentPrizesEditor({
   values,
   setValue,
@@ -609,12 +670,15 @@ function TournamentPrizesEditor({
   values: FormValues;
   setValue: (name: string, value: string | boolean) => void;
 }) {
-  const configuredCount = tournamentPrizePlacements.filter(({ placement }) =>
-    Boolean(
-      String(values[`prize${String(placement)}Title`] ?? "").trim() &&
-      String(values[`prize${String(placement)}Amount`] ?? "").trim(),
-    ),
+  const prizeItems = parseTournamentPrizeItems(values.tournamentPrizesJson);
+  const configuredCount = prizeItems.filter(
+    (item) => item.title.trim() && item.amount.trim(),
   ).length;
+  const updateItems = (items: TournamentPrizeFormItem[]) =>
+    setValue(
+      "tournamentPrizesJson",
+      JSON.stringify(normalizeTournamentPrizeItems(items)),
+    );
 
   return (
     <section className="tournament-prizes-editor full-width">
@@ -628,78 +692,151 @@ function TournamentPrizesEditor({
           </span>
           <h3>Prizes</h3>
           <p>
-            Manage the title, amount, and item image for the first three
-            finishers. Empty placements stay unpublished.
+            Add up to 10 separate rewards for each podium place. Empty reward
+            items stay unpublished.
           </p>
         </div>
         <span className="tournament-prizes-editor__status">
-          {String(configuredCount)} / 3 published
+          {String(configuredCount)} / 30 rewards
         </span>
       </header>
 
-      <div className="tournament-prize-editor-grid">
+      <div className="tournament-prize-placement-list">
         {tournamentPrizePlacements.map(
           ({ placement, label, shortLabel, tone }) => {
-            const titleKey = `prize${String(placement)}Title`;
-            const amountKey = `prize${String(placement)}Amount`;
-            const imageKey = `prize${String(placement)}ImageUrl`;
-            const title = String(values[titleKey] ?? "");
-            const amount = String(values[amountKey] ?? "");
-            const imageUrl = String(values[imageKey] ?? "");
-            const hasContent = Boolean(title || amount || imageUrl);
+            const placementItems = prizeItems.filter(
+              (item) => item.placement === placement,
+            );
             return (
               <article
-                className={`tournament-prize-editor-card tournament-prize-editor-card--${tone}`}
+                className={`tournament-prize-placement tournament-prize-placement--${tone}`}
                 key={placement}
               >
-                <div className="tournament-prize-editor-card__place">
-                  <Medal aria-hidden="true" />
-                  <span>{shortLabel}</span>
-                  <strong>{label}</strong>
-                </div>
-                <label>
-                  Prize title
-                  <input
-                    aria-label={`${label} prize title`}
-                    value={title}
-                    required={hasContent}
-                    maxLength={120}
-                    onChange={(event) => setValue(titleKey, event.target.value)}
-                    placeholder="Example: Championship package"
-                  />
-                </label>
-                <label>
-                  Amount or value
-                  <input
-                    aria-label={`${label} prize amount`}
-                    value={amount}
-                    required={hasContent}
-                    maxLength={120}
-                    onChange={(event) =>
-                      setValue(amountKey, event.target.value)
+                <header className="tournament-prize-placement__header">
+                  <div className="tournament-prize-placement__place">
+                    <Medal aria-hidden="true" />
+                    <span>{shortLabel}</span>
+                    <div>
+                      <strong>{label}</strong>
+                      <small>
+                        {String(placementItems.length)} / 10 reward items
+                      </small>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    aria-label={`Add reward to ${label}`}
+                    disabled={
+                      placementItems.length >= maxTournamentPrizeItemsPerPlace
                     }
-                    placeholder="Example: $5,000 or 1 custom vehicle"
-                  />
-                </label>
-                <CloudinaryUploadField
-                  label={`${label} item image`}
-                  value={imageUrl}
-                  onChange={(url) => setValue(imageKey, url)}
-                  category="tournament-prize"
-                  full
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={!hasContent}
-                  onClick={() => {
-                    setValue(titleKey, "");
-                    setValue(amountKey, "");
-                    setValue(imageKey, "");
-                  }}
-                >
-                  <Trash2 /> Clear {label}
-                </Button>
+                    onClick={() =>
+                      updateItems([
+                        ...prizeItems,
+                        {
+                          placement,
+                          itemOrder: placementItems.length,
+                          title: "",
+                          amount: "",
+                          imageUrl: "",
+                        },
+                      ])
+                    }
+                  >
+                    <Plus /> Add reward
+                  </Button>
+                </header>
+
+                {placementItems.length ? (
+                  <div className="tournament-prize-item-list">
+                    {placementItems.map((item, index) => {
+                      const updateItem = (
+                        key: "title" | "amount" | "imageUrl",
+                        value: string,
+                      ) =>
+                        updateItems(
+                          prizeItems.map((candidate) =>
+                            candidate.placement === placement &&
+                            candidate.itemOrder === item.itemOrder
+                              ? { ...candidate, [key]: value }
+                              : candidate,
+                          ),
+                        );
+                      const hasContent = Boolean(
+                        item.title || item.amount || item.imageUrl,
+                      );
+                      return (
+                        <section
+                          className="tournament-prize-item-editor"
+                          key={`${String(placement)}-${String(item.itemOrder)}`}
+                        >
+                          <header>
+                            <span>Reward {String(index + 1)}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              aria-label={`Remove ${label} reward ${String(index + 1)}`}
+                              onClick={() =>
+                                updateItems(
+                                  prizeItems.filter(
+                                    (candidate) => candidate !== item,
+                                  ),
+                                )
+                              }
+                            >
+                              <Trash2 />
+                            </Button>
+                          </header>
+                          <div className="tournament-prize-item-editor__fields">
+                            <label>
+                              Prize title
+                              <input
+                                aria-label={`${label} reward ${String(index + 1)} title`}
+                                value={item.title}
+                                required={hasContent}
+                                maxLength={120}
+                                onChange={(event) =>
+                                  updateItem("title", event.target.value)
+                                }
+                                placeholder="Example: Championship package"
+                              />
+                            </label>
+                            <label>
+                              Amount or value
+                              <input
+                                aria-label={`${label} reward ${String(index + 1)} amount`}
+                                value={item.amount}
+                                required={hasContent}
+                                maxLength={120}
+                                onChange={(event) =>
+                                  updateItem("amount", event.target.value)
+                                }
+                                placeholder="Example: $5,000 or custom vehicle"
+                              />
+                            </label>
+                            <CloudinaryUploadField
+                              label={`${label} reward ${String(index + 1)} image`}
+                              value={item.imageUrl}
+                              onChange={(url) => updateItem("imageUrl", url)}
+                              category="tournament-prize"
+                              full
+                            />
+                          </div>
+                        </section>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="tournament-prize-placement__empty">
+                    <Gift aria-hidden="true" />
+                    <div>
+                      <strong>No rewards added</strong>
+                      <span>
+                        Add the first reward for {label.toLowerCase()}.
+                      </span>
+                    </div>
+                  </div>
+                )}
               </article>
             );
           },
@@ -727,6 +864,7 @@ function blankValues(kind: RecordKind): FormValues {
       maximumParticipants: "16",
       publicVisible: true,
       featured: false,
+      tournamentPrizesJson: "[]",
     };
   if (kind === "match") return { status: "SCHEDULED", bestOf: "1" };
   return { status: "SCHEDULED", featured: false };
@@ -765,20 +903,29 @@ function valuesFromRecord(kind: RecordKind, record: AdminRecord): FormValues {
     const prizes = Array.isArray(record.prizes)
       ? (record.prizes as Array<Record<string, unknown>>)
       : [];
-    const prizeValues = Object.fromEntries(
-      tournamentPrizePlacements.flatMap(({ placement }) => {
-        const prize = prizes.find(
-          (item) => Number(item.placement) === placement,
-        );
-        const prizeValue = (key: string) =>
-          typeof prize?.[key] === "string" ? prize[key] : "";
-        return [
-          [`prize${String(placement)}Title`, prizeValue("title")],
-          [`prize${String(placement)}Amount`, prizeValue("amount")],
-          [`prize${String(placement)}ImageUrl`, prizeValue("imageUrl")],
-        ];
-      }),
-    );
+    const prizeOrderByPlacement = new Map<number, number>();
+    const prizeItems = prizes.flatMap((prize) => {
+      const placement = Number(prize.placement);
+      if (![1, 2, 3].includes(placement)) return [];
+      const fallbackOrder = prizeOrderByPlacement.get(placement) ?? 0;
+      const parsedOrder = Number(prize.itemOrder);
+      const itemOrder = Number.isInteger(parsedOrder)
+        ? parsedOrder
+        : fallbackOrder;
+      prizeOrderByPlacement.set(
+        placement,
+        Math.max(fallbackOrder + 1, itemOrder + 1),
+      );
+      return [
+        {
+          placement,
+          itemOrder,
+          title: typeof prize.title === "string" ? prize.title : "",
+          amount: typeof prize.amount === "string" ? prize.amount : "",
+          imageUrl: typeof prize.imageUrl === "string" ? prize.imageUrl : "",
+        },
+      ];
+    });
     return {
       name: valueOf(record, "name"),
       slug: valueOf(record, "slug"),
@@ -796,7 +943,9 @@ function valuesFromRecord(kind: RecordKind, record: AdminRecord): FormValues {
       prizeDescription: valueOf(record, "prizeDescription"),
       featured: Boolean(record.featured),
       publicVisible: record.publicVisible !== false,
-      ...prizeValues,
+      tournamentPrizesJson: JSON.stringify(
+        normalizeTournamentPrizeItems(prizeItems),
+      ),
     };
   }
   if (kind === "match") {
@@ -865,26 +1014,20 @@ function payloadFor(kind: RecordKind, values: FormValues) {
       status: String(values.status),
     };
   if (kind === "tournament") {
-    const prizes = tournamentPrizePlacements.flatMap(({ placement }) => {
-      const title = String(
-        values[`prize${String(placement)}Title`] ?? "",
-      ).trim();
-      const amount = String(
-        values[`prize${String(placement)}Amount`] ?? "",
-      ).trim();
-      const imageUrl = String(
-        values[`prize${String(placement)}ImageUrl`] ?? "",
-      ).trim();
-      if (!title && !amount && !imageUrl) return [];
-      return [
-        {
-          placement,
-          title,
-          amount,
-          imageUrl: optional(imageUrl) ?? null,
-        },
-      ];
-    });
+    const prizes = normalizeTournamentPrizeItems(
+      parseTournamentPrizeItems(values.tournamentPrizesJson),
+    )
+      .filter(
+        (item) =>
+          item.title.trim() || item.amount.trim() || item.imageUrl.trim(),
+      )
+      .map((item) => ({
+        placement: item.placement,
+        itemOrder: item.itemOrder,
+        title: item.title.trim(),
+        amount: item.amount.trim(),
+        imageUrl: optional(item.imageUrl.trim()) ?? null,
+      }));
     return {
       name: String(values.name ?? ""),
       slug:

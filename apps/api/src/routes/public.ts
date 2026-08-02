@@ -302,7 +302,7 @@ export function publicRoutes(app: FastifyInstance): void {
           organizer: {
             select: { id: true, displayName: true, avatarUrl: true },
           },
-          prizes: { orderBy: { placement: "asc" } },
+          prizes: { orderBy: [{ placement: "asc" }, { itemOrder: "asc" }] },
           participants: {
             where: { gang: { status: { not: "ARCHIVED" } } },
             include: { gang: true, roster: { include: { player: true } } },

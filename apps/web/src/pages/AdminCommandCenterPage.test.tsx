@@ -328,14 +328,26 @@ describe("AdminCommandCenterPage record actions", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Edit Tournament" }),
     );
-    fireEvent.change(screen.getByLabelText("First place prize title"), {
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add reward to First place" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add reward to First place" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add reward to Second place" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add reward to Third place" }),
+    );
+    fireEvent.change(screen.getByLabelText("First place reward 1 title"), {
       target: { value: "Championship package" },
     });
-    fireEvent.change(screen.getByLabelText("First place prize amount"), {
+    fireEvent.change(screen.getByLabelText("First place reward 1 amount"), {
       target: { value: "$5,000" },
     });
     fireEvent.change(
-      screen.getByLabelText("First place item image Cloudinary URL"),
+      screen.getByLabelText("First place reward 1 image Cloudinary URL"),
       {
         target: {
           value:
@@ -343,16 +355,22 @@ describe("AdminCommandCenterPage record actions", () => {
         },
       },
     );
-    fireEvent.change(screen.getByLabelText("Second place prize title"), {
+    fireEvent.change(screen.getByLabelText("First place reward 2 title"), {
+      target: { value: "Custom vehicle" },
+    });
+    fireEvent.change(screen.getByLabelText("First place reward 2 amount"), {
+      target: { value: "1 vehicle" },
+    });
+    fireEvent.change(screen.getByLabelText("Second place reward 1 title"), {
       target: { value: "Runner-up package" },
     });
-    fireEvent.change(screen.getByLabelText("Second place prize amount"), {
+    fireEvent.change(screen.getByLabelText("Second place reward 1 amount"), {
       target: { value: "$2,500" },
     });
-    fireEvent.change(screen.getByLabelText("Third place prize title"), {
+    fireEvent.change(screen.getByLabelText("Third place reward 1 title"), {
       target: { value: "Third-place package" },
     });
-    fireEvent.change(screen.getByLabelText("Third place prize amount"), {
+    fireEvent.change(screen.getByLabelText("Third place reward 1 amount"), {
       target: { value: "$1,000" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
@@ -364,19 +382,29 @@ describe("AdminCommandCenterPage record actions", () => {
           prizes: [
             {
               placement: 1,
+              itemOrder: 0,
               title: "Championship package",
               amount: "$5,000",
               imageUrl:
                 "https://res.cloudinary.com/world-star/image/upload/prizes/champion.webp",
             },
             {
+              placement: 1,
+              itemOrder: 1,
+              title: "Custom vehicle",
+              amount: "1 vehicle",
+              imageUrl: null,
+            },
+            {
               placement: 2,
+              itemOrder: 0,
               title: "Runner-up package",
               amount: "$2,500",
               imageUrl: null,
             },
             {
               placement: 3,
+              itemOrder: 0,
               title: "Third-place package",
               amount: "$1,000",
               imageUrl: null,

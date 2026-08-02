@@ -350,6 +350,7 @@ model TournamentPrize {
   id           String     @id @default(cuid())
   tournamentId String
   placement    Int
+  itemOrder    Int        @default(0)
   title        String
   amount       String
   imageUrl     String?    @db.Text
@@ -357,8 +358,8 @@ model TournamentPrize {
   updatedAt    DateTime   @updatedAt
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
 
-  @@unique([tournamentId, placement])
-  @@index([tournamentId])
+  @@unique([tournamentId, placement, itemOrder])
+  @@index([tournamentId, placement])
 }
 
 model TournamentParticipant {
