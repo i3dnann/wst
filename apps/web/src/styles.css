@@ -14041,7 +14041,7 @@ textarea:focus,
 
 .gang-profile-v3__banner {
   z-index: -2;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
 }
 
