@@ -136,6 +136,7 @@ function renderTournaments() {
         maximumParticipants: 16,
         rules: "Check in before the match.\nRespect administrator decisions.",
         prizeDescription: null,
+        prizes: [],
         featured: false,
         publicVisible: true,
         _count: { participants: 0, matches: 0 },
@@ -315,6 +316,75 @@ describe("AdminCommandCenterPage record actions", () => {
       ),
     );
     expect(updateTournament).not.toHaveBeenCalled();
+  });
+
+  it("publishes structured first, second, and third place prizes", async () => {
+    updateTournament.mockResolvedValue({
+      data: { id: "tournament-identifier-0001" },
+      meta: { requestId: "test", timestamp: new Date().toISOString() },
+    });
+    renderTournaments();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Edit Tournament" }),
+    );
+    fireEvent.change(screen.getByLabelText("First place prize title"), {
+      target: { value: "Championship package" },
+    });
+    fireEvent.change(screen.getByLabelText("First place prize amount"), {
+      target: { value: "$5,000" },
+    });
+    fireEvent.change(
+      screen.getByLabelText("First place item image Cloudinary URL"),
+      {
+        target: {
+          value:
+            "https://res.cloudinary.com/world-star/image/upload/prizes/champion.webp",
+        },
+      },
+    );
+    fireEvent.change(screen.getByLabelText("Second place prize title"), {
+      target: { value: "Runner-up package" },
+    });
+    fireEvent.change(screen.getByLabelText("Second place prize amount"), {
+      target: { value: "$2,500" },
+    });
+    fireEvent.change(screen.getByLabelText("Third place prize title"), {
+      target: { value: "Third-place package" },
+    });
+    fireEvent.change(screen.getByLabelText("Third place prize amount"), {
+      target: { value: "$1,000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    await waitFor(() =>
+      expect(updateTournament).toHaveBeenCalledWith(
+        "tournament-identifier-0001",
+        {
+          prizes: [
+            {
+              placement: 1,
+              title: "Championship package",
+              amount: "$5,000",
+              imageUrl:
+                "https://res.cloudinary.com/world-star/image/upload/prizes/champion.webp",
+            },
+            {
+              placement: 2,
+              title: "Runner-up package",
+              amount: "$2,500",
+              imageUrl: null,
+            },
+            {
+              placement: 3,
+              title: "Third-place package",
+              amount: "$1,000",
+              imageUrl: null,
+            },
+          ],
+        },
+      ),
+    );
   });
 
   it("creates a Kick stream from only the channel name", async () => {

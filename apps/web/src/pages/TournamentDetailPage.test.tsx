@@ -31,7 +31,11 @@ vi.mock("@/components/effects/ChampionCelebration", () => ({
 const tournament = vi.mocked(api.tournament);
 const bracket = vi.mocked(api.bracket);
 
-function renderTournamentPage(rules: string | null, rounds: unknown[] = []) {
+function renderTournamentPage(
+  rules: string | null,
+  rounds: unknown[] = [],
+  prizes: unknown[] = [],
+) {
   tournament.mockResolvedValue({
     data: {
       name: "World Star Cup",
@@ -43,6 +47,7 @@ function renderTournamentPage(rules: string | null, rounds: unknown[] = []) {
       maximumParticipants: 16,
       participants: [],
       rules,
+      prizes,
     },
     meta: { requestId: "test", timestamp: new Date().toISOString() },
   });
@@ -100,7 +105,59 @@ describe("TournamentDetailPage rules", () => {
     expect(
       await screen.findByText("Rules have not been published yet"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Pending")).toBeInTheDocument();
+    expect(screen.getAllByText("Pending")).toHaveLength(2);
+  });
+
+  it("renders the tournament prize podium below the bracket", async () => {
+    renderTournamentPage(
+      null,
+      [],
+      [
+        {
+          id: "first-prize",
+          placement: 1,
+          title: "Championship package",
+          amount: "$5,000",
+          imageUrl:
+            "https://res.cloudinary.com/world-star/image/upload/prizes/champion.webp",
+        },
+        {
+          id: "second-prize",
+          placement: 2,
+          title: "Runner-up package",
+          amount: "$2,500",
+          imageUrl: null,
+        },
+        {
+          id: "third-prize",
+          placement: 3,
+          title: "Third-place package",
+          amount: "$1,000",
+          imageUrl: null,
+        },
+      ],
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "Tournament Prizes" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Championship package")).toBeInTheDocument();
+    expect(screen.getByText("$5,000")).toBeInTheDocument();
+    expect(screen.getByAltText("Championship package prize")).toHaveAttribute(
+      "src",
+      "https://res.cloudinary.com/world-star/image/upload/prizes/champion.webp",
+    );
+
+    const bracketHeading = screen.getByRole("heading", {
+      name: "The bracket has not been seeded",
+    });
+    const prizesHeading = screen.getByRole("heading", {
+      name: "Tournament Prizes",
+    });
+    expect(
+      bracketHeading.compareDocumentPosition(prizesHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("celebrates the final winner even when bracket rounds arrive out of order", async () => {

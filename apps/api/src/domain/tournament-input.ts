@@ -33,6 +33,30 @@ const tournamentRulesSchema = z
   .nullable()
   .optional();
 
+export const tournamentPrizeSchema = z.object({
+  placement: z.number().int().min(1).max(3),
+  title: z.string().trim().min(1).max(120),
+  amount: z.string().trim().min(1).max(120),
+  imageUrl: httpsUrlSchema.nullable().optional(),
+});
+
+export const tournamentPrizesSchema = z
+  .array(tournamentPrizeSchema)
+  .max(3)
+  .superRefine((prizes, context) => {
+    const placements = new Set<number>();
+    for (const [index, prize] of prizes.entries()) {
+      if (placements.has(prize.placement)) {
+        context.addIssue({
+          code: "custom",
+          path: [index, "placement"],
+          message: "Each tournament placement can only have one prize.",
+        });
+      }
+      placements.add(prize.placement);
+    }
+  });
+
 const tournamentFieldsSchema = z.object({
   name: z.string().trim().min(2).max(140),
   slug: slugSchema,
@@ -54,6 +78,7 @@ const tournamentFieldsSchema = z.object({
   maximumParticipants: z.number().int().min(2).max(256),
   rules: tournamentRulesSchema,
   prizeDescription: z.string().trim().max(1000).optional(),
+  prizes: tournamentPrizesSchema.optional(),
   featured: z.boolean(),
   publicVisible: z.boolean(),
 });

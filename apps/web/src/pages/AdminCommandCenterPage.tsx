@@ -7,6 +7,7 @@ import {
   Gavel,
   LayoutDashboard,
   LogOut,
+  Medal,
   Pencil,
   Plus,
   Radio,
@@ -595,6 +596,119 @@ function TournamentRulesEditor({
   );
 }
 
+const tournamentPrizePlacements = [
+  { placement: 1, label: "First place", shortLabel: "1st", tone: "first" },
+  { placement: 2, label: "Second place", shortLabel: "2nd", tone: "second" },
+  { placement: 3, label: "Third place", shortLabel: "3rd", tone: "third" },
+] as const;
+
+function TournamentPrizesEditor({
+  values,
+  setValue,
+}: {
+  values: FormValues;
+  setValue: (name: string, value: string | boolean) => void;
+}) {
+  const configuredCount = tournamentPrizePlacements.filter(({ placement }) =>
+    Boolean(
+      String(values[`prize${String(placement)}Title`] ?? "").trim() &&
+      String(values[`prize${String(placement)}Amount`] ?? "").trim(),
+    ),
+  ).length;
+
+  return (
+    <section className="tournament-prizes-editor full-width">
+      <header>
+        <span className="tournament-prizes-editor__icon">
+          <Trophy aria-hidden="true" />
+        </span>
+        <div>
+          <span className="tournament-prizes-editor__eyebrow">
+            Tournament reward podium
+          </span>
+          <h3>Prizes</h3>
+          <p>
+            Manage the title, amount, and item image for the first three
+            finishers. Empty placements stay unpublished.
+          </p>
+        </div>
+        <span className="tournament-prizes-editor__status">
+          {String(configuredCount)} / 3 published
+        </span>
+      </header>
+
+      <div className="tournament-prize-editor-grid">
+        {tournamentPrizePlacements.map(
+          ({ placement, label, shortLabel, tone }) => {
+            const titleKey = `prize${String(placement)}Title`;
+            const amountKey = `prize${String(placement)}Amount`;
+            const imageKey = `prize${String(placement)}ImageUrl`;
+            const title = String(values[titleKey] ?? "");
+            const amount = String(values[amountKey] ?? "");
+            const imageUrl = String(values[imageKey] ?? "");
+            const hasContent = Boolean(title || amount || imageUrl);
+            return (
+              <article
+                className={`tournament-prize-editor-card tournament-prize-editor-card--${tone}`}
+                key={placement}
+              >
+                <div className="tournament-prize-editor-card__place">
+                  <Medal aria-hidden="true" />
+                  <span>{shortLabel}</span>
+                  <strong>{label}</strong>
+                </div>
+                <label>
+                  Prize title
+                  <input
+                    aria-label={`${label} prize title`}
+                    value={title}
+                    required={hasContent}
+                    maxLength={120}
+                    onChange={(event) => setValue(titleKey, event.target.value)}
+                    placeholder="Example: Championship package"
+                  />
+                </label>
+                <label>
+                  Amount or value
+                  <input
+                    aria-label={`${label} prize amount`}
+                    value={amount}
+                    required={hasContent}
+                    maxLength={120}
+                    onChange={(event) =>
+                      setValue(amountKey, event.target.value)
+                    }
+                    placeholder="Example: $5,000 or 1 custom vehicle"
+                  />
+                </label>
+                <CloudinaryUploadField
+                  label={`${label} item image`}
+                  value={imageUrl}
+                  onChange={(url) => setValue(imageKey, url)}
+                  category="tournament-prize"
+                  full
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!hasContent}
+                  onClick={() => {
+                    setValue(titleKey, "");
+                    setValue(amountKey, "");
+                    setValue(imageKey, "");
+                  }}
+                >
+                  <Trash2 /> Clear {label}
+                </Button>
+              </article>
+            );
+          },
+        )}
+      </div>
+    </section>
+  );
+}
+
 function blankValues(kind: RecordKind): FormValues {
   if (kind === "gang")
     return {
@@ -647,7 +761,24 @@ function valuesFromRecord(kind: RecordKind, record: AdminRecord): FormValues {
       externalFivemId: valueOf(record, "externalFivemId"),
       status: valueOf(record, "status"),
     };
-  if (kind === "tournament")
+  if (kind === "tournament") {
+    const prizes = Array.isArray(record.prizes)
+      ? (record.prizes as Array<Record<string, unknown>>)
+      : [];
+    const prizeValues = Object.fromEntries(
+      tournamentPrizePlacements.flatMap(({ placement }) => {
+        const prize = prizes.find(
+          (item) => Number(item.placement) === placement,
+        );
+        const prizeValue = (key: string) =>
+          typeof prize?.[key] === "string" ? prize[key] : "";
+        return [
+          [`prize${String(placement)}Title`, prizeValue("title")],
+          [`prize${String(placement)}Amount`, prizeValue("amount")],
+          [`prize${String(placement)}ImageUrl`, prizeValue("imageUrl")],
+        ];
+      }),
+    );
     return {
       name: valueOf(record, "name"),
       slug: valueOf(record, "slug"),
@@ -665,7 +796,9 @@ function valuesFromRecord(kind: RecordKind, record: AdminRecord): FormValues {
       prizeDescription: valueOf(record, "prizeDescription"),
       featured: Boolean(record.featured),
       publicVisible: record.publicVisible !== false,
+      ...prizeValues,
     };
+  }
   if (kind === "match") {
     const tournament = record.tournament as { id?: string } | null;
     const gangA = record.gangA as { id?: string } | null;
@@ -731,7 +864,27 @@ function payloadFor(kind: RecordKind, values: FormValues) {
       externalFivemId: optional(String(values.externalFivemId ?? "")),
       status: String(values.status),
     };
-  if (kind === "tournament")
+  if (kind === "tournament") {
+    const prizes = tournamentPrizePlacements.flatMap(({ placement }) => {
+      const title = String(
+        values[`prize${String(placement)}Title`] ?? "",
+      ).trim();
+      const amount = String(
+        values[`prize${String(placement)}Amount`] ?? "",
+      ).trim();
+      const imageUrl = String(
+        values[`prize${String(placement)}ImageUrl`] ?? "",
+      ).trim();
+      if (!title && !amount && !imageUrl) return [];
+      return [
+        {
+          placement,
+          title,
+          amount,
+          imageUrl: optional(imageUrl) ?? null,
+        },
+      ];
+    });
     return {
       name: String(values.name ?? ""),
       slug:
@@ -751,7 +904,9 @@ function payloadFor(kind: RecordKind, values: FormValues) {
       prizeDescription: optional(String(values.prizeDescription ?? "")),
       featured: Boolean(values.featured),
       publicVisible: Boolean(values.publicVisible),
+      prizes,
     };
+  }
   if (kind === "match")
     return {
       tournamentId: optional(String(values.tournamentId ?? "")),
@@ -1203,13 +1358,7 @@ function RecordEditorFields({
           />
         </label>
         <TournamentRulesEditor values={values} setValue={setValue} />
-        <Field
-          label="Prize description"
-          name="prizeDescription"
-          values={values}
-          setValue={setValue}
-          full
-        />
+        <TournamentPrizesEditor values={values} setValue={setValue} />
         <ToggleField
           label="Featured tournament"
           name="featured"

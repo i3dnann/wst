@@ -5568,6 +5568,386 @@ body .gold-home > .home-dashboard-grid {
   }
 }
 
+/* Structured tournament prize manager and public podium */
+.tournament-prizes-editor {
+  position: relative;
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  overflow: hidden;
+  border: 1px solid rgb(108 144 195 / 0.3);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 100% 0, rgb(39 66 114 / 0.2), transparent 34%),
+    linear-gradient(145deg, rgb(13 20 51 / 0.34), rgb(5 7 15 / 0.98));
+}
+
+.tournament-prizes-editor::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(#6c90c3, #274272, #171f55);
+}
+
+.tournament-prizes-editor > header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+}
+
+.tournament-prizes-editor__icon,
+.tournament-prizes-public__icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgb(108 144 195 / 0.34);
+  border-radius: 12px;
+  background: rgb(39 66 114 / 0.14);
+  color: #6c90c3;
+}
+
+.tournament-prizes-editor__icon svg,
+.tournament-prizes-public__icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.tournament-prizes-editor__eyebrow,
+.tournament-prizes-public > header > div > span {
+  color: #6c90c3;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.tournament-prizes-editor h3 {
+  margin: 5px 0 4px;
+  color: #f7f9fc;
+  font: 500 23px/1.05 var(--display);
+}
+
+.tournament-prizes-editor header p {
+  max-width: 620px;
+  margin: 0;
+  color: #969dac;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.tournament-prizes-editor__status {
+  padding: 7px 10px;
+  border: 1px solid rgb(108 144 195 / 0.28);
+  border-radius: 999px;
+  background: rgb(39 66 114 / 0.1);
+  color: #9eb7db;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tournament-prize-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tournament-prize-editor-card {
+  display: grid;
+  align-content: start;
+  gap: 13px;
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid rgb(108 144 195 / 0.18);
+  border-radius: 14px;
+  background: rgb(5 8 18 / 0.74);
+}
+
+.tournament-prize-editor-card--first {
+  border-color: rgb(108 144 195 / 0.4);
+  background:
+    linear-gradient(145deg, rgb(39 66 114 / 0.22), transparent 52%),
+    rgb(5 8 18 / 0.82);
+}
+
+.tournament-prize-editor-card__place {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid rgb(108 144 195 / 0.15);
+}
+
+.tournament-prize-editor-card__place svg {
+  width: 17px;
+  color: #6c90c3;
+}
+
+.tournament-prize-editor-card__place span {
+  color: #6c90c3;
+  font: 700 12px/1 var(--body);
+}
+
+.tournament-prize-editor-card__place strong {
+  color: #e9eef7;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tournament-prize-editor-card .cloudinary-upload-field__controls {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.tournament-prize-editor-card
+  .cloudinary-upload-field__controls
+  > input[type="url"] {
+  grid-column: 1 / -1;
+}
+
+.tournament-prize-editor-card .cloudinary-upload-field__preview {
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  object-fit: contain;
+  background: #050812;
+}
+
+.tournament-prizes-public {
+  grid-column: 1 / -1;
+  position: relative;
+  display: grid;
+  gap: clamp(22px, 3vw, 36px);
+  padding: clamp(22px, 3vw, 40px);
+  overflow: hidden;
+  border: 1px solid rgb(108 144 195 / 0.3);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 110%, rgb(39 66 114 / 0.34), transparent 44%),
+    linear-gradient(135deg, rgb(13 20 51 / 0.38), rgb(5 7 15 / 0.98) 54%);
+}
+
+.tournament-prizes-public::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(108 144 195 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(108 144 195 / 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black, transparent 86%);
+  pointer-events: none;
+}
+
+.tournament-prizes-public > header {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 15px;
+}
+
+.tournament-prizes-public h2 {
+  margin: 5px 0 4px;
+  color: #f7f9fc;
+  font: 500 clamp(27px, 3vw, 40px) / 1 var(--display);
+}
+
+.tournament-prizes-public > header p {
+  margin: 0;
+  color: #969dac;
+  font-size: 12px;
+}
+
+.tournament-prizes-public > header > strong {
+  padding: 8px 12px;
+  border: 1px solid rgb(108 144 195 / 0.27);
+  border-radius: 999px;
+  color: #9eb7db;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tournament-prize-podium {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-areas: "second first third";
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 14px;
+}
+
+.tournament-prize-card {
+  display: grid;
+  overflow: hidden;
+  min-width: 0;
+  border: 1px solid rgb(108 144 195 / 0.22);
+  border-radius: 17px;
+  background: rgb(5 8 18 / 0.84);
+  transition:
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.tournament-prize-card:hover {
+  border-color: rgb(108 144 195 / 0.52);
+  transform: translateY(-3px);
+}
+
+.tournament-prize-card--place-1 {
+  grid-area: first;
+  border-color: rgb(108 144 195 / 0.5);
+}
+
+.tournament-prize-card--place-2 {
+  grid-area: second;
+}
+
+.tournament-prize-card--place-3 {
+  grid-area: third;
+}
+
+.tournament-prize-card__media {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 190px;
+  overflow: hidden;
+  border-bottom: 1px solid rgb(108 144 195 / 0.18);
+  background:
+    radial-gradient(circle, rgb(39 66 114 / 0.28), transparent 64%), #070b18;
+}
+
+.tournament-prize-card--place-1 .tournament-prize-card__media {
+  min-height: 230px;
+}
+
+.tournament-prize-card__media img {
+  width: 100%;
+  height: 100%;
+  max-height: 250px;
+  padding: 18px;
+  object-fit: contain;
+}
+
+.tournament-prize-card__media > svg {
+  width: 54px;
+  height: 54px;
+  color: #6c90c3;
+  opacity: 0.72;
+}
+
+.tournament-prize-card__media > span {
+  position: absolute;
+  top: 13px;
+  left: 13px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgb(108 144 195 / 0.34);
+  border-radius: 50%;
+  background: rgb(5 8 18 / 0.88);
+  color: #9eb7db;
+  font: 800 10px/1 var(--body);
+}
+
+.tournament-prize-card__copy {
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+}
+
+.tournament-prize-card__copy > span {
+  color: #6c90c3;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.tournament-prize-card__copy h3 {
+  margin: 0;
+  color: #f7f9fc;
+  font: 500 clamp(20px, 2.2vw, 28px) / 1.08 var(--display);
+}
+
+.tournament-prize-card__copy strong {
+  color: #b9cbea;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.tournament-prizes-public__empty {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  min-height: 150px;
+  padding: 24px;
+  border: 1px dashed rgb(108 144 195 / 0.24);
+  border-radius: 15px;
+  color: #6c90c3;
+  text-align: left;
+}
+
+.tournament-prizes-public__empty > svg {
+  width: 30px;
+  height: 30px;
+}
+
+.tournament-prizes-public__empty strong {
+  color: #edf2fa;
+  font-size: 14px;
+}
+
+.tournament-prizes-public__empty p {
+  margin: 4px 0 0;
+  color: #929aaa;
+  font-size: 11px;
+}
+
+@media (max-width: 1050px) {
+  .tournament-prize-editor-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .tournament-prizes-editor > header,
+  .tournament-prizes-public > header {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .tournament-prizes-editor__status,
+  .tournament-prizes-public > header > strong {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .tournament-prize-podium {
+    grid-template-areas:
+      "first"
+      "second"
+      "third";
+    grid-template-columns: 1fr;
+  }
+
+  .tournament-prize-card__media,
+  .tournament-prize-card--place-1 .tournament-prize-card__media {
+    min-height: 180px;
+  }
+}
+
 /* Website settings: public page access controls */
 .settings-card-grid > .page-lock-manager {
   grid-column: 1 / -1;

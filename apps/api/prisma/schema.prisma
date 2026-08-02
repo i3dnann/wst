@@ -341,8 +341,24 @@ model Tournament {
   matches             Match[]
   awards              MvpAward[]
   liveStreams         LiveStream[]
+  prizes              TournamentPrize[]
 
   @@index([status, startAt])
+}
+
+model TournamentPrize {
+  id           String     @id @default(cuid())
+  tournamentId String
+  placement    Int
+  title        String
+  amount       String
+  imageUrl     String?    @db.Text
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, placement])
+  @@index([tournamentId])
 }
 
 model TournamentParticipant {

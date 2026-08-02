@@ -25,6 +25,7 @@ const uploadRequestSchema = z
       "gang-banner",
       "player-avatar",
       "tournament-banner",
+      "tournament-prize",
       "event-image",
       "event-video",
       "stream-thumbnail",

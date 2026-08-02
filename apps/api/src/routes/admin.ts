@@ -618,6 +618,7 @@ export function adminRoutes(app: FastifyInstance): void {
       where: { status: { not: "ARCHIVED" } },
       orderBy: { updatedAt: "desc" },
       include: {
+        prizes: { orderBy: { placement: "asc" } },
         _count: {
           select: {
             participants: {
@@ -643,6 +644,7 @@ export function adminRoutes(app: FastifyInstance): void {
         },
         include: {
           season: { select: { id: true, name: true } },
+          prizes: { orderBy: { placement: "asc" } },
           participants: {
             where: { gang: { status: { not: "ARCHIVED" } } },
             orderBy: [{ seed: "asc" }, { registeredAt: "asc" }],
@@ -856,11 +858,29 @@ export function adminRoutes(app: FastifyInstance): void {
   app.post("/api/v1/admin/tournaments", async (request, reply) => {
     const auth = requirePermission(request, "tournament.create");
     const input = tournamentInputSchema.parse(request.body);
-    const tournament = await prisma.tournament.create({
-      data: compact({
-        ...input,
-        organizerUserId: auth.userId,
-      }) as Prisma.TournamentUncheckedCreateInput,
+    const { prizes, ...tournamentInput } = input;
+    const tournament = await prisma.$transaction(async (tx) => {
+      const created = await tx.tournament.create({
+        data: compact({
+          ...tournamentInput,
+          organizerUserId: auth.userId,
+        }) as Prisma.TournamentUncheckedCreateInput,
+      });
+      if (prizes?.length) {
+        await tx.tournamentPrize.createMany({
+          data: prizes.map((prize) => ({
+            tournamentId: created.id,
+            placement: prize.placement,
+            title: prize.title,
+            amount: prize.amount,
+            imageUrl: prize.imageUrl ?? null,
+          })),
+        });
+      }
+      return tx.tournament.findUniqueOrThrow({
+        where: { id: created.id },
+        include: { prizes: { orderBy: { placement: "asc" } } },
+      });
     });
     await recordAudit(
       auth.userId,
@@ -877,21 +897,23 @@ export function adminRoutes(app: FastifyInstance): void {
     async (request) => {
       const auth = requirePermission(request, "tournament.update");
       const input = tournamentUpdateInputSchema.parse(request.body);
+      const { prizes, ...tournamentInput } = input;
       const before = await prisma.tournament.findUniqueOrThrow({
         where: { id: request.params.id },
+        include: { prizes: { orderBy: { placement: "asc" } } },
       });
-      if (input.status && input.status !== before.status) {
-        assertTournamentTransition(before.status, input.status);
-        if (input.status === "IN_PROGRESS") {
+      if (tournamentInput.status && tournamentInput.status !== before.status) {
+        assertTournamentTransition(before.status, tournamentInput.status);
+        if (tournamentInput.status === "IN_PROGRESS") {
           await assertTournamentCanStart(prisma, before.id);
         }
       }
-      const startAt = input.startAt ?? before.startAt;
-      const endAt = input.endAt ?? before.endAt;
+      const startAt = tournamentInput.startAt ?? before.startAt;
+      const endAt = tournamentInput.endAt ?? before.endAt;
       const registrationOpenAt =
-        input.registrationOpenAt ?? before.registrationOpenAt;
+        tournamentInput.registrationOpenAt ?? before.registrationOpenAt;
       const registrationCloseAt =
-        input.registrationCloseAt ?? before.registrationCloseAt;
+        tournamentInput.registrationCloseAt ?? before.registrationCloseAt;
       if (endAt && endAt <= startAt)
         throw new HttpError(
           422,
@@ -914,17 +936,39 @@ export function adminRoutes(app: FastifyInstance): void {
           "REGISTRATION_AFTER_START",
           "Registration must close before the tournament starts.",
         );
-      const tournament = await prisma.tournament.update({
-        where: { id: request.params.id },
-        data: compact({
-          ...input,
-          archivedAt:
-            input.status === "ARCHIVED"
-              ? new Date()
-              : input.status && before.status === "ARCHIVED"
-                ? null
-                : undefined,
-        }),
+      const tournament = await prisma.$transaction(async (tx) => {
+        await tx.tournament.update({
+          where: { id: request.params.id },
+          data: compact({
+            ...tournamentInput,
+            archivedAt:
+              tournamentInput.status === "ARCHIVED"
+                ? new Date()
+                : tournamentInput.status && before.status === "ARCHIVED"
+                  ? null
+                  : undefined,
+          }),
+        });
+        if (prizes !== undefined) {
+          await tx.tournamentPrize.deleteMany({
+            where: { tournamentId: request.params.id },
+          });
+          if (prizes.length) {
+            await tx.tournamentPrize.createMany({
+              data: prizes.map((prize) => ({
+                tournamentId: request.params.id,
+                placement: prize.placement,
+                title: prize.title,
+                amount: prize.amount,
+                imageUrl: prize.imageUrl ?? null,
+              })),
+            });
+          }
+        }
+        return tx.tournament.findUniqueOrThrow({
+          where: { id: request.params.id },
+          include: { prizes: { orderBy: { placement: "asc" } } },
+        });
       });
       await writeAudit({
         actorUserId: auth.userId,

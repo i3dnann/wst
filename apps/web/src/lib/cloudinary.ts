@@ -5,6 +5,7 @@ export type MediaCategory =
   | "gang-banner"
   | "player-avatar"
   | "tournament-banner"
+  | "tournament-prize"
   | "event-image"
   | "event-video"
   | "stream-thumbnail"
@@ -19,11 +20,7 @@ const imageTypes = new Set([
   "image/webp",
   "image/gif",
 ]);
-const videoTypes = new Set([
-  "video/mp4",
-  "video/webm",
-  "video/quicktime",
-]);
+const videoTypes = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 
 type CloudinaryUploadResponse = {
   secure_url?: string;
@@ -67,9 +64,7 @@ export function validateMediaFile(file: File, kind: MediaKind): void {
   const image = imageTypes.has(file.type);
   const video = videoTypes.has(file.type);
   if (!image && !video)
-    throw new Error(
-      "Choose a PNG, JPG, WebP, GIF, MP4, WebM, or MOV file.",
-    );
+    throw new Error("Choose a PNG, JPG, WebP, GIF, MP4, WebM, or MOV file.");
   if (kind === "image" && !image) throw new Error("Choose an image file.");
   if (kind === "video" && !video) throw new Error("Choose a video file.");
   const maximumBytes = video ? 100 * 1024 * 1024 : 12 * 1024 * 1024;
@@ -156,7 +151,9 @@ export async function uploadMediaToCloudinary(
     !mediaAssetId ||
     !timestamp
   )
-    throw new Error("The API returned an incomplete Cloudinary upload request.");
+    throw new Error(
+      "The API returned an incomplete Cloudinary upload request.",
+    );
 
   const form = new FormData();
   form.append("file", file);

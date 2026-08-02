@@ -5,6 +5,7 @@ import {
   BookOpen,
   CalendarDays,
   Check,
+  Gift,
   Shield,
   Swords,
   Trophy,
@@ -53,6 +54,15 @@ interface TournamentRecord {
   maximumParticipants: number;
   participants: unknown[];
   rules: string | null;
+  prizes: TournamentPrizeRecord[];
+}
+
+interface TournamentPrizeRecord {
+  id: string;
+  placement: number;
+  title: string;
+  amount: string;
+  imageUrl: string | null;
 }
 
 interface BracketRecord {
@@ -149,6 +159,15 @@ export default function TournamentDetailPage() {
     .map((rule) => rule.trim().replace(/^(?:[-*•]\s+|\d+[.)]\s*)/, ""))
     .filter(Boolean)
     .slice(0, 20);
+  const prizes = [...(Array.isArray(data.prizes) ? data.prizes : [])]
+    .filter((prize) => [1, 2, 3].includes(prize.placement))
+    .sort((left, right) => left.placement - right.placement);
+  const placementLabel = (placement: number) =>
+    placement === 1
+      ? "First place"
+      : placement === 2
+        ? "Second place"
+        : "Third place";
 
   return (
     <main className="gold-content-page tournament-detail-gold">
@@ -305,6 +324,65 @@ export default function TournamentDetailPage() {
           <h2>The bracket has not been seeded</h2>
         </section>
       )}
+
+      <section
+        className={
+          prizes.length
+            ? "tournament-prizes-public"
+            : "tournament-prizes-public tournament-prizes-public--empty"
+        }
+        aria-labelledby="tournament-prizes-heading"
+      >
+        <header>
+          <span className="tournament-prizes-public__icon">
+            <Gift aria-hidden="true" />
+          </span>
+          <div>
+            <span>Official prize pool</span>
+            <h2 id="tournament-prizes-heading">Tournament Prizes</h2>
+            <p>The rewards waiting at the end of the bracket.</p>
+          </div>
+          <strong>
+            {prizes.length ? `${String(prizes.length)} places` : "Pending"}
+          </strong>
+        </header>
+        {prizes.length ? (
+          <div className="tournament-prize-podium">
+            {prizes.map((prize) => (
+              <article
+                className={`tournament-prize-card tournament-prize-card--place-${String(prize.placement)}`}
+                key={prize.id || String(prize.placement)}
+              >
+                <div className="tournament-prize-card__media">
+                  {prize.imageUrl ? (
+                    <img
+                      className="user-media-original"
+                      src={prize.imageUrl}
+                      alt={`${prize.title} prize`}
+                    />
+                  ) : (
+                    <Trophy aria-hidden="true" />
+                  )}
+                  <span>{String(prize.placement).padStart(2, "0")}</span>
+                </div>
+                <div className="tournament-prize-card__copy">
+                  <span>{placementLabel(prize.placement)}</span>
+                  <h3>{prize.title}</h3>
+                  <strong>{prize.amount}</strong>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="tournament-prizes-public__empty">
+            <Trophy aria-hidden="true" />
+            <div>
+              <strong>The prize pool will be announced soon</strong>
+              <p>Check back for the first, second, and third place rewards.</p>
+            </div>
+          </div>
+        )}
+      </section>
 
       <section
         className={
