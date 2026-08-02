@@ -5116,8 +5116,35 @@ html
   filter: var(--wst-logo-blue-filter) !important;
 }
 
-html body :is(.gold-hero-image, .maintenance-page__image, .coming-soon-page__image) {
+html body
+  :is(
+    .gold-hero-image,
+    .maintenance-page__image,
+    .coming-soon-page__image,
+    img.themed-blue-media
+  ) {
   filter: var(--wst-media-blue-filter) !important;
+}
+
+html body .information-hero__shade {
+  background:
+    linear-gradient(
+      90deg,
+      rgb(7 11 30 / 0.96) 0%,
+      rgb(13 20 51 / 0.72) 58%,
+      rgb(23 31 85 / 0.28) 100%
+    ),
+    linear-gradient(0deg, rgb(7 11 30 / 0.88), transparent 58%) !important;
+}
+
+@media (max-width: 820px) {
+  html body .admin-login-page {
+    background:
+      linear-gradient(rgb(7 11 30 / 0.62), rgb(7 11 30 / 0.94)),
+      linear-gradient(#274272, #171f55),
+      url("/assets/wst-red/admin-office-red.jpg") center / cover no-repeat !important;
+    background-blend-mode: multiply, color, normal;
+  }
 }
 
 html body .gold-hero-title-accent,
@@ -23412,4 +23439,467 @@ body .gold-home > .gold-live-strip p {
  */
 html body img.user-media-original {
   filter: none !important;
+}
+
+/* Futuristic home command center — lightweight, border-led, and shadow-free. */
+body .gold-home > .gold-stat-rail,
+body .gold-home > .home-dashboard-grid,
+body .gold-home > .gold-live-strip {
+  width: min(calc(100% - clamp(28px, 4.2vw, 88px)), 1760px) !important;
+  max-width: 1760px !important;
+}
+
+body .gold-home > .gold-stat-rail {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px !important;
+  background:
+    linear-gradient(90deg, rgb(108 144 195 / 0.025) 1px, transparent 1px),
+    linear-gradient(rgb(108 144 195 / 0.025) 1px, transparent 1px),
+    radial-gradient(circle at 100% 0%, rgb(108 144 195 / 0.16), transparent 23rem),
+    rgb(7 12 32 / 0.96) !important;
+  background-size: 46px 46px, 46px 46px, auto, auto !important;
+}
+
+body .gold-home > .gold-stat-rail::before {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: -12%;
+  width: 18%;
+  background: linear-gradient(90deg, transparent, rgb(108 144 195 / 0.08), transparent);
+  content: "";
+  pointer-events: none;
+  transform: skewX(-18deg);
+  animation: home-command-scan 8s ease-in-out infinite;
+}
+
+body .gold-home > .gold-stat-rail article {
+  position: relative;
+  min-height: 112px !important;
+  grid-template-columns: 48px minmax(0, 1fr) !important;
+  gap: 14px !important;
+  padding: 20px clamp(13px, 1.35vw, 22px) !important;
+  isolation: isolate;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease !important;
+}
+
+body .gold-home > .gold-stat-rail article::before {
+  display: none !important;
+}
+
+body .gold-home > .gold-stat-rail article::after {
+  position: absolute;
+  right: 18px;
+  bottom: 0;
+  left: 18px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #6c90c3, transparent);
+  content: "";
+  opacity: 0;
+  transform: scaleX(0.35);
+  transition:
+    opacity 180ms ease,
+    transform 240ms var(--wst-ease);
+}
+
+body .gold-home > .gold-stat-rail article:hover {
+  background-color: rgb(39 66 114 / 0.12) !important;
+}
+
+body .gold-home > .gold-stat-rail article:hover::after {
+  opacity: 0.9;
+  transform: scaleX(1);
+}
+
+body .gold-home > .gold-stat-rail article > .home-stat-icon {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(145deg, rgb(108 144 195 / 0.12), transparent),
+    rgb(8 13 34 / 0.82) !important;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+body .gold-home > .gold-stat-rail article .home-stat-value {
+  color: #f7f9fc !important;
+  font-family: var(--display) !important;
+  font-size: clamp(25px, 2vw, 31px) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+body .gold-home > .gold-stat-rail article strong {
+  color: #a9b8d0 !important;
+  font-size: 9px !important;
+  letter-spacing: 0.1em !important;
+}
+
+body .gold-home > .gold-stat-rail article small {
+  color: rgb(108 144 195 / 0.72) !important;
+}
+
+body .gold-home > .home-dashboard-grid {
+  gap: 14px !important;
+  margin-top: 14px !important;
+}
+
+body .gold-home .home-dashboard-grid > .home-competition-band,
+body .gold-home .home-dashboard-grid > .gold-registry-section {
+  position: relative;
+  border-color: rgb(108 144 195 / 0.34) !important;
+  border-radius: 6px !important;
+  background:
+    linear-gradient(135deg, rgb(39 66 114 / 0.08), transparent 46%),
+    linear-gradient(90deg, rgb(108 144 195 / 0.02) 1px, transparent 1px),
+    linear-gradient(rgb(108 144 195 / 0.02) 1px, transparent 1px),
+    rgb(7 12 31 / 0.95) !important;
+  background-size: auto, 48px 48px, 48px 48px, auto !important;
+  box-shadow: none !important;
+}
+
+body .gold-home .home-dashboard-grid > .home-competition-band::before,
+body .gold-home .home-dashboard-grid > .gold-registry-section::before {
+  position: absolute;
+  z-index: 3;
+  top: -1px;
+  left: -1px;
+  width: 72px;
+  height: 1px;
+  background: #6c90c3;
+  content: "";
+  pointer-events: none;
+}
+
+body .gold-home .home-dashboard-grid > .home-competition-band {
+  min-height: 440px !important;
+}
+
+body .gold-home .home-feature-summary,
+body .gold-home .home-events-panel {
+  position: relative;
+  padding: clamp(30px, 3vw, 46px) !important;
+}
+
+body .gold-home .home-feature-summary {
+  background: radial-gradient(circle at 48% 66%, rgb(39 66 114 / 0.14), transparent 15rem) !important;
+}
+
+body .gold-home .home-events-panel {
+  background: linear-gradient(145deg, rgb(23 31 85 / 0.15), transparent 54%) !important;
+}
+
+body .gold-home .home-feature-summary .gold-section-heading,
+body .gold-home .home-events-panel .gold-section-heading {
+  position: relative;
+  padding-bottom: 24px !important;
+}
+
+body .gold-home .home-feature-summary .gold-section-heading::after,
+body .gold-home .home-events-panel .gold-section-heading::after {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  width: 38px;
+  height: 1px;
+  background: linear-gradient(90deg, #6c90c3, transparent);
+  content: "";
+}
+
+body .gold-home .home-feature-summary .gold-section-heading > div > span,
+body .gold-home .home-events-panel .gold-section-heading > div > span {
+  color: #6c90c3 !important;
+  font-size: 10px !important;
+  letter-spacing: 0.2em !important;
+}
+
+body .gold-home .home-feature-summary .gold-section-heading h2,
+body .gold-home .home-events-panel .gold-section-heading h2 {
+  max-width: 390px !important;
+  margin-top: 11px !important;
+  font-size: clamp(34px, 3vw, 50px) !important;
+  line-height: 0.9 !important;
+}
+
+body .gold-home .home-command-empty,
+body .gold-home .home-featured-tournament {
+  min-height: 250px !important;
+  background: radial-gradient(circle, rgb(39 66 114 / 0.08), transparent 62%);
+}
+
+body .gold-home .home-command-empty::before,
+body .gold-home .home-featured-tournament::before {
+  width: 154px !important;
+  height: 154px !important;
+  border-color: rgb(108 144 195 / 0.11) !important;
+  background:
+    radial-gradient(circle, transparent 38%, rgb(108 144 195 / 0.04) 39%, transparent 40%),
+    repeating-radial-gradient(circle, transparent 0 28px, rgb(108 144 195 / 0.035) 29px 30px) !important;
+  box-shadow: none !important;
+}
+
+body .gold-home .home-command-icon {
+  width: 58px !important;
+  height: 58px !important;
+  border-radius: 8px !important;
+  background: rgb(7 11 30 / 0.92) !important;
+  color: #6c90c3 !important;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+
+body .gold-home .home-command-empty > strong,
+body .gold-home .home-featured-tournament strong {
+  font-size: 13px !important;
+  letter-spacing: 0.11em !important;
+}
+
+body .gold-home .home-command-empty > p,
+body .gold-home .home-featured-tournament p {
+  color: #9baecd !important;
+  font-size: 11px !important;
+}
+
+body .gold-home .home-command-empty > [data-slot="button"],
+body .gold-home .home-featured-tournament > [data-slot="button"],
+body .gold-home .home-events-panel > [data-slot="button"],
+body .gold-home .home-rankings-cta {
+  min-height: 42px !important;
+  border-color: rgb(108 144 195 / 0.28) !important;
+  background: linear-gradient(90deg, rgb(13 20 51 / 0.88), rgb(23 31 85 / 0.45)) !important;
+}
+
+body .gold-home .home-events-panel .gold-event-list li {
+  border-left: 2px solid rgb(108 144 195 / 0.46) !important;
+  border-radius: 3px !important;
+  background: rgb(13 20 51 / 0.35) !important;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms ease !important;
+}
+
+body .gold-home .home-events-panel .gold-event-list li:hover {
+  border-left-color: #6c90c3 !important;
+  background-color: rgb(39 66 114 / 0.14) !important;
+  transform: translateX(3px);
+}
+
+body .gold-home .home-dashboard-grid > .gold-registry-section {
+  min-height: 440px !important;
+  padding: 27px 25px 22px !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgb(108 144 195 / 0.1), transparent 17rem),
+    linear-gradient(rgb(108 144 195 / 0.018) 1px, transparent 1px),
+    rgb(6 10 27 / 0.97) !important;
+  background-size: auto, 100% 46px, auto !important;
+}
+
+body
+  .gold-home
+  .home-dashboard-grid
+  > .gold-registry-section
+  .gold-section-heading
+  h2 {
+  color: #6c90c3 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.19em !important;
+}
+
+body .gold-home .home-rankings-table {
+  border-top-color: rgb(108 144 195 / 0.24) !important;
+}
+
+body .gold-home .home-ranking-row {
+  min-height: 51px !important;
+  grid-template-columns: 54px minmax(0, 1fr) 62px !important;
+  border-bottom-color: rgb(108 144 195 / 0.16) !important;
+}
+
+body .gold-home .home-ranking-row:not(.home-ranking-head) > strong {
+  display: grid;
+  width: 31px;
+  height: 25px;
+  place-items: center;
+  border: 1px solid rgb(108 144 195 / 0.22);
+  border-radius: 4px;
+  color: #dce9fa !important;
+  background: rgb(39 66 114 / 0.11);
+  font-size: 12px !important;
+}
+
+body .gold-home .home-ranking-head {
+  min-height: 35px !important;
+  color: #7f94b5 !important;
+}
+
+body .gold-home .home-ranking-gang img {
+  width: 27px !important;
+  height: 27px !important;
+}
+
+body .gold-home .home-ranking-gang b {
+  color: #bdc9da !important;
+  font-size: 10px !important;
+}
+
+body .gold-home > .gold-live-strip {
+  position: relative;
+  min-height: 88px !important;
+  margin: 14px auto 28px !important;
+  padding: 17px 24px !important;
+  border-radius: 6px !important;
+  background:
+    linear-gradient(90deg, rgb(39 66 114 / 0.12), transparent 34%, rgb(108 144 195 / 0.1)),
+    rgb(7 12 32 / 0.97) !important;
+}
+
+body .gold-home > .gold-live-strip::before {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  width: 28%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #6c90c3);
+  content: "";
+}
+
+body .gold-home > .gold-live-strip > div {
+  grid-template-columns: auto 48px auto minmax(190px, 1fr) !important;
+  gap: 18px !important;
+}
+
+body .gold-home > .gold-live-strip .home-live-icon {
+  position: relative;
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 8px !important;
+  background: rgb(39 66 114 / 0.12);
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+body .gold-home > .gold-live-strip .home-live-icon::after {
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgb(108 144 195 / 0.32);
+  border-radius: inherit;
+  content: "";
+  animation: home-live-pulse 2.4s ease-out infinite;
+}
+
+body .gold-home > .gold-live-strip > div > span:first-child {
+  color: #6c90c3 !important;
+  letter-spacing: 0.2em !important;
+}
+
+body .gold-home > .gold-live-strip h2 {
+  color: #f7f9fc !important;
+  font-size: 12px !important;
+  letter-spacing: 0.11em !important;
+}
+
+body .gold-home > .gold-live-strip p {
+  color: #91a2bd !important;
+  font-size: 11px !important;
+}
+
+@keyframes home-command-scan {
+  0%,
+  18% {
+    left: -18%;
+    opacity: 0;
+  }
+  32%,
+  60% {
+    opacity: 1;
+  }
+  76%,
+  100% {
+    left: 110%;
+    opacity: 0;
+  }
+}
+
+@keyframes home-live-pulse {
+  0% {
+    opacity: 0.72;
+    transform: scale(0.72);
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: scale(1.22);
+  }
+}
+
+@media (max-width: 1180px) {
+  body .gold-home > .gold-stat-rail article {
+    min-height: 98px !important;
+  }
+}
+
+@media (max-width: 1380px) and (min-width: 701px) {
+  body .gold-home > .gold-stat-rail {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  body .gold-home > .gold-stat-rail article:nth-child(3n) {
+    border-right: 0 !important;
+  }
+
+  body .gold-home > .gold-stat-rail article:nth-child(-n + 3) {
+    border-bottom: 1px solid var(--wst-border) !important;
+  }
+}
+
+@media (max-width: 700px) {
+  body .gold-home > .gold-stat-rail,
+  body .gold-home > .home-dashboard-grid,
+  body .gold-home > .gold-live-strip {
+    width: calc(100% - 24px) !important;
+  }
+
+  body .gold-home > .gold-stat-rail article {
+    min-height: 92px !important;
+    grid-template-columns: 40px minmax(0, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  body .gold-home > .gold-stat-rail article > .home-stat-icon {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  body .gold-home .home-feature-summary,
+  body .gold-home .home-events-panel {
+    padding: 28px 20px !important;
+  }
+
+  body .gold-home .home-feature-summary .gold-section-heading h2,
+  body .gold-home .home-events-panel .gold-section-heading h2 {
+    font-size: 37px !important;
+  }
+
+  body .gold-home .home-dashboard-grid > .gold-registry-section {
+    min-height: 420px !important;
+    padding: 24px 18px 18px !important;
+  }
+
+  body .gold-home > .gold-live-strip {
+    padding: 20px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body .gold-home > .gold-stat-rail::before,
+  body .gold-home > .gold-live-strip .home-live-icon::after {
+    animation: none !important;
+  }
+
+  body .gold-home > .gold-stat-rail article,
+  body .gold-home .home-events-panel .gold-event-list li {
+    transition: none !important;
+  }
 }

@@ -53,7 +53,11 @@ export default function LoginPage() {
   return (
     <main className="admin-login-page">
       <div className="admin-login-media" aria-hidden="true">
-        <img src="/assets/wst-red/admin-office-red.jpg" alt="" />
+        <img
+          className="themed-blue-media"
+          src="/assets/wst-red/admin-office-red.jpg"
+          alt=""
+        />
         <span className="admin-login-media-scan" />
       </div>
       <section className="admin-login-panel">

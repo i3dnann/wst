@@ -50,6 +50,9 @@ describe("LoginPage session restoration", () => {
       await screen.findByRole("button", { name: "Enter Command Center" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/stays active for 30 days/i)).toBeInTheDocument();
+    expect(
+      document.querySelector<HTMLImageElement>(".admin-login-media img"),
+    ).toHaveClass("themed-blue-media");
   });
 
   it("redirects an authenticated administrator without showing the form", async () => {

@@ -57,7 +57,7 @@ export default function InformationPage({
     <main className="information-page">
       <header className="information-hero">
         <img
-          className="information-hero__media"
+          className="information-hero__media themed-blue-media"
           src={
             kind === "rules"
               ? "/assets/wst-red/sealed-dossier-red.jpg"

@@ -155,7 +155,7 @@ export default function HomePage() {
             <div>
               <strong>{label}</strong>
               <span className="home-stat-value">
-                {value > 0 ? <NumberTicker value={value} /> : "--"}
+                <NumberTicker value={value} />
               </span>
               <small>{caption}</small>
             </div>
