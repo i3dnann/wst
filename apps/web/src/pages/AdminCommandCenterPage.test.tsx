@@ -206,6 +206,12 @@ describe("AdminCommandCenterPage record actions", () => {
     fireEvent.change(screen.getByLabelText("Gang name"), {
       target: { value: "Crimson Kings" },
     });
+    expect(screen.getByText("Crimson Kings")).toHaveStyle({
+      color: "#6C90C3",
+    });
+    fireEvent.change(screen.getByLabelText("Gang name color hex"), {
+      target: { value: "#A83BFF" },
+    });
     fireEvent.change(screen.getByLabelText("Tag"), {
       target: { value: "CK" },
     });
@@ -217,6 +223,7 @@ describe("AdminCommandCenterPage record actions", () => {
           name: "Crimson Kings",
           slug: "crimson-kings",
           tag: "CK",
+          primaryColor: "#A83BFF",
           status: "ACTIVE",
         }),
       ),

@@ -64,6 +64,12 @@ function memberLabel(count: number) {
   return `${String(count)} active ${count === 1 ? "member" : "members"}`;
 }
 
+function gangNameColor(value: unknown): string | undefined {
+  return typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value)
+    ? value
+    : undefined;
+}
+
 export default function GangDetailPage() {
   const { slug = "" } = useParams();
   const gang = useQuery({
@@ -106,11 +112,19 @@ export default function GangDetailPage() {
     <main className="gang-profile-v3">
       <section className="gang-profile-v3__hero">
         {typeof data.bannerUrl === "string" ? (
-          <img
-            className="gang-profile-v3__banner user-media-original"
-            src={data.bannerUrl}
-            alt=""
-          />
+          <>
+            <img
+              className="gang-profile-v3__banner-backdrop"
+              src={data.bannerUrl}
+              alt=""
+              aria-hidden="true"
+            />
+            <img
+              className="gang-profile-v3__banner user-media-original"
+              src={data.bannerUrl}
+              alt={`${readString(data, "name")} banner`}
+            />
+          </>
         ) : null}
         <div className="gang-profile-v3__hero-fade" />
         <div className="gang-profile-v3__hero-inner">
@@ -131,7 +145,9 @@ export default function GangDetailPage() {
             </div>
             <div>
               <div className="gang-profile-v3__name">
-                <h1>{readString(data, "name")}</h1>
+                <h1 style={{ color: gangNameColor(data.primaryColor) }}>
+                  {readString(data, "name")}
+                </h1>
                 {data.verified === true ? (
                   <span>
                     <ShieldCheck aria-hidden="true" /> Verified

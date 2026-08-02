@@ -10,6 +10,14 @@ import {
 } from "@/components/data/StatusState";
 import { api } from "@/lib/api";
 
+const hexColorPattern = /^#[0-9a-fA-F]{6}$/;
+
+function gangNameColor(value: unknown): string | undefined {
+  return typeof value === "string" && hexColorPattern.test(value)
+    ? value
+    : undefined;
+}
+
 export default function GangsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ACTIVE");
@@ -156,7 +164,9 @@ export default function GangsPage() {
                     </div>
                     <div>
                       <Link to={`/gangs/${gang.slug}`}>
-                        <h2>{gang.name}</h2>
+                        <h2 style={{ color: gangNameColor(gang.primaryColor) }}>
+                          {gang.name}
+                        </h2>
                         <ArrowRight aria-hidden="true" />
                       </Link>
                       <strong>[{gang.tag}]</strong>

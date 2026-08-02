@@ -29,16 +29,10 @@ const visibleMatchWhere = {
       ],
     },
     {
-      OR: [
-        { gangAId: null },
-        { gangA: { status: { not: "ARCHIVED" } } },
-      ],
+      OR: [{ gangAId: null }, { gangA: { status: { not: "ARCHIVED" } } }],
     },
     {
-      OR: [
-        { gangBId: null },
-        { gangB: { status: { not: "ARCHIVED" } } },
-      ],
+      OR: [{ gangBId: null }, { gangB: { status: { not: "ARCHIVED" } } }],
     },
   ],
 } satisfies Prisma.MatchWhereInput;
@@ -54,6 +48,7 @@ function toGangListItem(gang: Awaited<ReturnType<typeof findGangs>>[number]) {
     motto: gang.motto,
     logoUrl: gang.logoUrl,
     bannerUrl: gang.bannerUrl,
+    primaryColor: gang.primaryColor,
     status: gang.status,
     recruitmentStatus: gang.recruitmentStatus,
     verified: gang.verified,

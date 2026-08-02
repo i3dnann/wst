@@ -9340,6 +9340,87 @@ textarea:focus-visible {
   resize: vertical;
 }
 
+.gang-name-color-field {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgb(108 144 195 / 0.24);
+  border-radius: 13px;
+  background:
+    radial-gradient(circle at 100% 0%, rgb(108 144 195 / 0.13), transparent 42%),
+    rgb(7 11 30 / 0.72);
+}
+
+.gang-name-color-field > header,
+.gang-name-color-field > header > div {
+  display: flex;
+}
+
+.gang-name-color-field > header {
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.gang-name-color-field > header > div {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gang-name-color-field > header strong {
+  color: #f7f9fc;
+  font: 700 15px/1.2 var(--sans);
+}
+
+.gang-name-color-field > header small,
+.gang-name-color-field__preview > span,
+.gang-name-color-field__preview > small {
+  color: #93a4bf;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.gang-name-color-field__swatch {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgb(255 255 255 / 0.32);
+  border-radius: 10px;
+}
+
+.gang-name-color-field__controls {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.admin-drawer-form .gang-name-color-field input[type="color"] {
+  width: 100%;
+  padding: 5px;
+  cursor: pointer;
+}
+
+.gang-name-color-field__preview {
+  min-height: 92px;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 5px;
+  padding: 14px 16px;
+  overflow: hidden;
+  border: 1px solid rgb(108 144 195 / 0.16);
+  border-radius: 11px;
+  background: rgb(5 8 22 / 0.78);
+}
+
+.gang-name-color-field__preview > strong {
+  max-width: 100%;
+  overflow: hidden;
+  font: 600 clamp(28px, 5vw, 42px) / 0.95 var(--display);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .admin-form-note {
   margin: 0;
   padding: 10px 12px;
@@ -13934,14 +14015,34 @@ textarea:focus,
   background: #101014;
 }
 
-.gang-registry-card__banner,
-.gang-profile-v3__banner {
+.gang-registry-card__banner {
   position: absolute;
   z-index: -2;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.gang-profile-v3__banner,
+.gang-profile-v3__banner-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.gang-profile-v3__banner-backdrop {
+  z-index: -3;
+  object-fit: cover;
+  transform: scale(1.08);
+  filter: blur(26px) brightness(0.42) saturate(0.82) !important;
+}
+
+.gang-profile-v3__banner {
+  z-index: -2;
+  object-fit: contain;
+  object-position: center;
 }
 
 .gang-registry-card__fade {
@@ -14157,7 +14258,7 @@ textarea:focus,
   min-height: 440px;
   overflow: hidden;
   border-bottom: 1px solid var(--gang-line);
-  background: #0b0b0f;
+  background: #050817;
 }
 
 .gang-profile-v3__hero-fade {
@@ -15888,6 +15989,15 @@ textarea:focus,
 .champions-draw__spin svg {
   width: 18px;
   height: 18px;
+}
+
+.champions-draw__automatic-pair {
+  margin: 12px 0 0;
+  color: #93a4bf;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .champions-draw__results {
@@ -23288,6 +23398,10 @@ body .gold-home > .gold-live-strip p {
 
   body .gold-home > .gold-live-strip > div {
     grid-template-columns: 42px minmax(0, 1fr) !important;
+  }
+
+  .gang-name-color-field__controls {
+    grid-template-columns: 1fr;
   }
 }
 

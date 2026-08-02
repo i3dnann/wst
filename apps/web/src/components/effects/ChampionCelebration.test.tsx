@@ -63,7 +63,7 @@ describe("ChampionCelebration", () => {
     );
 
     act(() => {
-      vi.advanceTimersByTime(4_200);
+      vi.advanceTimersByTime(5_800);
     });
     expect(screen.queryByText("Crimson Syndicate")).not.toBeInTheDocument();
 

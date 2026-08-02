@@ -92,7 +92,13 @@ export function LiveDrawBroadcast({ state }: { state: BroadcastState }) {
       setSpinning(false);
       return;
     }
-    const drawnBeforeSpin = draw.drawnParticipantIds.slice(0, -1);
+    const selectedDrawIndex = draw.drawnParticipantIds.lastIndexOf(
+      spin.selectedParticipantId,
+    );
+    const drawnBeforeSpin = draw.drawnParticipantIds.slice(
+      0,
+      selectedDrawIndex,
+    );
     const drawnBeforeSpinSet = new Set(drawnBeforeSpin);
     const wheelParticipants = draw.participants.filter(
       (participant) => !drawnBeforeSpinSet.has(participant.id),

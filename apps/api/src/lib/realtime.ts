@@ -127,9 +127,18 @@ class RealtimeHub {
     if (!remaining.length) return null;
     const selected = remaining[randomInt(remaining.length)];
     if (!selected) return null;
+    const remainingAfterSelection = remaining.filter(
+      (participant) => participant.id !== selected.id,
+    );
+    const automaticallyPaired =
+      remainingAfterSelection.length <= 2 ? remainingAfterSelection : [];
     const updated = {
       ...draw,
-      drawnParticipantIds: [...draw.drawnParticipantIds, selected.id],
+      drawnParticipantIds: [
+        ...draw.drawnParticipantIds,
+        selected.id,
+        ...automaticallyPaired.map((participant) => participant.id),
+      ],
       updatedAt: new Date().toISOString(),
     } satisfies LiveTournamentDraw;
     this.activeDraws.set(tournamentId, updated);

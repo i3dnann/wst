@@ -12,10 +12,26 @@ vi.mock("@/lib/api", () => ({
   },
 }));
 
+vi.mock("@/components/effects/ChampionCelebration", () => ({
+  ChampionCelebration: ({
+    celebrationId,
+    tournamentName,
+    winnerName,
+  }: {
+    celebrationId: string;
+    tournamentName: string;
+    winnerName: string;
+  }) => (
+    <div data-testid="champion-celebration" data-celebration-id={celebrationId}>
+      {winnerName} won {tournamentName}
+    </div>
+  ),
+}));
+
 const tournament = vi.mocked(api.tournament);
 const bracket = vi.mocked(api.bracket);
 
-function renderTournamentPage(rules: string | null) {
+function renderTournamentPage(rules: string | null, rounds: unknown[] = []) {
   tournament.mockResolvedValue({
     data: {
       name: "World Star Cup",
@@ -31,7 +47,7 @@ function renderTournamentPage(rules: string | null) {
     meta: { requestId: "test", timestamp: new Date().toISOString() },
   });
   bracket.mockResolvedValue({
-    data: { version: 0, rounds: [] },
+    data: { version: 7, rounds },
     meta: { requestId: "test", timestamp: new Date().toISOString() },
   });
   const client = new QueryClient({
@@ -85,5 +101,50 @@ describe("TournamentDetailPage rules", () => {
       await screen.findByText("Rules have not been published yet"),
     ).toBeInTheDocument();
     expect(screen.getByText("Pending")).toBeInTheDocument();
+  });
+
+  it("celebrates the final winner even when bracket rounds arrive out of order", async () => {
+    renderTournamentPage(null, [
+      {
+        id: "final-round",
+        name: "Final",
+        roundNumber: 2,
+        matches: [
+          {
+            id: "final-match",
+            position: 1,
+            gangA: {
+              id: "gang-blue",
+              name: "Blue Vipers",
+              logoUrl: null,
+            },
+            gangB: {
+              id: "gang-north",
+              name: "North Side",
+              logoUrl: null,
+            },
+            gangAScore: 3,
+            gangBScore: 1,
+            winnerGangId: "gang-blue",
+            status: "COMPLETED",
+            scheduledAt: null,
+          },
+        ],
+      },
+      {
+        id: "opening-round",
+        name: "Semifinals",
+        roundNumber: 1,
+        matches: [],
+      },
+    ]);
+
+    expect(
+      await screen.findByText("Blue Vipers won World Star Cup"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("champion-celebration")).toHaveAttribute(
+      "data-celebration-id",
+      "world-star-cup:7:final-match:gang-blue",
+    );
   });
 });

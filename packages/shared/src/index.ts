@@ -309,6 +309,7 @@ export interface GangListItem {
   motto: string | null;
   logoUrl: string | null;
   bannerUrl: string | null;
+  primaryColor: string | null;
   status: string;
   recruitmentStatus: string;
   verified: boolean;

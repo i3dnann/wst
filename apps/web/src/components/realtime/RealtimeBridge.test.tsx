@@ -91,4 +91,37 @@ describe("LiveDrawBroadcast", () => {
       screen.getByRole("progressbar", { name: "Tournament draw progress" }),
     ).toHaveAttribute("aria-valuenow", "3");
   });
+
+  it("reveals the automatically paired final two gangs after the last spin", () => {
+    vi.useFakeTimers();
+    render(
+      <MemoryRouter>
+        <LiveDrawBroadcast
+          state={{
+            draw: draw(participants.map(({ id }) => id)),
+            spin: {
+              eventId: 43,
+              selectedParticipantId: participants[1]?.id ?? "",
+              durationMs: 8_000,
+            },
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByRole("progressbar", { name: "Tournament draw progress" }),
+    ).toHaveAttribute("aria-valuenow", "1");
+
+    act(() => {
+      vi.advanceTimersByTime(8_000);
+    });
+
+    expect(
+      screen.getByRole("progressbar", { name: "Tournament draw progress" }),
+    ).toHaveAttribute("aria-valuenow", "4");
+    expect(screen.getAllByText("Charlie").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Delta").length).toBeGreaterThan(0);
+    expect(screen.getByText("2 of 2 confirmed")).toBeInTheDocument();
+  });
 });

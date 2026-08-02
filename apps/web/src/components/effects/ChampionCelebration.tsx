@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
 import { Trophy } from "lucide-react";
 
-const CELEBRATION_DURATION_MS = 3_000;
-const OVERLAY_DURATION_MS = 4_200;
+const CELEBRATION_DURATION_MS = 5_000;
+const OVERLAY_DURATION_MS = 5_800;
 const CONFETTI_COLORS = ["#0d1433", "#171f55", "#274272", "#6c90c3"];
 
 interface ChampionCelebrationProps {
@@ -26,32 +26,54 @@ export function ChampionCelebration({
       "(prefers-reduced-motion: reduce)",
     ).matches;
     let animationFrame = 0;
+    let lastSideBurst = 0;
+    let lastCenterBurst = 0;
 
-    const fireSideCannons = () => {
-      if (Date.now() > end) return;
-      const options = {
-        particleCount: 2,
-        spread: 55,
-        startVelocity: 60,
-        colors: CONFETTI_COLORS,
-        zIndex: 2300,
-        disableForReducedMotion: true,
-      };
+    const fireFireworks = () => {
+      const now = Date.now();
+      if (now > end) return;
+      if (now - lastSideBurst >= 64) {
+        lastSideBurst = now;
+        const options = {
+          particleCount: 3,
+          spread: 62,
+          startVelocity: 64,
+          colors: CONFETTI_COLORS,
+          zIndex: 2300,
+          disableForReducedMotion: true,
+        };
 
-      void confetti({
-        ...options,
-        angle: 60,
-        origin: { x: 0, y: 0.55 },
-      });
-      void confetti({
-        ...options,
-        angle: 120,
-        origin: { x: 1, y: 0.55 },
-      });
-      animationFrame = window.requestAnimationFrame(fireSideCannons);
+        void confetti({
+          ...options,
+          angle: 60,
+          origin: { x: 0, y: 0.55 },
+        });
+        void confetti({
+          ...options,
+          angle: 120,
+          origin: { x: 1, y: 0.55 },
+        });
+      }
+
+      if (now - lastCenterBurst >= 700) {
+        lastCenterBurst = now;
+        void confetti({
+          particleCount: 42,
+          spread: 86,
+          startVelocity: 38,
+          gravity: 0.85,
+          scalar: 0.9,
+          origin: { x: 0.5, y: 0.28 },
+          colors: CONFETTI_COLORS,
+          zIndex: 2300,
+          disableForReducedMotion: true,
+        });
+      }
+
+      animationFrame = window.requestAnimationFrame(fireFireworks);
     };
 
-    if (!reducedMotion) fireSideCannons();
+    if (!reducedMotion) fireFireworks();
     const hideTimer = window.setTimeout(
       () => setVisible(false),
       OVERLAY_DURATION_MS,

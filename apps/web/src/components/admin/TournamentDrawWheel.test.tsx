@@ -49,15 +49,17 @@ describe("TournamentDrawWheel", () => {
     let spinIndex = 0;
     const onSpin = vi.fn(() => {
       spinIndex += 1;
+      const drawnParticipantIds =
+        spinIndex === 1
+          ? [participants[0]?.id ?? ""]
+          : participants.map(({ id }) => id);
       return Promise.resolve({
         draw: {
           tournamentId: "tournament-1",
           tournamentSlug: "world-star-cup",
           tournamentName: "World Star Cup",
           participants,
-          drawnParticipantIds: participants
-            .slice(0, spinIndex)
-            .map(({ id }) => id),
+          drawnParticipantIds,
           updatedAt: new Date().toISOString(),
         },
         selectedParticipantId: participants[spinIndex - 1]?.id ?? "",
@@ -92,7 +94,7 @@ describe("TournamentDrawWheel", () => {
     });
     expect(confirm).toBeDisabled();
 
-    for (const name of ["Alpha", "Bravo", "Charlie", "Delta"]) {
+    for (const name of ["Alpha", "Bravo"]) {
       fireEvent.click(screen.getByRole("button", { name: "Spin next gang" }));
       await act(() => Promise.resolve());
       expect(screen.getByRole("button", { name: "Drawing…" })).toBeDisabled();
@@ -102,6 +104,9 @@ describe("TournamentDrawWheel", () => {
       expect(screen.getAllByText(name).length).toBeGreaterThan(0);
     }
 
+    expect(onSpin).toHaveBeenCalledTimes(2);
+    expect(screen.getAllByText("Charlie").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Delta").length).toBeGreaterThan(0);
     expect(
       screen.getByRole("button", { name: "Draw complete" }),
     ).toBeDisabled();

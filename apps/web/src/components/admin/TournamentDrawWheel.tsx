@@ -217,6 +217,11 @@ export function TournamentDrawWheel({
                 ? "Spin next gang"
                 : "Draw complete"}
           </Button>
+          {remaining.length > 0 && remaining.length <= 3 && !spinning ? (
+            <p className="champions-draw__automatic-pair">
+              The last two gangs will be paired automatically.
+            </p>
+          ) : null}
         </div>
 
         <div className="champions-draw__results">

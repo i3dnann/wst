@@ -29,6 +29,7 @@ describe("GangsPage background refresh", () => {
             motto: "Loyalty above all",
             logoUrl: "https://cdn.example.com/crimson-logo.png",
             bannerUrl: "https://cdn.example.com/crimson-banner.png",
+            primaryColor: "#A83BFF",
             status: "ACTIVE",
             recruitmentStatus: "CLOSED",
             verified: true,
@@ -73,6 +74,9 @@ describe("GangsPage background refresh", () => {
     expect(
       await screen.findByRole("heading", { name: "Crimson Syndicate" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Crimson Syndicate" }),
+    ).toHaveStyle({ color: "#A83BFF" });
     expect(
       screen.getByRole("img", { name: "Crimson Syndicate logo" }),
     ).toHaveClass("user-media-original");

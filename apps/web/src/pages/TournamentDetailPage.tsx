@@ -55,6 +55,11 @@ interface TournamentRecord {
   rules: string | null;
 }
 
+interface BracketRecord {
+  version: number;
+  rounds: BracketRoundRecord[];
+}
+
 function TeamRow({
   gang,
   score,
@@ -112,9 +117,18 @@ export default function TournamentDetailPage() {
   }
 
   const data = tournament.data.data as unknown as TournamentRecord;
-  const rounds = bracket.data.data.rounds as BracketRoundRecord[];
-  const finalRound = rounds[rounds.length - 1];
-  const finalMatch = finalRound?.matches[0];
+  const bracketData = bracket.data.data as BracketRecord;
+  const rounds = [...bracketData.rounds].sort(
+    (left, right) => left.roundNumber - right.roundNumber,
+  );
+  const finalRound = rounds.reduce<BracketRoundRecord | undefined>(
+    (latest, round) =>
+      !latest || round.roundNumber > latest.roundNumber ? round : latest,
+    undefined,
+  );
+  const finalMatch =
+    finalRound?.matches.find((match) => match.winnerGangId !== null) ??
+    finalRound?.matches[0];
   const champion = finalMatch
     ? finalMatch.winnerGangId === finalMatch.gangA?.id
       ? finalMatch.gangA
@@ -140,7 +154,7 @@ export default function TournamentDetailPage() {
     <main className="gold-content-page tournament-detail-gold">
       {champion && finalMatch ? (
         <ChampionCelebration
-          celebrationId={`${slug}:${finalMatch.id}:${champion.id}`}
+          celebrationId={`${slug}:${String(bracketData.version)}:${finalMatch.id}:${champion.id}`}
           tournamentName={data.name}
           winnerName={champion.name}
         />

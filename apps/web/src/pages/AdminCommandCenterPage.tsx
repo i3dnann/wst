@@ -352,6 +352,77 @@ function Field({
   );
 }
 
+const hexColorPattern = /^#[0-9a-fA-F]{6}$/;
+
+function safeHexColor(value: unknown, fallback = "#6C90C3") {
+  return typeof value === "string" && hexColorPattern.test(value)
+    ? value.toUpperCase()
+    : fallback;
+}
+
+function GangNameColorField({
+  values,
+  setValue,
+}: {
+  values: FormValues;
+  setValue: (name: string, value: string | boolean) => void;
+}) {
+  const value = String(values.primaryColor ?? "#6C90C3");
+  const previewColor = safeHexColor(value);
+  const previewName = String(values.name ?? "").trim() || "Gang Name";
+
+  return (
+    <section className="gang-name-color-field full-width">
+      <header>
+        <div>
+          <strong>Gang name color</strong>
+          <small>
+            Match the public gang name to the logo, banner, or gang identity.
+          </small>
+        </div>
+        <span
+          className="gang-name-color-field__swatch"
+          style={{ backgroundColor: previewColor }}
+          aria-hidden="true"
+        />
+      </header>
+      <div className="gang-name-color-field__controls">
+        <label>
+          Choose color
+          <input
+            aria-label="Gang name color picker"
+            type="color"
+            value={previewColor}
+            onChange={(event) =>
+              setValue("primaryColor", event.target.value.toUpperCase())
+            }
+          />
+        </label>
+        <label>
+          Hex color
+          <input
+            aria-label="Gang name color hex"
+            type="text"
+            value={value}
+            maxLength={7}
+            pattern="^#[0-9a-fA-F]{6}$"
+            placeholder="#6C90C3"
+            title="Enter a six-digit hex color such as #6C90C3"
+            onChange={(event) =>
+              setValue("primaryColor", event.target.value.toUpperCase())
+            }
+          />
+        </label>
+      </div>
+      <div className="gang-name-color-field__preview">
+        <span>Public name preview</span>
+        <strong style={{ color: previewColor }}>{previewName}</strong>
+        <small>{previewColor}</small>
+      </div>
+    </section>
+  );
+}
+
 function SelectField({
   label,
   name,
@@ -529,7 +600,7 @@ function blankValues(kind: RecordKind): FormValues {
     return {
       status: "ACTIVE",
       recruitmentStatus: "CLOSED",
-      primaryColor: "#274272",
+      primaryColor: "#6C90C3",
       secondaryColor: "#171f55",
       verified: false,
       featured: false,
@@ -559,7 +630,7 @@ function valuesFromRecord(kind: RecordKind, record: AdminRecord): FormValues {
       logoUrl: valueOf(record, "logoUrl"),
       bannerUrl: valueOf(record, "bannerUrl"),
       territory: valueOf(record, "territory"),
-      primaryColor: valueOf(record, "primaryColor") || "#274272",
+      primaryColor: valueOf(record, "primaryColor") || "#6C90C3",
       secondaryColor: valueOf(record, "secondaryColor") || "#171f55",
       foundedAt: dateTimeInput(record.foundedAt).slice(0, 10),
       status: valueOf(record, "status"),
@@ -737,7 +808,13 @@ function RecordTableCells({
     return (
       <>
         <td>
-          <strong>{valueOf(record, "name")}</strong>
+          <strong
+            style={{
+              color: safeHexColor(valueOf(record, "primaryColor"), "#F7F9FC"),
+            }}
+          >
+            {valueOf(record, "name")}
+          </strong>
           <small>{valueOf(record, "motto") || "No motto"}</small>
         </td>
         <td>{valueOf(record, "tag")}</td>
@@ -934,15 +1011,9 @@ function RecordEditorFields({
           setValue={setValue}
           type="date"
         />
+        <GangNameColorField values={values} setValue={setValue} />
         <Field
-          label="Primary color"
-          name="primaryColor"
-          values={values}
-          setValue={setValue}
-          type="color"
-        />
-        <Field
-          label="Secondary color"
+          label="Gang accent color"
           name="secondaryColor"
           values={values}
           setValue={setValue}

@@ -21,7 +21,7 @@ describe("realtime tournament draws", () => {
     realtimeHub.resetForTests();
   });
 
-  it("broadcasts a unique authoritative selection for every spin", async () => {
+  it("automatically pairs the final two gangs after the last required spin", async () => {
     realtimeHub.startDraw({
       tournamentId: "tournament-1",
       tournamentSlug: "world-star-cup",
@@ -32,19 +32,20 @@ describe("realtime tournament draws", () => {
     expect(started.events.map(({ type }) => type)).toEqual(["draw.started"]);
     expect(started.activeDraws).toHaveLength(1);
 
-    const selected = Array.from({ length: participants.length }, () =>
+    const selected = Array.from({ length: 2 }, () =>
       realtimeHub.spinDraw("tournament-1"),
     ).map((result) => result?.selectedParticipantId);
-    expect(new Set(selected).size).toBe(participants.length);
+    expect(new Set(selected).size).toBe(2);
 
     const afterSpins = await realtimeHub.poll(started.cursor);
-    expect(afterSpins.events).toHaveLength(participants.length);
+    expect(afterSpins.events).toHaveLength(2);
     expect(afterSpins.events.every(({ type }) => type === "draw.spin")).toBe(
       true,
     );
     expect(afterSpins.activeDraws[0]?.drawnParticipantIds).toHaveLength(
       participants.length,
     );
+    expect(realtimeHub.spinDraw("tournament-1")).toBeNull();
   });
 
   it("ends the live draw and broadcasts the persisted bracket version", async () => {
@@ -100,7 +101,7 @@ describe("realtime tournament draws", () => {
       drawConfirmationIssue(started, "DRAW", started.drawnParticipantIds),
     ).toBe("DRAW_INCOMPLETE");
 
-    for (let index = 0; index < participants.length; index += 1)
+    for (let index = 0; index < participants.length - 2; index += 1)
       realtimeHub.spinDraw("tournament-1");
     const completed = realtimeHub.getDraw("tournament-1");
     expect(completed).not.toBeNull();
