@@ -5730,6 +5730,50 @@ body .gold-home > .home-dashboard-grid {
   text-transform: uppercase;
 }
 
+.tournament-prize-announcement-editor {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(150px, 0.28fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 15px;
+  border: 1px solid rgb(108 144 195 / 0.25);
+  border-radius: 13px;
+  background:
+    linear-gradient(90deg, rgb(39 66 114 / 0.18), transparent 34%),
+    rgb(4 7 16 / 0.82);
+}
+
+.tournament-prize-announcement-editor > span {
+  display: grid;
+  gap: 4px;
+}
+
+.tournament-prize-announcement-editor strong {
+  color: #eaf0fa;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tournament-prize-announcement-editor small {
+  color: #7f899b;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.tournament-prize-announcement-editor textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.tournament-prize-announcement-editor > small {
+  align-self: end;
+  padding-bottom: 9px;
+  color: #6c90c3;
+  font-variant-numeric: tabular-nums;
+}
+
 .tournament-prize-placement-list {
   display: grid;
   gap: 12px;
@@ -5916,6 +5960,8 @@ body .gold-home > .home-dashboard-grid {
   background:
     radial-gradient(circle at 50% 110%, rgb(39 66 114 / 0.34), transparent 44%),
     linear-gradient(135deg, rgb(13 20 51 / 0.38), rgb(5 7 15 / 0.98) 54%);
+  animation: tournament-prize-panel-enter 600ms cubic-bezier(0.2, 0.8, 0.2, 1)
+    both;
 }
 
 .tournament-prizes-public::before {
@@ -5928,6 +5974,76 @@ body .gold-home > .home-dashboard-grid {
   background-size: 44px 44px;
   mask-image: linear-gradient(to bottom, black, transparent 86%);
   pointer-events: none;
+}
+
+.tournament-prize-announcement {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: stretch;
+  min-height: 48px;
+  overflow: hidden;
+  border: 1px solid rgb(108 144 195 / 0.36);
+  border-radius: 12px;
+  background: rgb(3 6 15 / 0.9);
+}
+
+.tournament-prize-announcement__label {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 17px;
+  border-right: 1px solid rgb(108 144 195 / 0.28);
+  background: linear-gradient(135deg, #274272, #171f55);
+  color: #f4f7fc;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tournament-prize-announcement__label svg {
+  width: 16px;
+  height: 16px;
+  animation: tournament-prize-note-pulse 1.8s ease-in-out infinite;
+}
+
+.tournament-prize-announcement__viewport {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    black 4%,
+    black 96%,
+    transparent
+  );
+}
+
+.tournament-prize-announcement__track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  min-width: max-content;
+  color: #dce6f5;
+  font-size: 12px;
+  line-height: 1.45;
+  animation: tournament-prize-ticker var(--prize-ticker-duration, 24s) linear
+    infinite;
+  will-change: transform;
+}
+
+.tournament-prize-announcement__track > span {
+  flex: none;
+  min-width: max-content;
+  padding: 0 46px;
+  white-space: nowrap;
 }
 
 .tournament-prizes-public > header {
@@ -5981,6 +6097,8 @@ body .gold-home > .home-dashboard-grid {
   transition:
     border-color 180ms ease,
     transform 180ms ease;
+  animation: tournament-prize-card-enter 520ms cubic-bezier(0.2, 0.8, 0.2, 1)
+    both;
 }
 
 .tournament-prize-card:hover {
@@ -5991,14 +6109,17 @@ body .gold-home > .home-dashboard-grid {
 .tournament-prize-card--place-1 {
   grid-area: first;
   border-color: rgb(108 144 195 / 0.5);
+  animation-delay: 80ms;
 }
 
 .tournament-prize-card--place-2 {
   grid-area: second;
+  animation-delay: 150ms;
 }
 
 .tournament-prize-card--place-3 {
   grid-area: third;
+  animation-delay: 220ms;
 }
 
 .tournament-prize-card__header {
@@ -6061,6 +6182,14 @@ body .gold-home > .home-dashboard-grid {
   min-width: 0;
   padding: 13px;
   background: rgb(5 8 18 / 0.96);
+  transition:
+    background 180ms ease,
+    padding-left 180ms ease;
+}
+
+.tournament-prize-public-item:hover {
+  padding-left: 17px;
+  background: rgb(10 17 36 / 0.98);
 }
 
 .tournament-prize-public-item__media {
@@ -6146,6 +6275,49 @@ body .gold-home > .home-dashboard-grid {
   font-size: 11px;
 }
 
+@keyframes tournament-prize-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tournament-prize-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tournament-prize-ticker {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes tournament-prize-note-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
 @media (max-width: 760px) {
   .tournament-prizes-editor > header,
   .tournament-prizes-public > header {
@@ -6170,6 +6342,29 @@ body .gold-home > .home-dashboard-grid {
     grid-template-columns: 1fr;
   }
 
+  .tournament-prize-announcement-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .tournament-prize-announcement-editor > small {
+    justify-self: end;
+    padding-bottom: 0;
+  }
+
+  .tournament-prize-announcement {
+    grid-template-columns: 1fr;
+  }
+
+  .tournament-prize-announcement__label {
+    min-height: 38px;
+    border-right: 0;
+    border-bottom: 1px solid rgb(108 144 195 / 0.28);
+  }
+
+  .tournament-prize-announcement__viewport {
+    min-height: 46px;
+  }
+
   .tournament-prize-placement__header {
     align-items: stretch;
     flex-direction: column;
@@ -6177,6 +6372,30 @@ body .gold-home > .home-dashboard-grid {
 
   .tournament-prize-placement__header > button {
     width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tournament-prizes-public,
+  .tournament-prize-card,
+  .tournament-prize-announcement__label svg {
+    animation: none;
+  }
+
+  .tournament-prize-announcement__track {
+    width: 100%;
+    min-width: 0;
+    animation: none;
+  }
+
+  .tournament-prize-announcement__track > span {
+    min-width: 0;
+    padding: 0 18px;
+    white-space: normal;
+  }
+
+  .tournament-prize-announcement__track > span[aria-hidden="true"] {
+    display: none;
   }
 }
 

@@ -701,6 +701,26 @@ function TournamentPrizesEditor({
         </span>
       </header>
 
+      <label className="tournament-prize-announcement-editor">
+        <span>
+          <strong>Prize announcement</strong>
+          <small>
+            This note scrolls from right to left above the public prize pool.
+          </small>
+        </span>
+        <textarea
+          aria-label="Prize announcement note"
+          value={String(values.prizeDescription ?? "")}
+          maxLength={1000}
+          rows={3}
+          onChange={(event) => setValue("prizeDescription", event.target.value)}
+          placeholder="Example: Prize quantities may be adjusted before the grand final."
+        />
+        <small>
+          {String(String(values.prizeDescription ?? "").length)} / 1000
+        </small>
+      </label>
+
       <div className="tournament-prize-placement-list">
         {tournamentPrizePlacements.map(
           ({ placement, label, shortLabel, tone }) => {
@@ -818,7 +838,9 @@ function TournamentPrizesEditor({
                               label={`${label} reward ${String(index + 1)} image`}
                               value={item.imageUrl}
                               onChange={(url) => updateItem("imageUrl", url)}
-                              category="tournament-prize"
+                              // Keep prize uploads compatible with API releases from
+                              // before the dedicated tournament-prize category existed.
+                              category="website-media"
                               full
                             />
                           </div>

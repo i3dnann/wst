@@ -7,6 +7,7 @@ import {
   Check,
   Gift,
   Medal,
+  Megaphone,
   Shield,
   Swords,
   Trophy,
@@ -55,6 +56,7 @@ interface TournamentRecord {
   maximumParticipants: number;
   participants: unknown[];
   rules: string | null;
+  prizeDescription: string | null;
   prizes: TournamentPrizeRecord[];
 }
 
@@ -181,6 +183,10 @@ export default function TournamentDetailPage() {
       items: prizes.filter((prize) => prize.placement === placement),
     }))
     .filter((group) => group.items.length > 0);
+  const prizeAnnouncement = data.prizeDescription?.trim() ?? "";
+  const prizeTickerStyle = {
+    "--prize-ticker-duration": `${String(Math.max(18, Math.min(48, prizeAnnouncement.length * 0.2)))}s`,
+  } as CSSProperties;
 
   return (
     <main className="gold-content-page tournament-detail-gold">
@@ -346,6 +352,25 @@ export default function TournamentDetailPage() {
         }
         aria-labelledby="tournament-prizes-heading"
       >
+        {prizeAnnouncement ? (
+          <aside
+            className="tournament-prize-announcement"
+            aria-label="Tournament prize announcement"
+          >
+            <span className="tournament-prize-announcement__label">
+              <Megaphone aria-hidden="true" /> Prize update
+            </span>
+            <div className="tournament-prize-announcement__viewport">
+              <div
+                className="tournament-prize-announcement__track"
+                style={prizeTickerStyle}
+              >
+                <span>{prizeAnnouncement}</span>
+                <span aria-hidden="true">{prizeAnnouncement}</span>
+              </div>
+            </div>
+          </aside>
+        ) : null}
         <header>
           <span className="tournament-prizes-public__icon">
             <Gift aria-hidden="true" />

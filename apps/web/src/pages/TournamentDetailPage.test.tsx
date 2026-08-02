@@ -35,6 +35,7 @@ function renderTournamentPage(
   rules: string | null,
   rounds: unknown[] = [],
   prizes: unknown[] = [],
+  prizeDescription: string | null = null,
 ) {
   tournament.mockResolvedValue({
     data: {
@@ -47,6 +48,7 @@ function renderTournamentPage(
       maximumParticipants: 16,
       participants: [],
       rules,
+      prizeDescription,
       prizes,
     },
     meta: { requestId: "test", timestamp: new Date().toISOString() },
@@ -147,6 +149,7 @@ describe("TournamentDetailPage rules", () => {
           imageUrl: null,
         },
       ],
+      "Final prize quantities will be confirmed before the grand final.",
     );
 
     expect(
@@ -155,6 +158,11 @@ describe("TournamentDetailPage rules", () => {
     expect(screen.getByText("Championship package")).toBeInTheDocument();
     expect(screen.getByText("Custom vehicle")).toBeInTheDocument();
     expect(screen.getByText("$5,000")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Tournament prize announcement"),
+    ).toHaveTextContent(
+      "Final prize quantities will be confirmed before the grand final.",
+    );
     expect(screen.getByAltText("Championship package prize")).toHaveAttribute(
       "src",
       "https://res.cloudinary.com/world-star/image/upload/prizes/champion.webp",

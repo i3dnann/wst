@@ -340,6 +340,11 @@ describe("AdminCommandCenterPage record actions", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Add reward to Third place" }),
     );
+    fireEvent.change(screen.getByLabelText("Prize announcement note"), {
+      target: {
+        value: "Prize quantities are confirmed before the grand final.",
+      },
+    });
     fireEvent.change(screen.getByLabelText("First place reward 1 title"), {
       target: { value: "Championship package" },
     });
@@ -379,6 +384,8 @@ describe("AdminCommandCenterPage record actions", () => {
       expect(updateTournament).toHaveBeenCalledWith(
         "tournament-identifier-0001",
         {
+          prizeDescription:
+            "Prize quantities are confirmed before the grand final.",
           prizes: [
             {
               placement: 1,
