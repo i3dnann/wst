@@ -1,4 +1,5 @@
 import { useDeferredValue, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -113,55 +114,150 @@ function readableStatus(status: string): string {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function PlayerList({ rows }: { rows: RecordRow[] }) {
-  return (
-    <section className="public-directory-grid">
-      {rows.map((player) => {
-        const memberships = array(player.memberships);
-        const membership = memberships[0];
+export function PlayerList({ rows }: { rows: RecordRow[] }) {
+  const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search.trim().toLowerCase());
+  const visiblePlayers = useMemo(
+    () =>
+      rows.filter((player) => {
+        if (!deferredSearch) return true;
+        const membership = array(player.memberships)[0];
         const gang = record(membership?.gang);
-        const stats = array(player.seasonStats)[0];
-        return (
-          <Link
-            className="public-directory-card"
-            to={`/players/${value(player, "slug", "")}`}
-            key={player.id}
-          >
-            {typeof player.avatarUrl === "string" ? (
-              <img
-                className="user-media-original"
-                src={player.avatarUrl}
-                alt=""
-              />
-            ) : (
-              <UserRound />
-            )}
-            <div>
-              <span>{value(player, "status")}</span>
-              <h2>{value(player, "displayName")}</h2>
-              <p>{value(gang, "name", "Independent player")}</p>
-            </div>
-            <dl>
-              <div>
-                <dt>Matches</dt>
-                <dd>{numberValue(stats, "matchesPlayed")}</dd>
-              </div>
-              <div>
-                <dt>Wins</dt>
-                <dd>{numberValue(stats, "wins")}</dd>
-              </div>
-              <div>
-                <dt>Kills</dt>
-                <dd>{numberValue(stats, "kills")}</dd>
-              </div>
-              <div>
-                <dt>MVP</dt>
-                <dd>{numberValue(stats, "mvpAwards")}</dd>
-              </div>
-            </dl>
-          </Link>
-        );
-      })}
+        return [
+          value(player, "displayName", ""),
+          value(player, "status", ""),
+          value(gang, "name", "Independent player"),
+          value(gang, "tag", ""),
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(deferredSearch);
+      }),
+    [deferredSearch, rows],
+  );
+  const activePlayers = rows.filter(
+    (player) => value(player, "status", "").toUpperCase() === "ACTIVE",
+  ).length;
+  const representedGangs = new Set(
+    rows
+      .map((player) => {
+        const membership = array(player.memberships)[0];
+        return value(record(membership?.gang), "name", "");
+      })
+      .filter(Boolean),
+  ).size;
+
+  return (
+    <section
+      className="player-registry"
+      aria-label="Player registry"
+      data-disable-scroll-reveal
+    >
+      <header className="player-registry__overview">
+        <div>
+          <span>Verified competition roster</span>
+          <strong>{rows.length}</strong>
+          <small>Published players</small>
+        </div>
+        <dl>
+          <div>
+            <dt>Active</dt>
+            <dd>{activePlayers}</dd>
+          </div>
+          <div>
+            <dt>Gangs represented</dt>
+            <dd>{representedGangs}</dd>
+          </div>
+        </dl>
+      </header>
+
+      <div className="player-registry__toolbar">
+        <label>
+          <Search aria-hidden="true" />
+          <span className="sr-only">Search players</span>
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by player or gang"
+          />
+        </label>
+        <p>
+          <strong>{visiblePlayers.length}</strong>
+          {visiblePlayers.length === 1 ? " player" : " players"}
+        </p>
+      </div>
+
+      {visiblePlayers.length ? (
+        <div className="public-directory-grid">
+          {visiblePlayers.map((player, index) => {
+            const memberships = array(player.memberships);
+            const membership = memberships[0];
+            const gang = record(membership?.gang);
+            const stats = array(player.seasonStats)[0];
+            return (
+              <Link
+                className="public-directory-card"
+                to={`/players/${value(player, "slug", "")}`}
+                key={player.id}
+                style={{ "--player-card-index": index } as CSSProperties}
+              >
+                <header>
+                  <div className="public-directory-card__avatar">
+                    {typeof player.avatarUrl === "string" ? (
+                      <img
+                        className="user-media-original"
+                        src={player.avatarUrl}
+                        alt=""
+                      />
+                    ) : (
+                      <UserRound aria-hidden="true" />
+                    )}
+                    <i aria-hidden="true" />
+                  </div>
+                  <div className="public-directory-card__identity">
+                    <span>
+                      {readableStatus(value(player, "status", "Active"))}
+                    </span>
+                    <h2>{value(player, "displayName")}</h2>
+                    <p>
+                      <Shield aria-hidden="true" />
+                      {value(gang, "name", "Independent player")}
+                    </p>
+                  </div>
+                </header>
+                <dl>
+                  <div>
+                    <dt>Matches</dt>
+                    <dd>{numberValue(stats, "matchesPlayed")}</dd>
+                  </div>
+                  <div>
+                    <dt>Wins</dt>
+                    <dd>{numberValue(stats, "wins")}</dd>
+                  </div>
+                  <div>
+                    <dt>Kills</dt>
+                    <dd>{numberValue(stats, "kills")}</dd>
+                  </div>
+                  <div>
+                    <dt>MVP</dt>
+                    <dd>{numberValue(stats, "mvpAwards")}</dd>
+                  </div>
+                </dl>
+                <footer>
+                  <span>View player dossier</span>
+                  <ChevronRight aria-hidden="true" />
+                </footer>
+              </Link>
+            );
+          })}
+        </div>
+      ) : (
+        <EmptyState
+          title="No players found"
+          message="Try another player name or gang."
+        />
+      )}
     </section>
   );
 }
@@ -633,9 +729,10 @@ export default function DirectoryPage({ type }: { type: keyof typeof labels }) {
   const detail = record(query.data.data) as RecordRow | null;
   const isMatchList = isMatch && !isDetail;
   const isMatchDetail = isMatch && isDetail;
+  const isPlayerList = type === "players";
   return (
     <main
-      className={`page-shell${isMatchList ? " match-archive-page" : ""}${isMatchDetail ? " match-record-page" : ""}`}
+      className={`page-shell${isMatchList ? " match-archive-page" : ""}${isMatchDetail ? " match-record-page" : ""}${isPlayerList ? " players-directory-page" : ""}`}
     >
       {!isMatchList && !isMatchDetail ? (
         <header className="page-heading">
