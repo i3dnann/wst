@@ -1,6 +1,7 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { MatchDetail } from "./DirectoryPage";
+import { MemoryRouter } from "react-router-dom";
+import { MatchDetail, PlayerList } from "./DirectoryPage";
 
 afterEach(cleanup);
 
@@ -34,5 +35,53 @@ describe("MatchDetail", () => {
     expect(
       screen.getByText("No player statistics published"),
     ).toBeInTheDocument();
+  });
+});
+
+describe("PlayerList gang categories", () => {
+  it("filters members by gang and disables the category when clicked again", () => {
+    render(
+      <MemoryRouter>
+        <PlayerList
+          rows={[
+            {
+              id: "player-1",
+              slug: "one",
+              displayName: "Player One",
+              status: "ACTIVE",
+              memberships: [
+                { id: "membership-1", gang: { id: "gang-a", name: "Alpha" } },
+              ],
+              seasonStats: [],
+            },
+            {
+              id: "player-2",
+              slug: "two",
+              displayName: "Player Two",
+              status: "ACTIVE",
+              memberships: [
+                { id: "membership-2", gang: { id: "gang-b", name: "Bravo" } },
+              ],
+              seasonStats: [],
+            },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+
+    const alphaCategory = screen.getByRole("button", { name: "Alpha 1" });
+    fireEvent.click(alphaCategory);
+
+    expect(screen.getByRole("heading", { name: "Player One" })).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: "Player Two" }),
+    ).not.toBeInTheDocument();
+    expect(alphaCategory).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(alphaCategory);
+
+    expect(screen.getByRole("heading", { name: "Player One" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Player Two" })).toBeVisible();
+    expect(alphaCategory).toHaveAttribute("aria-pressed", "false");
   });
 });

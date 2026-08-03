@@ -12,6 +12,7 @@ import {
   Swords,
   Trophy,
   UserRound,
+  X,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import type { ApiEnvelope } from "@mafia/shared";
@@ -116,13 +117,46 @@ function readableStatus(status: string): string {
 
 export function PlayerList({ rows }: { rows: RecordRow[] }) {
   const [search, setSearch] = useState("");
+  const [selectedGang, setSelectedGang] = useState<string | null>(null);
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
+  const gangCategories = useMemo(() => {
+    const categories = new Map<string, { label: string; count: number }>();
+    for (const player of rows) {
+      const membership = array(player.memberships)[0];
+      const gang = record(membership?.gang);
+      const gangId = value(gang, "id", "");
+      const gangName = value(gang, "name", "Independent players");
+      const key = gangId ? `gang:${gangId}` : "independent";
+      const existing = categories.get(key);
+      categories.set(key, {
+        label: gangName,
+        count: (existing?.count ?? 0) + 1,
+      });
+    }
+    const independentCategory = categories.get("independent");
+    return Array.from(categories, ([key, category]) => ({ key, ...category }))
+      .filter((category) => category.key !== "independent")
+      .sort((left, right) => left.label.localeCompare(right.label))
+      .concat(
+        independentCategory
+          ? [
+              {
+                key: "independent",
+                ...independentCategory,
+              },
+            ]
+          : [],
+      );
+  }, [rows]);
   const visiblePlayers = useMemo(
     () =>
       rows.filter((player) => {
-        if (!deferredSearch) return true;
         const membership = array(player.memberships)[0];
         const gang = record(membership?.gang);
+        const gangId = value(gang, "id", "");
+        const categoryKey = gangId ? `gang:${gangId}` : "independent";
+        if (selectedGang && categoryKey !== selectedGang) return false;
+        if (!deferredSearch) return true;
         return [
           value(player, "displayName", ""),
           value(player, "status", ""),
@@ -133,7 +167,7 @@ export function PlayerList({ rows }: { rows: RecordRow[] }) {
           .toLowerCase()
           .includes(deferredSearch);
       }),
-    [deferredSearch, rows],
+    [deferredSearch, rows, selectedGang],
   );
   const activePlayers = rows.filter(
     (player) => value(player, "status", "").toUpperCase() === "ACTIVE",
@@ -171,6 +205,36 @@ export function PlayerList({ rows }: { rows: RecordRow[] }) {
         </dl>
       </header>
 
+      <nav className="player-registry__categories" aria-label="Player gangs">
+        <button
+          type="button"
+          className={selectedGang === null ? "is-active" : undefined}
+          aria-pressed={selectedGang === null}
+          onClick={() => setSelectedGang(null)}
+        >
+          <span>All players</span>
+          <strong>{rows.length}</strong>
+        </button>
+        {gangCategories.map((category) => {
+          const isActive = selectedGang === category.key;
+          return (
+            <button
+              type="button"
+              className={isActive ? "is-active" : undefined}
+              aria-pressed={isActive}
+              onClick={() => setSelectedGang(isActive ? null : category.key)}
+              key={category.key}
+              title={isActive ? "Disable this gang filter" : undefined}
+            >
+              <Shield aria-hidden="true" />
+              <span>{category.label}</span>
+              <strong>{category.count}</strong>
+              {isActive ? <X aria-hidden="true" /> : null}
+            </button>
+          );
+        })}
+      </nav>
+
       <div className="player-registry__toolbar">
         <label>
           <Search aria-hidden="true" />
@@ -184,7 +248,11 @@ export function PlayerList({ rows }: { rows: RecordRow[] }) {
         </label>
         <p>
           <strong>{visiblePlayers.length}</strong>
-          {visiblePlayers.length === 1 ? " player" : " players"}
+          {selectedGang
+            ? " category members"
+            : visiblePlayers.length === 1
+              ? " player"
+              : " players"}
         </p>
       </div>
 
