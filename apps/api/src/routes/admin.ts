@@ -607,7 +607,7 @@ export function adminRoutes(app: FastifyInstance): void {
           include: { gang: { select: { id: true, name: true, tag: true } } },
         },
       },
-      take: 500,
+      take: 300,
     });
     return envelope(request, players);
   });
