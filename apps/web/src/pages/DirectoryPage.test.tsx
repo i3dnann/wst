@@ -50,6 +50,7 @@ describe("PlayerList gang categories", () => {
               displayName: "Player One",
               status: "ACTIVE",
               memberships: [
+                { id: "membership-0", gang: { id: "gang-b", name: "Bravo" } },
                 { id: "membership-1", gang: { id: "gang-a", name: "Alpha" } },
               ],
               seasonStats: [],

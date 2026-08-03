@@ -122,16 +122,28 @@ export function PlayerList({ rows }: { rows: RecordRow[] }) {
   const gangCategories = useMemo(() => {
     const categories = new Map<string, { label: string; count: number }>();
     for (const player of rows) {
-      const membership = array(player.memberships)[0];
-      const gang = record(membership?.gang);
-      const gangId = value(gang, "id", "");
-      const gangName = value(gang, "name", "Independent players");
-      const key = gangId ? `gang:${gangId}` : "independent";
-      const existing = categories.get(key);
-      categories.set(key, {
-        label: gangName,
-        count: (existing?.count ?? 0) + 1,
-      });
+      const memberships = array(player.memberships);
+      if (!memberships.length) {
+        const existing = categories.get("independent");
+        categories.set("independent", {
+          label: "Independent players",
+          count: (existing?.count ?? 0) + 1,
+        });
+        continue;
+      }
+      const countedGangIds = new Set<string>();
+      for (const membership of memberships) {
+        const gang = record(membership.gang);
+        const gangId = value(gang, "id", "");
+        if (!gangId || countedGangIds.has(gangId)) continue;
+        countedGangIds.add(gangId);
+        const key = `gang:${gangId}`;
+        const existing = categories.get(key);
+        categories.set(key, {
+          label: value(gang, "name", "Unnamed gang"),
+          count: (existing?.count ?? 0) + 1,
+        });
+      }
     }
     const independentCategory = categories.get("independent");
     return Array.from(categories, ([key, category]) => ({ key, ...category }))
@@ -151,17 +163,21 @@ export function PlayerList({ rows }: { rows: RecordRow[] }) {
   const visiblePlayers = useMemo(
     () =>
       rows.filter((player) => {
-        const membership = array(player.memberships)[0];
-        const gang = record(membership?.gang);
-        const gangId = value(gang, "id", "");
-        const categoryKey = gangId ? `gang:${gangId}` : "independent";
-        if (selectedGang && categoryKey !== selectedGang) return false;
+        const gangs = array(player.memberships).map((membership) =>
+          record(membership.gang),
+        );
+        const categoryKeys = gangs.length
+          ? gangs.map((gang) => `gang:${value(gang, "id", "")}`)
+          : ["independent"];
+        if (selectedGang && !categoryKeys.includes(selectedGang)) return false;
         if (!deferredSearch) return true;
         return [
           value(player, "displayName", ""),
           value(player, "status", ""),
-          value(gang, "name", "Independent player"),
-          value(gang, "tag", ""),
+          ...gangs.flatMap((gang) => [
+            value(gang, "name", "Independent player"),
+            value(gang, "tag", ""),
+          ]),
         ]
           .join(" ")
           .toLowerCase()
@@ -174,10 +190,11 @@ export function PlayerList({ rows }: { rows: RecordRow[] }) {
   ).length;
   const representedGangs = new Set(
     rows
-      .map((player) => {
-        const membership = array(player.memberships)[0];
-        return value(record(membership?.gang), "name", "");
-      })
+      .flatMap((player) =>
+        array(player.memberships).map((membership) =>
+          value(record(membership.gang), "name", ""),
+        ),
+      )
       .filter(Boolean),
   ).size;
 
@@ -260,7 +277,13 @@ export function PlayerList({ rows }: { rows: RecordRow[] }) {
         <div className="public-directory-grid">
           {visiblePlayers.map((player, index) => {
             const memberships = array(player.memberships);
-            const membership = memberships[0];
+            const membership = selectedGang
+              ? memberships.find(
+                  (entry) =>
+                    `gang:${value(record(entry.gang), "id", "")}` ===
+                    selectedGang,
+                )
+              : memberships[0];
             const gang = record(membership?.gang);
             const stats = array(player.seasonStats)[0];
             return (

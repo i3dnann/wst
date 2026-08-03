@@ -215,7 +215,7 @@ export function publicRoutes(app: FastifyInstance): void {
     const players = await prisma.player.findMany({
       where: { status: "ACTIVE" },
       orderBy: { displayName: "asc" },
-      take: 50,
+      take: 500,
       include: {
         memberships: {
           where: {
