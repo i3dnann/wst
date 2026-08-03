@@ -317,6 +317,25 @@ export function PublicLayout() {
         </div>
       ) : null}
       {!lockedPage ? (
+        <div
+          className="live-news-bar"
+          role="status"
+          aria-label="Tournament live now"
+        >
+          <div className="live-news-bar__track" aria-hidden="true">
+            {[0, 1].map((group) => (
+              <div className="live-news-bar__group" key={group}>
+                {Array.from({ length: 4 }, (_, item) => (
+                  <span key={item}>
+                    <Radio /> Tournament Live Now <i />
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {!lockedPage ? (
         <header className="site-header">
           <Brand logoUrl={logoUrl} name={shortName} />
           <nav className="primary-nav" aria-label="Primary navigation">

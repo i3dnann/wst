@@ -3783,6 +3783,76 @@ video.gold-hero-image {
   }
 }
 
+/* Lightweight live bulletin above the public navigation. */
+.live-news-bar {
+  position: relative;
+  z-index: 82;
+  width: 100%;
+  height: 34px;
+  overflow: hidden;
+  border-block: 1px solid rgb(255 255 255 / 0.16);
+  background: #b5122d;
+  color: #fff;
+}
+
+.live-news-bar__track {
+  display: flex;
+  width: max-content;
+  height: 100%;
+  will-change: transform;
+  animation: live-news-scroll 22s linear infinite;
+}
+
+.live-news-bar__group {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.live-news-bar__group span {
+  display: inline-flex;
+  gap: 12px;
+  align-items: center;
+  padding-inline: clamp(28px, 5vw, 88px);
+  white-space: nowrap;
+  font: 800 11px/1 var(--ui);
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+}
+
+.live-news-bar__group svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.2;
+}
+
+.live-news-bar__group i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0.72;
+}
+
+@keyframes live-news-scroll {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-news-bar__track {
+    width: 100%;
+    justify-content: center;
+    animation: none;
+  }
+
+  .live-news-bar__group:not(:first-child),
+  .live-news-bar__group span:not(:first-child) {
+    display: none;
+  }
+}
+
 /* Player registry: spacious identity cards and responsive directory controls. */
 body .players-directory-page {
   width: min(100%, 1920px);

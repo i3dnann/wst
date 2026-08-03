@@ -100,6 +100,9 @@ describe("PublicLayout website settings", () => {
     expect(
       screen.getByText(/All rights reserved/).closest("small"),
     ).toHaveAttribute("data-disable-scroll-reveal");
+    expect(
+      screen.getByRole("status", { name: "Tournament live now" }),
+    ).toBeVisible();
   });
 
   it("replaces a locked section and all its detail routes with Coming Soon", () => {
