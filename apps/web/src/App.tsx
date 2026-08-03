@@ -3,7 +3,6 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { PublicLayout } from "./components/layout/PublicLayout";
 import { PageSkeleton } from "./components/data/StatusState";
 import { RealtimeBridge } from "./components/realtime/RealtimeBridge";
-import { ScrollRevealController } from "./components/effects/ScrollRevealController";
 
 const HomePage = lazy(() => import("./pages/HomePage"));
 const GangsPage = lazy(() => import("./pages/GangsPage"));
@@ -53,7 +52,6 @@ export function App() {
   return (
     <>
       <RealtimeBridge />
-      <ScrollRevealController routeKey={location.pathname} />
       <div className="global-atmosphere" aria-hidden="true">
         <span />
       </div>
@@ -69,14 +67,6 @@ export function App() {
               <Route index element={<HomePage />} />
               <Route path="gangs" element={<GangsPage />} />
               <Route path="gangs/:slug" element={<GangDetailPage />} />
-              <Route
-                path="players"
-                element={<DirectoryPage type="players" />}
-              />
-              <Route
-                path="players/:slug"
-                element={<DirectoryPage type="player-profile" />}
-              />
               <Route path="tournaments" element={<TournamentsPage />} />
               <Route
                 path="tournaments/:slug"

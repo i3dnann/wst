@@ -95,6 +95,9 @@ describe("PublicLayout website settings", () => {
       "https://discord.gg/eZqaNx5P7y",
     );
     expect(
+      screen.queryByRole("link", { name: "Players" }),
+    ).not.toBeInTheDocument();
+    expect(
       screen.getByText(/All rights reserved/).closest("small"),
     ).toHaveAttribute("data-disable-scroll-reveal");
   });

@@ -15,7 +15,6 @@ import { usePublicWebsiteSettings } from "@/lib/website-settings";
 const navigation = [
   ["Home", "/"],
   ["Gangs", "/gangs"],
-  ["Players", "/players"],
   ["Tournaments", "/tournaments"],
   ["Matches", "/matches"],
   ["Rankings", "/rankings"],
@@ -25,8 +24,8 @@ const navigation = [
   ["About", "/about"],
 ] as const;
 
-const primaryNavigation = navigation.slice(0, 8);
-const moreNavigation = navigation.slice(8);
+const primaryNavigation = navigation.slice(0, 7);
+const moreNavigation = navigation.slice(7);
 const publicPageLabels: Record<PublicPageKey, string> = {
   home: "Home",
   gangs: "Gangs",

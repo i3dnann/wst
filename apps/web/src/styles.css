@@ -20412,7 +20412,18 @@ body .site-footer__studio-credit a:focus-visible::after {
   contain: strict;
   opacity: 0.45;
   transform: translate3d(0, 0, 0);
-  animation: ws-atmosphere-drift 18s ease-in-out infinite alternate;
+  animation: none;
+}
+
+:where(
+  .gang-registry-card,
+  .tournament-ledger-list > article,
+  .event-directory > li,
+  .public-directory-card,
+  .match-archive__row
+) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
 }
 
 .global-atmosphere > span:nth-child(1) {

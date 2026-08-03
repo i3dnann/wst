@@ -211,59 +211,6 @@ export function publicRoutes(app: FastifyInstance): void {
     },
   );
 
-  app.get("/api/v1/players", async (request) => {
-    const players = await prisma.player.findMany({
-      where: { status: "ACTIVE" },
-      orderBy: { displayName: "asc" },
-      take: 300,
-      include: {
-        memberships: {
-          where: {
-            active: true,
-            gang: { status: { not: "ARCHIVED" } },
-          },
-          include: { gang: true, gangRole: true },
-        },
-        seasonStats: { orderBy: { updatedAt: "desc" }, take: 1 },
-      },
-    });
-    return envelope(request, players);
-  });
-
-  app.get<{ Params: { slug: string } }>(
-    "/api/v1/players/:slug",
-    async (request) => {
-      const player = await prisma.player.findFirst({
-        where: { slug: request.params.slug, status: { not: "ARCHIVED" } },
-        include: {
-          memberships: {
-            where: { gang: { status: { not: "ARCHIVED" } } },
-            include: { gang: true, gangRole: true },
-            orderBy: { joinedAt: "desc" },
-          },
-          seasonStats: { orderBy: { updatedAt: "desc" } },
-          awards: {
-            orderBy: { awardedAt: "desc" },
-            take: 50,
-            include: { gang: true, tournament: true, match: true },
-          },
-          matchStats: {
-            orderBy: { createdAt: "desc" },
-            take: 25,
-            include: {
-              match: {
-                include: { gangA: true, gangB: true, tournament: true },
-              },
-            },
-          },
-        },
-      });
-      if (!player)
-        throw new HttpError(404, "PLAYER_NOT_FOUND", "Player was not found.");
-      return envelope(request, player);
-    },
-  );
-
   app.get("/api/v1/tournaments", async (request) => {
     const tournaments = await prisma.tournament.findMany({
       where: { status: { not: "ARCHIVED" }, publicVisible: true },
