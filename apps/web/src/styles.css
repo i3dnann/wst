@@ -17853,6 +17853,52 @@ body .admin-match-editor button {
   font-size: 9px !important;
 }
 
+body .admin-match-editor__header {
+  display: flex;
+  min-height: 27px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 7px 4px 9px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+}
+
+body .admin-match-editor__header > span {
+  overflow: hidden;
+  color: #6c90c3;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+body .admin-match-editor__undo {
+  display: inline-flex;
+  min-height: 22px !important;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px !important;
+  border: 1px solid rgb(108 144 195 / 0.38) !important;
+  border-radius: 5px;
+  background: rgb(39 66 114 / 0.2);
+  color: #a9c4e8 !important;
+  font-size: 7px !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body .admin-match-editor__undo svg {
+  width: 11px;
+  height: 11px;
+}
+
+body .admin-match-editor__undo:hover:not(:disabled) {
+  border-color: #6c90c3 !important;
+  background: rgb(39 66 114 / 0.4) !important;
+  color: #fff !important;
+}
+
 body .bracket-round-tabs {
   border-radius: 8px !important;
   background: #0b0b0e !important;

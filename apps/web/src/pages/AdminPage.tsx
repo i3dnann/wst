@@ -21,6 +21,7 @@ import {
   Swords,
   Trash2,
   Trophy,
+  Undo2,
   Users,
   X,
 } from "lucide-react";
@@ -358,6 +359,17 @@ function MatchAdvanceEditor({
     setScoreA(String(match.gangAScore ?? 0));
     setScoreB(String(match.gangBScore ?? 0));
   }, [match.gangAScore, match.gangBScore]);
+  const refreshBracketQueries = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin-tournament"] }),
+      queryClient.invalidateQueries({ queryKey: ["bracket"] }),
+      queryClient.invalidateQueries({
+        queryKey: ["tournament", tournamentSlug],
+      }),
+      queryClient.invalidateQueries({ queryKey: ["matches"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-records", "match"] }),
+    ]);
+  };
   const advance = useMutation({
     mutationFn: (winnerGangId: string) =>
       api.advanceMatch(match.id, {
@@ -368,21 +380,43 @@ function MatchAdvanceEditor({
       }),
     onSuccess: () => {
       toast.success("Winner advanced.");
-      void queryClient.invalidateQueries({
-        queryKey: ["bracket", tournamentSlug],
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ["tournament", tournamentSlug],
-      });
+      void refreshBracketQueries();
     },
     onError: (error) => toast.error(error.message),
   });
+  const reopen = useMutation({
+    mutationFn: () =>
+      api.reopenMatch(match.id, {
+        version: match.version,
+        reason: "Bracket winner reversed by an administrator for a rematch.",
+      }),
+    onSuccess: () => {
+      toast.success("Winner returned to this match. The rematch is ready.");
+      void refreshBracketQueries();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const mutationPending = advance.isPending || reopen.isPending;
   return (
     <article className="admin-match-editor">
-      <span>
-        Match {match.position ?? "—"} · {match.status.replaceAll("_", " ")}
-        {match.winnerGangId ? " · winner selected" : ""}
-      </span>
+      <header className="admin-match-editor__header">
+        <span>
+          Match {match.position ?? "—"} · {match.status.replaceAll("_", " ")}
+          {match.winnerGangId ? " · winner selected" : ""}
+        </span>
+        {match.winnerGangId ? (
+          <button
+            className="admin-match-editor__undo"
+            type="button"
+            disabled={mutationPending}
+            onClick={() => reopen.mutate()}
+            title="Undo this result, remove the gang from the next round, and prepare a rematch"
+          >
+            <Undo2 aria-hidden="true" />
+            {reopen.isPending ? "Undoing…" : "Rematch"}
+          </button>
+        ) : null}
+      </header>
       {[match.gangA, match.gangB].map((gang, index) => (
         <div key={gang?.id ?? `slot-${String(index)}`}>
           <strong>{gang?.name ?? "TBD"}</strong>
@@ -402,7 +436,7 @@ function MatchAdvanceEditor({
             size="sm"
             variant="outline"
             aria-label={`Set ${gang?.name ?? "empty slot"} as winner and advance`}
-            disabled={!gang || advance.isPending}
+            disabled={!gang || mutationPending}
             onClick={() => gang && advance.mutate(gang.id)}
           >
             Advance
@@ -411,6 +445,9 @@ function MatchAdvanceEditor({
       ))}
       {advance.isError ? (
         <p className="form-error">{advance.error.message}</p>
+      ) : null}
+      {reopen.isError ? (
+        <p className="form-error">{reopen.error.message}</p>
       ) : null}
     </article>
   );
