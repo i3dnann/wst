@@ -25,6 +25,7 @@ interface GangRef {
   name: string;
   tag?: string;
   logoUrl: string | null;
+  primaryColor?: string | null;
 }
 
 interface BracketMatchRecord {
@@ -78,21 +79,32 @@ function TeamRow({
   gang,
   score,
   winner,
+  revealDelay,
 }: {
   gang: GangRef | null;
   score: number | null;
   winner: boolean;
+  revealDelay: number;
 }) {
+  const gangColor = /^#[0-9a-f]{6}$/i.test(gang?.primaryColor ?? "")
+    ? gang?.primaryColor
+    : "#6c90c3";
   return (
     <div
-      className={winner ? "bracket-team bracket-team--winner" : "bracket-team"}
+      className={`bracket-team ${gang ? "bracket-team--gang" : "bracket-team--tbd"}${winner ? " bracket-team--winner" : ""}`}
+      style={
+        {
+          "--gang-color": gangColor,
+          "--team-reveal-delay": `${String(revealDelay)}ms`,
+        } as CSSProperties
+      }
     >
       {gang?.logoUrl ? (
         <img className="user-media-original" src={gang.logoUrl} alt="" />
       ) : (
         <Shield />
       )}
-      <span>{gang?.name ?? "TBD"}</span>
+      <span className="bracket-team__name">{gang?.name ?? "TBD"}</span>
       <strong>{score ?? "—"}</strong>
     </div>
   );
@@ -275,7 +287,7 @@ export default function TournamentDetailPage() {
                     <h2 id={`round-${round.id}`}>{round.name}</h2>
                   </header>
                   <div className="bracket-match-stack">
-                    {round.matches.map((match) => (
+                    {round.matches.map((match, matchIndex) => (
                       <div className="bracket-match-cell" key={match.id}>
                         <article
                           className={`football-match football-match--${match.status.toLowerCase()}`}
@@ -288,11 +300,13 @@ export default function TournamentDetailPage() {
                             gang={match.gangA}
                             score={match.gangAScore}
                             winner={match.winnerGangId === match.gangA?.id}
+                            revealDelay={(roundIndex * 2 + matchIndex) * 55}
                           />
                           <TeamRow
                             gang={match.gangB}
                             score={match.gangBScore}
                             winner={match.winnerGangId === match.gangB?.id}
+                            revealDelay={(roundIndex * 2 + matchIndex) * 55 + 35}
                           />
                           {match.scheduledAt ? (
                             <time dateTime={match.scheduledAt}>

@@ -194,6 +194,7 @@ describe("TournamentDetailPage rules", () => {
               id: "gang-blue",
               name: "Blue Vipers",
               logoUrl: null,
+              primaryColor: "#A83BFF",
             },
             gangB: {
               id: "gang-north",
@@ -223,5 +224,8 @@ describe("TournamentDetailPage rules", () => {
       "data-celebration-id",
       "world-star-cup:7:final-match:gang-blue",
     );
+    expect(
+      document.querySelector(".bracket-team--gang"),
+    ).toHaveStyle("--gang-color: #A83BFF");
   });
 });
