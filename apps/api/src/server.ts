@@ -9,6 +9,7 @@ import { adminRoutes } from "./routes/admin.js";
 import { adminExtendedRoutes } from "./routes/admin-extended.js";
 import { authRoutes } from "./routes/auth.js";
 import { healthRoutes } from "./routes/health.js";
+import { giftRoutes } from "./routes/gift.js";
 import { mediaRoutes } from "./routes/media.js";
 import { publicRoutes } from "./routes/public.js";
 
@@ -29,6 +30,7 @@ await registerSecurity(app);
 registerErrorHandler(app);
 healthRoutes(app);
 publicRoutes(app);
+giftRoutes(app);
 authRoutes(app);
 adminRoutes(app);
 adminExtendedRoutes(app);

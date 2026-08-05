@@ -684,3 +684,27 @@ model PlatformSetting {
   updatedAt       DateTime @updatedAt
   updatedBy       User     @relation(fields: [updatedByUserId], references: [id], onDelete: Restrict)
 }
+
+model GiftChallenge {
+  id                String   @id @default("daily-gift") @db.VarChar(32)
+  code              String   @db.VarChar(255)
+  requiredClicks    Int      @default(100)
+  claimedAt         DateTime?
+  claimedCode       String?  @db.VarChar(255)
+  claimTokenHash    String?  @db.Char(64)
+  updatedByUserId   String?  @db.VarChar(30)
+  updatedAt         DateTime @updatedAt
+
+  @@index([claimedAt])
+}
+
+model GiftChallengeAttempt {
+  id          String   @id @default(cuid())
+  tokenHash   String   @unique @db.Char(64)
+  progress    Int      @default(0)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([expiresAt])
+}

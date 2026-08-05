@@ -25727,3 +25727,135 @@ body .gold-home > .gold-live-strip p {
     transition: none !important;
   }
 }
+/* Daily gift challenge */
+.gift-page {
+  position: relative;
+  min-height: calc(100vh - 6.5rem);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  padding: clamp(3rem, 7vw, 7rem) 1.25rem;
+  background:
+    radial-gradient(circle at 50% 18%, rgb(39 66 114 / 0.34), transparent 38rem),
+    linear-gradient(145deg, #070a13 0%, #0d1433 52%, #080b16 100%);
+}
+.gift-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.22;
+  background-image:
+    linear-gradient(rgb(108 144 195 / 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(108 144 195 / 0.14) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(circle, black, transparent 75%);
+}
+.gift-page__ambient span {
+  position: absolute;
+  width: 22rem;
+  aspect-ratio: 1;
+  border: 1px solid rgb(108 144 195 / 0.16);
+  border-radius: 50%;
+  animation: gift-orbit 14s linear infinite;
+}
+.gift-page__ambient span:nth-child(2) { width: 32rem; animation-duration: 22s; animation-direction: reverse; }
+.gift-page__ambient span:nth-child(3) { width: 46rem; animation-duration: 32s; }
+.gift-challenge {
+  position: relative;
+  z-index: 1;
+  width: min(70rem, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(22rem, 1.1fr);
+  min-height: 35rem;
+  border: 1px solid rgb(108 144 195 / 0.3);
+  background: rgb(7 10 19 / 0.86);
+  backdrop-filter: blur(18px);
+}
+.gift-challenge__intro {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(2.2rem, 5vw, 5rem);
+  border-right: 1px solid rgb(108 144 195 / 0.2);
+}
+.gift-challenge__mark {
+  width: 4rem;
+  height: 4rem;
+  display: grid;
+  place-items: center;
+  color: #9bbbea;
+  border: 1px solid rgb(108 144 195 / 0.35);
+  background: #0d1433;
+  transform: rotate(45deg);
+  margin-bottom: 3rem;
+}
+.gift-challenge__mark svg { width: 1.75rem; transform: rotate(-45deg); }
+.gift-challenge__intro > p { color: #6c90c3; letter-spacing: 0.22em; text-transform: uppercase; font-size: 0.72rem; font-weight: 800; }
+.gift-challenge__intro h1 { max-width: 10ch; margin: 0.8rem 0 1rem; color: #f7f8fc; font-size: clamp(3.4rem, 6vw, 6.8rem); line-height: 0.86; font-family: var(--font-display); font-weight: 400; }
+.gift-challenge__intro > span { max-width: 33rem; color: #aeb7ca; line-height: 1.7; }
+.gift-action, .gift-claimed, .gift-winner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: clamp(2rem, 5vw, 5rem);
+}
+.gift-press {
+  --gift-progress: 0%;
+  position: relative;
+  width: min(19rem, 72vw);
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  border: 1px solid rgb(108 144 195 / 0.5);
+  border-radius: 50%;
+  color: white;
+  background: conic-gradient(#6c90c3 var(--gift-progress), #171f55 var(--gift-progress), #0a0e1d 0);
+  box-shadow: inset 0 0 0 1.1rem #080b15, inset 0 0 0 1.2rem rgb(108 144 195 / 0.18);
+  cursor: pointer;
+  transition: transform 120ms ease, filter 200ms ease;
+  isolation: isolate;
+}
+.gift-press::before { content: ""; position: absolute; inset: 2rem; z-index: -1; border-radius: inherit; background: radial-gradient(circle at 45% 35%, #274272, #0d1433 65%); }
+.gift-press:hover { filter: brightness(1.14); transform: translateY(-3px); }
+.gift-press:active { transform: scale(0.96); }
+.gift-press:focus-visible { outline: 3px solid #9bbbea; outline-offset: 8px; }
+.gift-press svg { width: 2.2rem; height: 2.2rem; color: #9bbbea; }
+.gift-press strong { font-size: 1.35rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.gift-press small { font-size: 1.05rem; color: #aebbd0; }
+.gift-press__rings { position: absolute; inset: -1.2rem; border: 1px solid rgb(108 144 195 / 0.18); border-radius: inherit; animation: gift-pulse 2.5s ease-out infinite; }
+.gift-progress { width: min(24rem, 100%); height: 3px; margin-top: 2.5rem; overflow: hidden; background: #171f55; }
+.gift-progress span { display: block; height: 100%; background: linear-gradient(90deg, #274272, #9bbbea); transition: width 180ms ease; }
+.gift-action > p { margin-top: 1rem; color: #7f8ba3; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.13em; }
+.gift-claimed > svg, .gift-winner > svg { width: 3.5rem; height: 3.5rem; color: #6c90c3; margin-bottom: 1.5rem; }
+.gift-claimed h2, .gift-winner h2 { margin: 0; color: #f4f6fb; font-size: clamp(2rem, 4vw, 3.6rem); font-family: var(--font-display); font-weight: 400; }
+.gift-claimed p, .gift-winner p { color: #9da7ba; max-width: 28rem; line-height: 1.65; }
+.gift-claimed strong { color: #9bbbea; font-size: clamp(2.3rem, 6vw, 4.6rem); font-variant-numeric: tabular-nums; letter-spacing: 0.06em; }
+.gift-claimed small { color: #68748d; }
+.gift-winner__code { width: min(27rem, 100%); margin: 1.4rem 0; padding: 1.25rem; border: 1px solid #274272; background: #0d1433; }
+.gift-winner__code code { color: #d9e6fa; font-size: clamp(1rem, 2.5vw, 1.35rem); overflow-wrap: anywhere; }
+.gift-admin__layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr); gap: 1rem; }
+.gift-admin__editor, .gift-admin__claim { padding: clamp(1.4rem, 3vw, 2.5rem); border: 1px solid rgb(108 144 195 / 0.25); background: #090d19; }
+.gift-admin__editor > svg, .gift-admin__claim > svg { color: #6c90c3; width: 2rem; height: 2rem; }
+.gift-admin__editor label { display: block; margin: 1.5rem 0 0.4rem; color: #f2f5fb; font-weight: 700; }
+.gift-admin__editor p, .gift-admin__claim p { color: #8f9ab0; line-height: 1.6; }
+.gift-admin__editor input { width: 100%; margin: 0.75rem 0 1.25rem; }
+.gift-admin__claim { display: flex; flex-direction: column; align-items: flex-start; }
+.gift-admin__claim > span { margin-top: 1.25rem; color: #77849c; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.75rem; }
+.gift-admin__claim > strong { color: #e5edfa; font-family: var(--font-display); font-size: 2.5rem; font-weight: 400; }
+.gift-admin__status { padding: 0.6rem 0.9rem; color: #9bbbea; border: 1px solid #274272; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.12em; }
+.gift-admin__status.is-claimed { color: #cbd4e4; background: #171f55; }
+@keyframes gift-orbit { to { transform: rotate(360deg); } }
+@keyframes gift-pulse { 0% { opacity: 0.75; transform: scale(0.95); } 100% { opacity: 0; transform: scale(1.12); } }
+@media (max-width: 800px) {
+  .gift-challenge { grid-template-columns: 1fr; }
+  .gift-challenge__intro { border-right: 0; border-bottom: 1px solid rgb(108 144 195 / 0.2); }
+  .gift-admin__layout { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gift-page__ambient span, .gift-press__rings { animation: none; }
+}

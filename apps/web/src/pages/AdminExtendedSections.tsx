@@ -9,6 +9,8 @@ import {
   Activity,
   ArchiveRestore,
   FileImage,
+  Gift,
+  KeyRound,
   LockKeyhole,
   LockOpen,
   RefreshCw,
@@ -602,6 +604,101 @@ export function GangOrganizationManager() {
             })}
           </tbody>
         </table>
+      </div>
+    </section>
+  );
+}
+
+export function GiftChallengeManager() {
+  const queryClient = useQueryClient();
+  const challenge = useQuery({
+    queryKey: ["admin-gift"],
+    queryFn: api.adminGift,
+  });
+  const [code, setCode] = useState("");
+  useEffect(() => {
+    if (challenge.data?.data.code) setCode(challenge.data.data.code);
+  }, [challenge.data?.data.code]);
+  const update = useMutation({
+    mutationFn: () => api.updateAdminGift(code),
+    onSuccess: async () => {
+      toast.success("Gift code saved.");
+      await queryClient.invalidateQueries({ queryKey: ["admin-gift"] });
+    },
+    onError: (error: Error) => toast.error(message(error)),
+  });
+  const reset = useMutation({
+    mutationFn: api.resetAdminGift,
+    onSuccess: async () => {
+      toast.success("The daily gift is available again.");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-gift"] }),
+        queryClient.invalidateQueries({ queryKey: ["gift-status"] }),
+      ]);
+    },
+    onError: (error: Error) => toast.error(message(error)),
+  });
+
+  if (challenge.isPending) return <div className="admin-loading">Loading gift challenge…</div>;
+  if (challenge.isError)
+    return <ErrorState title="Gift challenge could not load" message={message(challenge.error)} retry={() => void challenge.refetch()} />;
+
+  const data = challenge.data.data;
+  return (
+    <section className="admin-dataset admin-extended-section gift-admin">
+      <header className="admin-dataset-heading">
+        <div>
+          <h2><Gift /> Daily Gift Challenge</h2>
+          <p>Manage the secret reward revealed to the first visitor who completes 100 presses.</p>
+        </div>
+        <span className={`gift-admin__status${data.claimed ? " is-claimed" : ""}`}>
+          {data.claimed ? "Claimed" : "Available"}
+        </span>
+      </header>
+      <div className="gift-admin__layout">
+        <form
+          className="gift-admin__editor"
+          onSubmit={(event) => {
+            event.preventDefault();
+            update.mutate();
+          }}
+        >
+          <KeyRound aria-hidden="true" />
+          <label htmlFor="gift-code">Secret gift code</label>
+          <p>The public API keeps this value hidden until a visitor wins.</p>
+          <input
+            id="gift-code"
+            value={code}
+            minLength={4}
+            maxLength={255}
+            required
+            autoComplete="off"
+            onChange={(event) => setCode(event.target.value)}
+          />
+          <Button type="submit" disabled={update.isPending || code.trim().length < 4}>
+            <Save /> {update.isPending ? "Saving…" : "Save gift code"}
+          </Button>
+        </form>
+        <aside className="gift-admin__claim">
+          <Gift aria-hidden="true" />
+          <span>Current daily drop</span>
+          <strong>{data.requiredClicks} presses</strong>
+          <p>
+            {data.claimed
+              ? `Claimed ${data.claimedAt ? date(data.claimedAt) : "today"}. The next automatic gift opens ${data.nextAvailableAt ? date(data.nextAvailableAt) : "in 24 hours"}.`
+              : "No one has claimed the current gift yet."}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={reset.isPending}
+            onClick={() => {
+              if (window.confirm("Reset the current winner and all click progress?")) reset.mutate();
+            }}
+          >
+            <RefreshCw /> {reset.isPending ? "Resetting…" : "Reset gift now"}
+          </Button>
+        </aside>
       </div>
     </section>
   );

@@ -242,6 +242,24 @@ export interface DiscordAuditSettings {
   categories: string[];
 }
 
+export interface GiftChallengeState {
+  claimed: boolean;
+  requiredClicks: number;
+  nextAvailableAt: string | null;
+  progress?: number;
+  code?: string | null;
+  token?: string | null;
+  winner?: boolean;
+}
+
+export interface AdminGiftChallenge {
+  code: string;
+  requiredClicks: number;
+  claimedAt: string | null;
+  nextAvailableAt: string | null;
+  claimed: boolean;
+}
+
 export interface LiveDrawParticipant {
   id: string;
   gang: {
@@ -306,6 +324,18 @@ export const api = {
       30_000,
     ),
   home: () => apiRequest<ApiEnvelope<HomeData>>("/api/v1/public/home"),
+  giftStatus: () =>
+    apiRequest<ApiEnvelope<GiftChallengeState>>("/api/v1/gift"),
+  giftSession: (token?: string) =>
+    apiRequest<ApiEnvelope<GiftChallengeState>>("/api/v1/gift/session", {
+      method: "POST",
+      body: JSON.stringify(token ? { token } : {}),
+    }),
+  giftClick: (token: string) =>
+    apiRequest<ApiEnvelope<GiftChallengeState>>("/api/v1/gift/click", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    }),
   publicSettings: (signal?: AbortSignal) =>
     apiRequest<
       ApiEnvelope<{ value: WebsiteSettings | null; updatedAt: string | null }>
@@ -350,6 +380,17 @@ export const api = {
     ),
   adminOverview: () =>
     apiRequest<ApiEnvelope<AdminOverviewData>>("/api/v1/admin/overview"),
+  adminGift: () =>
+    apiRequest<ApiEnvelope<AdminGiftChallenge>>("/api/v1/admin/gift"),
+  updateAdminGift: (code: string) =>
+    apiRequest<ApiEnvelope<{ updated: boolean }>>("/api/v1/admin/gift", {
+      method: "PATCH",
+      body: JSON.stringify({ code }),
+    }),
+  resetAdminGift: () =>
+    apiRequest<ApiEnvelope<{ reset: boolean }>>("/api/v1/admin/gift/reset", {
+      method: "POST",
+    }),
   adminLogin: (email: string, password: string) =>
     apiRequest<ApiEnvelope<Pick<AdminUser, "id" | "email" | "displayName">>>(
       "/api/v1/auth/login",

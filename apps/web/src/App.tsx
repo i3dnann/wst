@@ -17,6 +17,7 @@ const InformationPage = lazy(() => import("./pages/InformationPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 const EventsPage = lazy(() => import("./pages/EventsPage"));
 const LivePage = lazy(() => import("./pages/LivePage"));
+const GiftPage = lazy(() => import("./pages/GiftPage"));
 
 const blockedIntegerKeys = new Set(["e", "E", "+", "-", "."]);
 
@@ -75,6 +76,7 @@ export function App() {
               <Route path="rankings" element={<RankingsPage />} />
               <Route path="events" element={<EventsPage />} />
               <Route path="live" element={<LivePage />} />
+              <Route path="gift" element={<GiftPage />} />
               <Route
                 path="matches"
                 element={<DirectoryPage type="matches" />}

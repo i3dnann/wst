@@ -22,6 +22,7 @@ const navigation = [
   ["Live", "/live"],
   ["Rules", "/rules"],
   ["About", "/about"],
+  ["Gift", "/gift"],
 ] as const;
 
 const primaryNavigation = navigation.slice(0, 7);

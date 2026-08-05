@@ -47,6 +47,7 @@ import {
 import { BracketManager } from "./AdminPage";
 import {
   GangOrganizationManager,
+  GiftChallengeManager,
   MediaManager,
   ResultsDisputesManager,
   RolesPermissionsManager,
@@ -75,7 +76,8 @@ type AdminSection =
   | "audit"
   | "discord"
   | "settings"
-  | "health";
+  | "health"
+  | "gift";
 
 class AdminSectionBoundary extends Component<
   { children: ReactNode; section: AdminSection | null },
@@ -159,6 +161,7 @@ const adminSectionRoutes: Record<AdminSection, string> = {
   discord: "discord",
   settings: "settings",
   health: "health",
+  gift: "gift",
 };
 
 function adminSectionFromPath(pathname: string): AdminSection | null {
@@ -194,6 +197,7 @@ const navigation = [
   [UserCog, "Administrators", "administrator", "user.manage"],
   [UserCog, "Roles & Permissions", "roles", "role.manage"],
   [Settings, "Website Settings", "settings", "settings.manage"],
+  [Gift, "Gift Challenge", "gift", "settings.manage"],
   [Radio, "Discord Integration", "discord", "audit.configure"],
   [FileClock, "Audit History", "audit", "audit.read"],
   [RefreshCw, "System Health", "health", "system.health.read"],
@@ -212,7 +216,7 @@ const navigationGroups: Array<{
     label: "Competition",
     sections: ["tournament", "participant", "bracket", "ranking", "season"],
   },
-  { label: "Publishing", sections: ["event", "stream", "media"] },
+  { label: "Publishing", sections: ["event", "stream", "media", "gift"] },
   {
     label: "Access & System",
     sections: [
@@ -3354,6 +3358,7 @@ export default function AdminCommandCenterPage() {
           ) : null}
           {effectiveSection === "roles" ? <RolesPermissionsManager /> : null}
           {effectiveSection === "settings" ? <WebsiteSettingsManager /> : null}
+          {effectiveSection === "gift" ? <GiftChallengeManager /> : null}
           {effectiveSection === "discord" ? <AuditManager integration /> : null}
           {effectiveSection === "audit" ? <AuditManager /> : null}
           {effectiveSection === "health" ? <SystemHealthManager /> : null}
