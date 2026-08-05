@@ -38,6 +38,24 @@
   --color-5: #dce9fa;
 }
 
+@media (max-width: 720px) {
+  html body .match-archive-page .match-archive__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  html body .match-archive-page .match-archive__meta .match-countdown {
+    flex: 1 0 100%;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
 /* Complete administration workspace */
 .admin-extended-section {
   display: grid;
@@ -3780,6 +3798,40 @@ video.gold-hero-image {
 @media (prefers-reduced-motion: reduce) {
   .live-draw-broadcast__panel > header span svg {
     animation: none;
+  }
+}
+
+@media (max-width: 720px) {
+  body .match-archive-page .match-archive__meta {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    justify-items: start;
+    width: 100%;
+  }
+
+  body .match-archive-page .match-archive__meta time {
+    width: 100%;
+    text-align: right;
+  }
+
+  body .match-archive-page .match-archive__meta .match-countdown {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 0.15rem;
+  }
+
+  .match-countdown--compact .match-countdown__clock {
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .match-countdown--compact .match-countdown__unit {
+    min-width: 1.48rem;
+  }
+
+  .match-countdown--compact .match-countdown__unit i {
+    margin-right: 0.14rem;
   }
 }
 
@@ -19642,7 +19694,7 @@ body .match-archive-page .match-archive__meta {
   gap: 7px;
 }
 
-body .match-archive-page .match-archive__meta span {
+body .match-archive-page .match-archive__meta > span {
   display: inline-flex;
   align-items: center;
   min-height: 24px;
@@ -19656,15 +19708,15 @@ body .match-archive-page .match-archive__meta span {
   text-transform: uppercase;
 }
 
-body .match-archive-page .match-archive__meta span[data-status="LIVE"],
-body .match-archive-page .match-archive__meta span[data-status="DISPUTED"] {
+body .match-archive-page .match-archive__meta > span[data-status="LIVE"],
+body .match-archive-page .match-archive__meta > span[data-status="DISPUTED"] {
   border-color: rgb(108 144 195 / 0.5);
   background: rgb(39 66 114 / 0.16);
   color: #6c90c3;
 }
 
-body .match-archive-page .match-archive__meta span[data-status="COMPLETED"],
-body .match-archive-page .match-archive__meta span[data-status="FORFEIT"] {
+body .match-archive-page .match-archive__meta > span[data-status="COMPLETED"],
+body .match-archive-page .match-archive__meta > span[data-status="FORFEIT"] {
   border-color: rgb(108 144 195 / 0.34);
   color: #dce9fa;
 }
@@ -19676,6 +19728,134 @@ body .match-archive-page .match-archive__meta time {
   font: 600 0.72rem/1.25 var(--ui);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Live match countdown ----------------------------------------------------- */
+.match-countdown {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 2.75rem;
+  padding: 0.48rem 0.75rem 0.58rem;
+  overflow: hidden;
+  border: 1px solid rgb(108 144 195 / 0.38);
+  border-radius: 8px;
+  background: linear-gradient(110deg, rgb(13 20 40 / 0.96), rgb(23 31 58 / 0.9));
+  color: #eef5ff;
+  box-shadow: inset 0 1px rgb(255 255 255 / 0.04);
+}
+
+.match-countdown__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #86aee0;
+  font: 750 0.61rem/1 var(--ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.match-countdown__label svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  animation: match-countdown-clock 2s ease-in-out infinite;
+}
+
+.match-countdown__clock {
+  display: inline-flex;
+  align-items: center;
+}
+
+.match-countdown__unit {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  min-width: 2rem;
+}
+
+.match-countdown__unit i {
+  margin: 0 0.24rem 0 0.08rem;
+  color: rgb(108 144 195 / 0.65);
+  font-style: normal;
+  animation: match-countdown-colon 1s steps(1, end) infinite;
+}
+
+.match-countdown__unit b {
+  font: 700 0.84rem/1 var(--ui);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.match-countdown__unit small {
+  margin-left: 0.18rem;
+  color: #667998;
+  font: 700 0.48rem/1 var(--ui);
+}
+
+.match-countdown__pulse {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #6c90c3, #b7d7ff, transparent);
+  transform: translateX(-70%);
+  animation: match-countdown-rail 2.8s ease-in-out infinite;
+}
+
+.match-countdown--compact {
+  gap: 0.42rem;
+  min-height: 1.9rem;
+  padding: 0.32rem 0.46rem 0.4rem;
+  border-radius: 5px;
+}
+
+.match-countdown--compact .match-countdown__label {
+  font-size: 0.5rem;
+}
+
+.match-countdown--compact .match-countdown__label svg {
+  width: 0.72rem;
+  height: 0.72rem;
+}
+
+.match-countdown--compact .match-countdown__unit {
+  min-width: 1.65rem;
+}
+
+.match-countdown--compact .match-countdown__unit b {
+  font-size: 0.68rem;
+}
+
+.match-countdown--compact .match-countdown__unit small {
+  font-size: 0.4rem;
+}
+
+@keyframes match-countdown-clock {
+  0%, 100% { opacity: 0.72; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+@keyframes match-countdown-colon {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.28; }
+}
+
+@keyframes match-countdown-rail {
+  0% { transform: translateX(-75%); opacity: 0; }
+  18%, 82% { opacity: 1; }
+  100% { transform: translateX(75%); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .match-countdown__label svg,
+  .match-countdown__unit i,
+  .match-countdown__pulse {
+    animation: none;
+  }
 }
 
 @media (max-width: 1200px) {

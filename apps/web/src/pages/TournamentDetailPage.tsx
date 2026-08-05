@@ -17,6 +17,7 @@ import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ErrorState, PageSkeleton } from "@/components/data/StatusState";
 import { ChampionCelebration } from "@/components/effects/ChampionCelebration";
+import { MatchCountdown } from "@/components/matches/MatchCountdown";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { api } from "@/lib/api";
 
@@ -309,9 +310,12 @@ export default function TournamentDetailPage() {
                             revealDelay={(roundIndex * 2 + matchIndex) * 55 + 35}
                           />
                           {match.scheduledAt ? (
-                            <time dateTime={match.scheduledAt}>
-                              {new Date(match.scheduledAt).toLocaleString()}
-                            </time>
+                            <>
+                              <time dateTime={match.scheduledAt}>
+                                {new Date(match.scheduledAt).toLocaleString()}
+                              </time>
+                              <MatchCountdown scheduledAt={match.scheduledAt} compact />
+                            </>
                           ) : null}
                         </article>
                       </div>

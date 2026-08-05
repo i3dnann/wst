@@ -21,6 +21,7 @@ import {
   ErrorState,
   PageSkeleton,
 } from "@/components/data/StatusState";
+import { MatchCountdown } from "@/components/matches/MatchCountdown";
 import { api } from "@/lib/api";
 
 const labels = {
@@ -610,6 +611,10 @@ function MatchList({ rows }: { rows: RecordRow[] }) {
                       ? new Date(match.scheduledAt).toLocaleString()
                       : "Not scheduled"}
                   </time>
+                  <MatchCountdown
+                    scheduledAt={typeof match.scheduledAt === "string" ? match.scheduledAt : null}
+                    compact
+                  />
                 </div>
                 <ChevronRight aria-hidden="true" />
               </Link>
