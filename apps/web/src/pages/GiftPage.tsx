@@ -108,6 +108,9 @@ export default function GiftPage() {
             <h2>You claimed the gift</h2>
             <p>Keep this code safe. It is only displayed to this winning browser.</p>
             <div className="gift-winner__code"><code>{state.code}</code></div>
+            <div className="gift-winner__message">
+              <p>{state.claimMessage}</p>
+            </div>
             <Button
               onClick={() => {
                 void navigator.clipboard.writeText(state.code ?? "");

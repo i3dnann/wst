@@ -25838,12 +25838,15 @@ body .gold-home > .gold-live-strip p {
 .gift-claimed small { color: #68748d; }
 .gift-winner__code { width: min(27rem, 100%); margin: 1.4rem 0; padding: 1.25rem; border: 1px solid #274272; background: #0d1433; }
 .gift-winner__code code { color: #d9e6fa; font-size: clamp(1rem, 2.5vw, 1.35rem); overflow-wrap: anywhere; }
+.gift-winner__message { width: min(29rem, 100%); margin: 0 0 1.5rem; padding: 1rem 1.25rem; border-left: 3px solid #6c90c3; background: rgb(23 31 85 / 0.55); text-align: left; }
+.gift-winner__message p { margin: 0; color: #d6deed; white-space: pre-wrap; }
 .gift-admin__layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr); gap: 1rem; }
 .gift-admin__editor, .gift-admin__claim { padding: clamp(1.4rem, 3vw, 2.5rem); border: 1px solid rgb(108 144 195 / 0.25); background: #090d19; }
 .gift-admin__editor > svg, .gift-admin__claim > svg { color: #6c90c3; width: 2rem; height: 2rem; }
 .gift-admin__editor label { display: block; margin: 1.5rem 0 0.4rem; color: #f2f5fb; font-weight: 700; }
 .gift-admin__editor p, .gift-admin__claim p { color: #8f9ab0; line-height: 1.6; }
 .gift-admin__editor input { width: 100%; margin: 0.75rem 0 1.25rem; }
+.gift-admin__editor textarea { width: 100%; min-height: 8rem; margin: 0.75rem 0 1.25rem; resize: vertical; }
 .gift-admin__claim { display: flex; flex-direction: column; align-items: flex-start; }
 .gift-admin__claim > span { margin-top: 1.25rem; color: #77849c; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.75rem; }
 .gift-admin__claim > strong { color: #e5edfa; font-family: var(--font-display); font-size: 2.5rem; font-weight: 400; }

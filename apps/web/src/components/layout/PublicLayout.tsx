@@ -16,17 +16,17 @@ const navigation = [
   ["Home", "/"],
   ["Gangs", "/gangs"],
   ["Tournaments", "/tournaments"],
+  ["Gift", "/gift"],
   ["Matches", "/matches"],
   ["Rankings", "/rankings"],
   ["Events", "/events"],
   ["Live", "/live"],
   ["Rules", "/rules"],
   ["About", "/about"],
-  ["Gift", "/gift"],
 ] as const;
 
-const primaryNavigation = navigation.slice(0, 7);
-const moreNavigation = navigation.slice(7);
+const primaryNavigation = navigation.slice(0, 8);
+const moreNavigation = navigation.slice(8);
 const publicPageLabels: Record<PublicPageKey, string> = {
   home: "Home",
   gangs: "Gangs",

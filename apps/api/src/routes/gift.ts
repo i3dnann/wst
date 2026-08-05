@@ -15,11 +15,16 @@ import {
 
 const CHALLENGE_ID = "daily-gift";
 const DEFAULT_CODE = "Adnanwashere2001";
+const DEFAULT_CLAIM_MESSAGE =
+  "DM a World Star administrator on Discord and send this code to claim your gift.";
 const REQUIRED_CLICKS = 100;
 const ATTEMPT_WINDOW_MS = 30 * 60 * 1_000;
 const tokenInput = z.object({ token: z.string().min(32).max(128) });
 const sessionInput = z.object({ token: z.string().min(32).max(128).optional() });
-const settingsInput = z.object({ code: z.string().trim().min(4).max(255) });
+const settingsInput = z.object({
+  code: z.string().trim().min(4).max(255),
+  claimMessage: z.string().trim().min(10).max(1_000),
+});
 
 function tokenHash(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -32,6 +37,7 @@ async function ensureChallenge() {
     create: {
       id: CHALLENGE_ID,
       code: DEFAULT_CODE,
+      claimMessage: DEFAULT_CLAIM_MESSAGE,
       requiredClicks: REQUIRED_CLICKS,
     },
   });
@@ -59,6 +65,9 @@ export function giftRoutes(app: FastifyInstance): void {
           ...publicGiftStatus(challenge),
           progress: winner ? challenge.requiredClicks : 0,
           code: winner ? (challenge.claimedCode ?? challenge.code) : null,
+          claimMessage: winner
+            ? (challenge.claimMessage ?? DEFAULT_CLAIM_MESSAGE)
+            : null,
           token: winner ? input.token : null,
           winner,
         });
@@ -114,6 +123,9 @@ export function giftRoutes(app: FastifyInstance): void {
           ...publicGiftStatus(challenge),
           progress: winner ? challenge.requiredClicks : 0,
           code: winner ? (challenge.claimedCode ?? challenge.code) : null,
+          claimMessage: winner
+            ? (challenge.claimMessage ?? DEFAULT_CLAIM_MESSAGE)
+            : null,
           winner,
         });
       }
@@ -162,6 +174,9 @@ export function giftRoutes(app: FastifyInstance): void {
         ...publicGiftStatus(current),
         progress: winner ? current.requiredClicks : attempt.progress,
         code: winner ? (current.claimedCode ?? current.code) : null,
+        claimMessage: winner
+          ? (current.claimMessage ?? DEFAULT_CLAIM_MESSAGE)
+          : null,
         winner,
       });
     },
@@ -172,6 +187,7 @@ export function giftRoutes(app: FastifyInstance): void {
     const challenge = await ensureChallenge();
     return envelope(request, {
       code: challenge.code,
+      claimMessage: challenge.claimMessage ?? DEFAULT_CLAIM_MESSAGE,
       requiredClicks: challenge.requiredClicks,
       claimedAt: challenge.claimedAt,
       nextAvailableAt: giftAvailableAt(challenge.claimedAt),
@@ -184,20 +200,25 @@ export function giftRoutes(app: FastifyInstance): void {
     const input = settingsInput.parse(request.body);
     const challenge = await prisma.giftChallenge.upsert({
       where: { id: CHALLENGE_ID },
-      update: { code: input.code, updatedByUserId: auth.userId },
+      update: {
+        code: input.code,
+        claimMessage: input.claimMessage,
+        updatedByUserId: auth.userId,
+      },
       create: {
         id: CHALLENGE_ID,
         code: input.code,
+        claimMessage: input.claimMessage,
         requiredClicks: REQUIRED_CLICKS,
         updatedByUserId: auth.userId,
       },
     });
     await recordAudit({
       actorUserId: auth.userId,
-      action: "gift.code.update",
+      action: "gift.settings.update",
       entityType: "GiftChallenge",
       entityId: challenge.id,
-      afterData: { codeChanged: true },
+      afterData: { codeChanged: true, claimMessageChanged: true },
     });
     return envelope(request, { updated: true });
   });

@@ -688,6 +688,7 @@ model PlatformSetting {
 model GiftChallenge {
   id                String   @id @default("daily-gift") @db.VarChar(32)
   code              String   @db.VarChar(255)
+  claimMessage      String?  @db.Text
   requiredClicks    Int      @default(100)
   claimedAt         DateTime?
   claimedCode       String?  @db.VarChar(255)

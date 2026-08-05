@@ -616,11 +616,14 @@ export function GiftChallengeManager() {
     queryFn: api.adminGift,
   });
   const [code, setCode] = useState("");
+  const [claimMessage, setClaimMessage] = useState("");
   useEffect(() => {
     if (challenge.data?.data.code) setCode(challenge.data.data.code);
-  }, [challenge.data?.data.code]);
+    if (challenge.data?.data.claimMessage)
+      setClaimMessage(challenge.data.data.claimMessage);
+  }, [challenge.data?.data.claimMessage, challenge.data?.data.code]);
   const update = useMutation({
-    mutationFn: () => api.updateAdminGift(code),
+    mutationFn: () => api.updateAdminGift(code, claimMessage),
     onSuccess: async () => {
       toast.success("Gift code saved.");
       await queryClient.invalidateQueries({ queryKey: ["admin-gift"] });
@@ -675,8 +678,27 @@ export function GiftChallengeManager() {
             autoComplete="off"
             onChange={(event) => setCode(event.target.value)}
           />
-          <Button type="submit" disabled={update.isPending || code.trim().length < 4}>
-            <Save /> {update.isPending ? "Saving…" : "Save gift code"}
+          <label htmlFor="gift-claim-message">Winner claim message</label>
+          <p>This instruction appears only after the visitor wins and receives the code.</p>
+          <textarea
+            id="gift-claim-message"
+            value={claimMessage}
+            minLength={10}
+            maxLength={1_000}
+            required
+            rows={5}
+            placeholder="Example: DM @username on Discord and send this code to claim your gift."
+            onChange={(event) => setClaimMessage(event.target.value)}
+          />
+          <Button
+            type="submit"
+            disabled={
+              update.isPending ||
+              code.trim().length < 4 ||
+              claimMessage.trim().length < 10
+            }
+          >
+            <Save /> {update.isPending ? "Saving…" : "Save gift settings"}
           </Button>
         </form>
         <aside className="gift-admin__claim">

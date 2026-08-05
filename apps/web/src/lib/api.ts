@@ -248,12 +248,14 @@ export interface GiftChallengeState {
   nextAvailableAt: string | null;
   progress?: number;
   code?: string | null;
+  claimMessage?: string | null;
   token?: string | null;
   winner?: boolean;
 }
 
 export interface AdminGiftChallenge {
   code: string;
+  claimMessage: string;
   requiredClicks: number;
   claimedAt: string | null;
   nextAvailableAt: string | null;
@@ -382,10 +384,10 @@ export const api = {
     apiRequest<ApiEnvelope<AdminOverviewData>>("/api/v1/admin/overview"),
   adminGift: () =>
     apiRequest<ApiEnvelope<AdminGiftChallenge>>("/api/v1/admin/gift"),
-  updateAdminGift: (code: string) =>
+  updateAdminGift: (code: string, claimMessage: string) =>
     apiRequest<ApiEnvelope<{ updated: boolean }>>("/api/v1/admin/gift", {
       method: "PATCH",
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, claimMessage }),
     }),
   resetAdminGift: () =>
     apiRequest<ApiEnvelope<{ reset: boolean }>>("/api/v1/admin/gift/reset", {
