@@ -18,8 +18,12 @@ const DEFAULT_CODE = "Adnanwashere2001";
 const DEFAULT_CLAIM_MESSAGE =
   "DM a World Star administrator on Discord and send this code to claim your gift.";
 const REQUIRED_CLICKS = 100;
-const ATTEMPT_WINDOW_MS = 30 * 60 * 1_000;
+const REVEAL_WINDOW_MS = 20 * 1_000;
+const ANSWER_WINDOW_MS = 20 * 1_000;
+const ATTEMPT_WINDOW_MS = REVEAL_WINDOW_MS + ANSWER_WINDOW_MS;
+const PUZZLE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const tokenInput = z.object({ token: z.string().min(32).max(128) });
+const answerInput = tokenInput.extend({ answer: z.string().trim().min(10).max(11) });
 const sessionInput = z.object({ token: z.string().min(32).max(128).optional() });
 const settingsInput = z.object({
   code: z.string().trim().min(4).max(255),
@@ -28,6 +32,23 @@ const settingsInput = z.object({
 
 function tokenHash(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function createPuzzleCode(): string {
+  const raw = Array.from(crypto.randomBytes(10), (value) =>
+    PUZZLE_ALPHABET[value % PUZZLE_ALPHABET.length] ?? "X",
+  ).join("");
+  return `${raw.slice(0, 5)}-${raw.slice(5)}`;
+}
+
+function puzzleAttemptState(attempt: { puzzleCode: string | null; revealUntil: Date | null; answerUntil: Date | null; attemptsRemaining: number }, now: Date) {
+  const revealing = Boolean(attempt.revealUntil && attempt.revealUntil > now);
+  return {
+    puzzleCode: revealing ? attempt.puzzleCode : null,
+    revealUntil: attempt.revealUntil,
+    answerUntil: attempt.answerUntil,
+    attemptsRemaining: attempt.attemptsRemaining,
+  };
 }
 
 async function ensureChallenge() {
@@ -77,10 +98,16 @@ export function giftRoutes(app: FastifyInstance): void {
         const existing = await prisma.giftChallengeAttempt.findFirst({
           where: { tokenHash: suppliedHash, expiresAt: { gt: now } },
         });
-        if (existing) {
+        if (
+          existing?.puzzleCode &&
+          existing.revealUntil &&
+          existing.answerUntil &&
+          existing.answerUntil > now &&
+          existing.attemptsRemaining > 0
+        ) {
           return envelope(request, {
             ...publicGiftStatus(challenge),
-            progress: Math.min(existing.progress, challenge.requiredClicks),
+            ...puzzleAttemptState(existing, now),
             code: null,
             token: input.token,
             winner: false,
@@ -89,18 +116,25 @@ export function giftRoutes(app: FastifyInstance): void {
       }
 
       const token = crypto.randomBytes(32).toString("base64url");
+      const revealUntil = new Date(now.getTime() + REVEAL_WINDOW_MS);
+      const answerUntil = new Date(revealUntil.getTime() + ANSWER_WINDOW_MS);
       await prisma.giftChallengeAttempt.deleteMany({
         where: { expiresAt: { lte: now } },
       });
       await prisma.giftChallengeAttempt.create({
         data: {
           tokenHash: tokenHash(token),
+          puzzleCode: createPuzzleCode(),
+          revealUntil,
+          answerUntil,
+          attemptsRemaining: 3,
           expiresAt: new Date(now.getTime() + ATTEMPT_WINDOW_MS),
         },
       });
+      const created = await prisma.giftChallengeAttempt.findUniqueOrThrow({ where: { tokenHash: tokenHash(token) } });
       return envelope(request, {
         ...publicGiftStatus(challenge),
-        progress: 0,
+        ...puzzleAttemptState(created, now),
         code: null,
         token,
         winner: false,
@@ -109,10 +143,10 @@ export function giftRoutes(app: FastifyInstance): void {
   );
 
   app.post(
-    "/api/v1/gift/click",
-    { config: { rateLimit: { max: 180, timeWindow: "1 minute" } } },
+    "/api/v1/gift/answer",
+    { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
     async (request) => {
-      const { token } = tokenInput.parse(request.body);
+      const { token, answer } = answerInput.parse(request.body);
       const hash = tokenHash(token);
       const now = new Date();
       const challenge = await ensureChallenge();
@@ -130,31 +164,24 @@ export function giftRoutes(app: FastifyInstance): void {
         });
       }
 
-      const incremented = await prisma.giftChallengeAttempt.updateMany({
-        where: {
-          tokenHash: hash,
-          expiresAt: { gt: now },
-          progress: { lt: challenge.requiredClicks },
-        },
-        data: { progress: { increment: 1 } },
-      });
-      if (incremented.count !== 1) {
-        throw new HttpError(
-          409,
-          "GIFT_SESSION_EXPIRED",
-          "This challenge session expired. Start the challenge again.",
-        );
+      const attempt = await prisma.giftChallengeAttempt.findUnique({ where: { tokenHash: hash } });
+      if (!attempt?.puzzleCode || !attempt.revealUntil || !attempt.answerUntil || attempt.answerUntil <= now || attempt.attemptsRemaining <= 0) {
+        throw new HttpError(409, "GIFT_SESSION_EXPIRED", "This puzzle expired. Start a new challenge.");
       }
-
-      const attempt = await prisma.giftChallengeAttempt.findUniqueOrThrow({
-        where: { tokenHash: hash },
-      });
-      if (attempt.progress < challenge.requiredClicks) {
+      if (attempt.revealUntil > now) {
+        throw new HttpError(409, "GIFT_REVEAL_ACTIVE", "Wait until the code is hidden before answering.");
+      }
+      if (answer.toUpperCase() !== attempt.puzzleCode) {
+        const updated = await prisma.giftChallengeAttempt.update({
+          where: { tokenHash: hash },
+          data: { attemptsRemaining: { decrement: 1 } },
+        });
         return envelope(request, {
           ...publicGiftStatus(challenge),
-          progress: attempt.progress,
+          ...puzzleAttemptState(updated, now),
           code: null,
           winner: false,
+          correct: false,
         });
       }
 
@@ -172,12 +199,13 @@ export function giftRoutes(app: FastifyInstance): void {
         giftIsClaimed(current.claimedAt, now);
       return envelope(request, {
         ...publicGiftStatus(current),
-        progress: winner ? current.requiredClicks : attempt.progress,
+        ...puzzleAttemptState(attempt, now),
         code: winner ? (current.claimedCode ?? current.code) : null,
         claimMessage: winner
           ? (current.claimMessage ?? DEFAULT_CLAIM_MESSAGE)
           : null,
         winner,
+        correct: winner,
       });
     },
   );

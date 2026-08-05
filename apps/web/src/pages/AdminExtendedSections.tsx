@@ -652,7 +652,7 @@ export function GiftChallengeManager() {
       <header className="admin-dataset-heading">
         <div>
           <h2><Gift /> Daily Gift Challenge</h2>
-          <p>Manage the secret reward revealed to the first visitor who completes 100 presses.</p>
+          <p>Manage the reward revealed to the first visitor who solves the timed memory puzzle.</p>
         </div>
         <span className={`gift-admin__status${data.claimed ? " is-claimed" : ""}`}>
           {data.claimed ? "Claimed" : "Available"}
@@ -704,7 +704,8 @@ export function GiftChallengeManager() {
         <aside className="gift-admin__claim">
           <Gift aria-hidden="true" />
           <span>Current daily drop</span>
-          <strong>{data.requiredClicks} presses</strong>
+          <strong>20-second code puzzle</strong>
+          <p>Visitors get 20 seconds to memorize, 20 seconds to answer, and 3 attempts.</p>
           <p>
             {data.claimed
               ? `Claimed ${data.claimedAt ? date(data.claimedAt) : "today"}. The next automatic gift opens ${data.nextAvailableAt ? date(data.nextAvailableAt) : "in 24 hours"}.`

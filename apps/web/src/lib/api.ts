@@ -247,6 +247,11 @@ export interface GiftChallengeState {
   requiredClicks: number;
   nextAvailableAt: string | null;
   progress?: number;
+  puzzleCode?: string | null;
+  revealUntil?: string | null;
+  answerUntil?: string | null;
+  attemptsRemaining?: number;
+  correct?: boolean;
   code?: string | null;
   claimMessage?: string | null;
   token?: string | null;
@@ -333,10 +338,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify(token ? { token } : {}),
     }),
-  giftClick: (token: string) =>
-    apiRequest<ApiEnvelope<GiftChallengeState>>("/api/v1/gift/click", {
+  giftAnswer: (token: string, answer: string) =>
+    apiRequest<ApiEnvelope<GiftChallengeState>>("/api/v1/gift/answer", {
       method: "POST",
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({ token, answer }),
     }),
   publicSettings: (signal?: AbortSignal) =>
     apiRequest<

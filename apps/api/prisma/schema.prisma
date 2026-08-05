@@ -703,6 +703,10 @@ model GiftChallengeAttempt {
   id          String   @id @default(cuid())
   tokenHash   String   @unique @db.Char(64)
   progress    Int      @default(0)
+  puzzleCode  String?  @db.VarChar(11)
+  revealUntil DateTime?
+  answerUntil DateTime?
+  attemptsRemaining Int @default(3)
   expiresAt   DateTime
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

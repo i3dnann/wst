@@ -2,138 +2,15 @@ import {
   useEffect,
   useMemo,
   useState,
-  type CSSProperties,
-  type KeyboardEvent,
-  type SyntheticEvent,
 } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Check, Copy, Eye, Gift, KeyRound, LockKeyhole, MousePointer2, RotateCcw } from "lucide-react";
+import { Check, Copy, Gift, KeyRound, LockKeyhole, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
-import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ErrorState, PageSkeleton } from "@/components/data/StatusState";
 import { ApiError, api, type GiftChallengeState } from "@/lib/api";
 
 const TOKEN_KEY = "wst_gift_challenge_token_v1";
-const PUZZLE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-function createPuzzleCode(): string {
-  const values = crypto.getRandomValues(new Uint32Array(10));
-  return Array.from(values, (value, index) => {
-    const character = PUZZLE_ALPHABET[value % PUZZLE_ALPHABET.length] ?? "X";
-    return index === 4 ? `${character}-` : character;
-  }).join("");
-}
-
-function CodePuzzlePreview() {
-  const [code, setCode] = useState(() => createPuzzleCode());
-  const [phase, setPhase] = useState<"ready" | "memorize" | "answer" | "won" | "failed">("ready");
-  const [answer, setAnswer] = useState("");
-  const [attempts, setAttempts] = useState(3);
-  const [seconds, setSeconds] = useState(5);
-
-  const begin = () => {
-    setCode(createPuzzleCode());
-    setAnswer("");
-    setAttempts(3);
-    setSeconds(5);
-    setPhase("memorize");
-  };
-
-  useEffect(() => {
-    if (phase !== "memorize" && phase !== "answer") return;
-    if (seconds <= 0) {
-      if (phase === "memorize") {
-        setPhase("answer");
-        setSeconds(20);
-      } else setPhase("failed");
-      return;
-    }
-    const timer = window.setTimeout(() => setSeconds((value) => value - 1), 1_000);
-    return () => window.clearTimeout(timer);
-  }, [phase, seconds]);
-
-  const submit = () => {
-    if (answer.trim().toUpperCase() === code) {
-      setPhase("won");
-      return;
-    }
-    const remaining = attempts - 1;
-    setAttempts(remaining);
-    setAnswer("");
-    if (remaining <= 0) setPhase("failed");
-    else toast.error(`Incorrect code. ${String(remaining)} attempts remaining.`);
-  };
-
-  const blockPuzzleCopy = (event: SyntheticEvent) => {
-    event.preventDefault();
-  };
-
-  const blockPuzzleShortcut = (event: KeyboardEvent) => {
-    if ((event.ctrlKey || event.metaKey) && ["c", "x", "a"].includes(event.key.toLowerCase())) {
-      event.preventDefault();
-    }
-  };
-
-  return (
-    <main
-      className="code-puzzle-page"
-      onCopy={blockPuzzleCopy}
-      onCut={blockPuzzleCopy}
-      onContextMenu={blockPuzzleCopy}
-      onDragStart={blockPuzzleCopy}
-      onKeyDown={blockPuzzleShortcut}
-    >
-      <section className={`code-puzzle is-${phase}`} aria-labelledby="code-puzzle-title">
-        <div className="code-puzzle__header">
-          <span><KeyRound /> HARD MODE</span>
-          <strong>{phase === "answer" ? `${String(seconds)} SEC` : "MEMORY LOCK"}</strong>
-        </div>
-        <div className="code-puzzle__body">
-          {phase === "ready" && <>
-            <Eye aria-hidden="true" />
-            <h1 id="code-puzzle-title">Code Puzzle</h1>
-            <p>A random 10-character security code appears for five seconds. Memorize it, then enter it exactly before the timer expires.</p>
-            <ul><li>5 seconds to memorize</li><li>20 seconds to answer</li><li>3 attempts only</li></ul>
-            <Button onClick={begin}>Begin challenge</Button>
-          </>}
-          {phase === "memorize" && <>
-            <span className="code-puzzle__countdown">MEMORIZE · {seconds}</span>
-            <div
-              className="code-puzzle__code"
-              aria-label="Memorize the displayed security code"
-              draggable={false}
-            >
-              {code}
-            </div>
-            <p>The code disappears when the countdown reaches zero.</p>
-          </>}
-          {phase === "answer" && <form onSubmit={(event) => { event.preventDefault(); submit(); }}>
-            <span className="code-puzzle__countdown">ENTER THE CODE · {seconds}</span>
-            <h1 id="code-puzzle-title">What did you see?</h1>
-            <input autoFocus value={answer} maxLength={11} autoComplete="off" spellCheck={false} placeholder="XXXXX-XXXXX" onChange={(event) => setAnswer(event.target.value.toUpperCase())} />
-            <p>{attempts} attempts remaining</p>
-            <Button type="submit" disabled={answer.length < 10}>Unlock</Button>
-          </form>}
-          {phase === "won" && <>
-            <Check aria-hidden="true" />
-            <h1 id="code-puzzle-title">Lock opened</h1>
-            <p>You remembered the code correctly. In the finished challenge, this stage would advance you toward the daily gift.</p>
-            <Button onClick={begin}><RotateCcw /> Play again</Button>
-          </>}
-          {phase === "failed" && <>
-            <div className="code-puzzle__failure-icon"><LockKeyhole aria-hidden="true" /></div>
-            <span className="code-puzzle__failure-label">SECURITY LOCKOUT</span>
-            <h1 id="code-puzzle-title">Access denied</h1>
-            <p>The timer expired or all attempts were used. The next run generates a completely different code.</p>
-            <Button onClick={begin}><RotateCcw /> Try again</Button>
-          </>}
-        </div>
-        <div className="code-puzzle__rail"><span style={{ width: phase === "memorize" ? `${String((seconds / 5) * 100)}%` : phase === "answer" ? `${String((seconds / 20) * 100)}%` : "100%" }} /></div>
-      </section>
-    </main>
-  );
-}
 
 function countdownLabel(value: string | null, now: number): string {
   if (!value) return "";
@@ -145,8 +22,6 @@ function countdownLabel(value: string | null, now: number): string {
 }
 
 export default function GiftPage() {
-  const [searchParams] = useSearchParams();
-  const puzzlePreview = searchParams.has("code-puzzle-preview");
   const [session, setSession] = useState<GiftChallengeState | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [copied, setCopied] = useState(false);
@@ -159,15 +34,17 @@ export default function GiftPage() {
       if (data.token) localStorage.setItem(TOKEN_KEY, data.token);
     },
   });
-  const click = useMutation({
-    mutationFn: (token: string) => api.giftClick(token),
+  const [answer, setAnswer] = useState("");
+  const answerPuzzle = useMutation({
+    mutationFn: ({ token, value }: { token: string; value: string }) => api.giftAnswer(token, value),
     onSuccess: ({ data }) => {
       setSession((current) => ({
         ...data,
         token: current?.token ?? localStorage.getItem(TOKEN_KEY),
-        progress: Math.max(current?.progress ?? 0, data.progress ?? 0),
       }));
+      setAnswer("");
       if (data.winner && data.code) toast.success("Gift claimed. Your secret code is ready.");
+      else if (data.correct === false) toast.error(`${String(data.attemptsRemaining ?? 0)} attempts remaining.`);
     },
     onError: (error) => {
       if (error instanceof ApiError && error.code === "GIFT_SESSION_EXPIRED") {
@@ -199,20 +76,19 @@ export default function GiftPage() {
     return () => window.clearTimeout(timer);
   }, [state?.claimed, state?.nextAvailableAt, refetchStatus]);
 
-  const progress = state?.progress ?? 0;
-  const required = state?.requiredClicks ?? 100;
-  const percent = Math.min(100, Math.round((progress / required) * 100));
   const countdown = useMemo(
     () => countdownLabel(state?.nextAvailableAt ?? null, now),
     [now, state?.nextAvailableAt],
   );
 
-  if (puzzlePreview) return <CodePuzzlePreview />;
   if (status.isPending) return <PageSkeleton />;
   if (status.isError)
     return <ErrorState title="Gift challenge could not load" message={status.error.message} retry={() => void status.refetch()} />;
 
   const claimedByOther = Boolean(state?.claimed && !state.winner);
+  const revealSeconds = Math.max(0, Math.ceil((new Date(state?.revealUntil ?? 0).getTime() - now) / 1_000));
+  const answerSeconds = Math.max(0, Math.ceil((new Date(state?.answerUntil ?? 0).getTime() - now) / 1_000));
+  const puzzlePhase = revealSeconds > 0 ? "memorize" : answerSeconds > 0 && (state?.attemptsRemaining ?? 0) > 0 ? "answer" : "failed";
   return (
     <main className="gift-page">
       <div className="gift-page__ambient" aria-hidden="true"><span /><span /><span /></div>
@@ -221,7 +97,7 @@ export default function GiftPage() {
           <div className="gift-challenge__mark"><Gift aria-hidden="true" /></div>
           <p>WORLD STAR DAILY DROP</p>
           <h1 id="gift-title">One gift. One winner.</h1>
-          <span>Complete 100 presses before anyone else to unlock today&apos;s secret code.</span>
+          <span>Memorize the security code and solve the puzzle before anyone else claims today&apos;s gift.</span>
         </div>
 
         {claimedByOther ? (
@@ -252,23 +128,37 @@ export default function GiftPage() {
             </Button>
           </div>
         ) : (
-          <div className="gift-action">
-            <button
-              type="button"
-              className="gift-press"
-              disabled={!session?.token || progress >= required}
-              onClick={() => session?.token && click.mutate(session.token)}
-              style={{ "--gift-progress": `${String(percent)}%` } as CSSProperties}
-            >
-              <span className="gift-press__rings" aria-hidden="true" />
-              <MousePointer2 aria-hidden="true" />
-              <strong>Press to claim</strong>
-              <small>{progress} / {required}</small>
-            </button>
-            <div className="gift-progress" aria-label={`${String(progress)} of ${String(required)} presses`}>
-              <span style={{ width: `${String(percent)}%` }} />
+          <div
+            className={`code-puzzle code-puzzle--embedded is-${puzzlePhase}`}
+            onCopy={(event) => event.preventDefault()}
+            onCut={(event) => event.preventDefault()}
+            onContextMenu={(event) => event.preventDefault()}
+            onDragStart={(event) => event.preventDefault()}
+            onKeyDown={(event) => {
+              if ((event.ctrlKey || event.metaKey) && ["c", "x", "a"].includes(event.key.toLowerCase())) event.preventDefault();
+            }}
+          >
+            <div className="code-puzzle__header"><span><KeyRound /> HARD MODE</span><strong>{puzzlePhase === "memorize" ? `${String(revealSeconds)} SEC` : `${String(answerSeconds)} SEC`}</strong></div>
+            <div className="code-puzzle__body">
+              {puzzlePhase === "memorize" ? <>
+                <span className="code-puzzle__countdown">MEMORIZE · {revealSeconds}</span>
+                <div className="code-puzzle__code" draggable={false}>{state?.puzzleCode}</div>
+                <p>The code disappears when the timer reaches zero.</p>
+              </> : puzzlePhase === "answer" ? <form onSubmit={(event) => { event.preventDefault(); if (session?.token) answerPuzzle.mutate({ token: session.token, value: answer }); }}>
+                <span className="code-puzzle__countdown">ENTER THE CODE · {answerSeconds}</span>
+                <h2>What did you see?</h2>
+                <input autoFocus value={answer} maxLength={11} autoComplete="off" spellCheck={false} placeholder="XXXXX-XXXXX" onChange={(event) => setAnswer(event.target.value.toUpperCase())} />
+                <p>{state?.attemptsRemaining ?? 3} attempts remaining</p>
+                <Button type="submit" disabled={answer.length < 10 || answerPuzzle.isPending}>Unlock gift</Button>
+              </form> : <>
+                <div className="code-puzzle__failure-icon"><LockKeyhole /></div>
+                <span className="code-puzzle__failure-label">SECURITY LOCKOUT</span>
+                <h2>Access denied</h2>
+                <p>The puzzle expired or all attempts were used. Start a new randomized challenge.</p>
+                <Button onClick={() => { localStorage.removeItem(TOKEN_KEY); setSession(null); start.mutate(undefined); }}><RotateCcw /> Try again</Button>
+              </>}
             </div>
-            <p>{required - progress} presses remaining</p>
+            <div className="code-puzzle__rail"><span style={{ width: `${String(((puzzlePhase === "memorize" ? revealSeconds : answerSeconds) / 20) * 100)}%` }} /></div>
           </div>
         )}
       </section>
