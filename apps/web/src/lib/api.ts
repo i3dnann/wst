@@ -333,10 +333,10 @@ export const api = {
   home: () => apiRequest<ApiEnvelope<HomeData>>("/api/v1/public/home"),
   giftStatus: () =>
     apiRequest<ApiEnvelope<GiftChallengeState>>("/api/v1/gift"),
-  giftSession: (token?: string) =>
+  giftSession: (token?: string, restart = false) =>
     apiRequest<ApiEnvelope<GiftChallengeState>>("/api/v1/gift/session", {
       method: "POST",
-      body: JSON.stringify(token ? { token } : {}),
+      body: JSON.stringify({ ...(token ? { token } : {}), restart }),
     }),
   giftAnswer: (token: string, answer: string) =>
     apiRequest<ApiEnvelope<GiftChallengeState>>("/api/v1/gift/answer", {

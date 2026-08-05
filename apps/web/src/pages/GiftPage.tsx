@@ -28,7 +28,8 @@ export default function GiftPage() {
   const status = useQuery({ queryKey: ["gift-status"], queryFn: api.giftStatus });
   const refetchStatus = status.refetch;
   const start = useMutation({
-    mutationFn: (token?: string) => api.giftSession(token),
+    mutationFn: ({ token, restart = false }: { token?: string; restart?: boolean }) =>
+      api.giftSession(token, restart),
     onSuccess: ({ data }) => {
       setSession(data);
       if (data.token) localStorage.setItem(TOKEN_KEY, data.token);
@@ -50,7 +51,7 @@ export default function GiftPage() {
       if (error instanceof ApiError && error.code === "GIFT_SESSION_EXPIRED") {
         localStorage.removeItem(TOKEN_KEY);
         setSession(null);
-        void start.mutateAsync(undefined);
+        void start.mutateAsync({ restart: true });
       } else toast.error(error.message);
     },
   });
@@ -58,7 +59,8 @@ export default function GiftPage() {
 
   useEffect(() => {
     if (!status.data || session || start.isPending) return;
-    start.mutate(localStorage.getItem(TOKEN_KEY) ?? undefined);
+    const storedToken = localStorage.getItem(TOKEN_KEY);
+    start.mutate(storedToken ? { token: storedToken } : {});
   }, [session, start, status.data]);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1_000);
@@ -86,6 +88,7 @@ export default function GiftPage() {
     return <ErrorState title="Gift challenge could not load" message={status.error.message} retry={() => void status.refetch()} />;
 
   const claimedByOther = Boolean(state?.claimed && !state.winner);
+  if (!claimedByOther && !state?.winner && !session) return <PageSkeleton />;
   const revealSeconds = Math.max(0, Math.ceil((new Date(state?.revealUntil ?? 0).getTime() - now) / 1_000));
   const answerSeconds = Math.max(0, Math.ceil((new Date(state?.answerUntil ?? 0).getTime() - now) / 1_000));
   const puzzlePhase = revealSeconds > 0 ? "memorize" : answerSeconds > 0 && (state?.attemptsRemaining ?? 0) > 0 ? "answer" : "failed";
@@ -155,7 +158,16 @@ export default function GiftPage() {
                 <span className="code-puzzle__failure-label">SECURITY LOCKOUT</span>
                 <h2>Access denied</h2>
                 <p>The puzzle expired or all attempts were used. Start a new randomized challenge.</p>
-                <Button onClick={() => { localStorage.removeItem(TOKEN_KEY); setSession(null); start.mutate(undefined); }}><RotateCcw /> Try again</Button>
+                <Button
+                  disabled={start.isPending}
+                  onClick={() => {
+                    localStorage.removeItem(TOKEN_KEY);
+                    setAnswer("");
+                    start.mutate({ restart: true });
+                  }}
+                >
+                  <RotateCcw /> {start.isPending ? "Starting…" : "Try again"}
+                </Button>
               </>}
             </div>
             <div className="code-puzzle__rail"><span style={{ width: `${String(((puzzlePhase === "memorize" ? revealSeconds : answerSeconds) / 20) * 100)}%` }} /></div>

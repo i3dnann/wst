@@ -24,7 +24,10 @@ const ATTEMPT_WINDOW_MS = REVEAL_WINDOW_MS + ANSWER_WINDOW_MS;
 const PUZZLE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const tokenInput = z.object({ token: z.string().min(32).max(128) });
 const answerInput = tokenInput.extend({ answer: z.string().trim().min(10).max(11) });
-const sessionInput = z.object({ token: z.string().min(32).max(128).optional() });
+const sessionInput = z.object({
+  token: z.string().min(32).max(128).optional(),
+  restart: z.boolean().optional().default(false),
+});
 const settingsInput = z.object({
   code: z.string().trim().min(4).max(255),
   claimMessage: z.string().trim().min(10).max(1_000),
@@ -94,7 +97,7 @@ export function giftRoutes(app: FastifyInstance): void {
         });
       }
 
-      if (suppliedHash) {
+      if (suppliedHash && !input.restart) {
         const existing = await prisma.giftChallengeAttempt.findFirst({
           where: { tokenHash: suppliedHash, expiresAt: { gt: now } },
         });
