@@ -1,12 +1,139 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type SyntheticEvent,
+} from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Check, Copy, Gift, LockKeyhole, MousePointer2 } from "lucide-react";
+import { Check, Copy, Eye, Gift, KeyRound, LockKeyhole, MousePointer2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ErrorState, PageSkeleton } from "@/components/data/StatusState";
 import { ApiError, api, type GiftChallengeState } from "@/lib/api";
 
 const TOKEN_KEY = "wst_gift_challenge_token_v1";
+const PUZZLE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function createPuzzleCode(): string {
+  const values = crypto.getRandomValues(new Uint32Array(10));
+  return Array.from(values, (value, index) => {
+    const character = PUZZLE_ALPHABET[value % PUZZLE_ALPHABET.length] ?? "X";
+    return index === 4 ? `${character}-` : character;
+  }).join("");
+}
+
+function CodePuzzlePreview() {
+  const [code, setCode] = useState(() => createPuzzleCode());
+  const [phase, setPhase] = useState<"ready" | "memorize" | "answer" | "won" | "failed">("ready");
+  const [answer, setAnswer] = useState("");
+  const [attempts, setAttempts] = useState(3);
+  const [seconds, setSeconds] = useState(5);
+
+  const begin = () => {
+    setCode(createPuzzleCode());
+    setAnswer("");
+    setAttempts(3);
+    setSeconds(5);
+    setPhase("memorize");
+  };
+
+  useEffect(() => {
+    if (phase !== "memorize" && phase !== "answer") return;
+    if (seconds <= 0) {
+      if (phase === "memorize") {
+        setPhase("answer");
+        setSeconds(20);
+      } else setPhase("failed");
+      return;
+    }
+    const timer = window.setTimeout(() => setSeconds((value) => value - 1), 1_000);
+    return () => window.clearTimeout(timer);
+  }, [phase, seconds]);
+
+  const submit = () => {
+    if (answer.trim().toUpperCase() === code) {
+      setPhase("won");
+      return;
+    }
+    const remaining = attempts - 1;
+    setAttempts(remaining);
+    setAnswer("");
+    if (remaining <= 0) setPhase("failed");
+    else toast.error(`Incorrect code. ${String(remaining)} attempts remaining.`);
+  };
+
+  const blockPuzzleCopy = (event: SyntheticEvent) => {
+    event.preventDefault();
+  };
+
+  const blockPuzzleShortcut = (event: KeyboardEvent) => {
+    if ((event.ctrlKey || event.metaKey) && ["c", "x", "a"].includes(event.key.toLowerCase())) {
+      event.preventDefault();
+    }
+  };
+
+  return (
+    <main
+      className="code-puzzle-page"
+      onCopy={blockPuzzleCopy}
+      onCut={blockPuzzleCopy}
+      onContextMenu={blockPuzzleCopy}
+      onDragStart={blockPuzzleCopy}
+      onKeyDown={blockPuzzleShortcut}
+    >
+      <section className={`code-puzzle is-${phase}`} aria-labelledby="code-puzzle-title">
+        <div className="code-puzzle__header">
+          <span><KeyRound /> HARD MODE</span>
+          <strong>{phase === "answer" ? `${String(seconds)} SEC` : "MEMORY LOCK"}</strong>
+        </div>
+        <div className="code-puzzle__body">
+          {phase === "ready" && <>
+            <Eye aria-hidden="true" />
+            <h1 id="code-puzzle-title">Code Puzzle</h1>
+            <p>A random 10-character security code appears for five seconds. Memorize it, then enter it exactly before the timer expires.</p>
+            <ul><li>5 seconds to memorize</li><li>20 seconds to answer</li><li>3 attempts only</li></ul>
+            <Button onClick={begin}>Begin challenge</Button>
+          </>}
+          {phase === "memorize" && <>
+            <span className="code-puzzle__countdown">MEMORIZE · {seconds}</span>
+            <div
+              className="code-puzzle__code"
+              aria-label="Memorize the displayed security code"
+              draggable={false}
+            >
+              {code}
+            </div>
+            <p>The code disappears when the countdown reaches zero.</p>
+          </>}
+          {phase === "answer" && <form onSubmit={(event) => { event.preventDefault(); submit(); }}>
+            <span className="code-puzzle__countdown">ENTER THE CODE · {seconds}</span>
+            <h1 id="code-puzzle-title">What did you see?</h1>
+            <input autoFocus value={answer} maxLength={11} autoComplete="off" spellCheck={false} placeholder="XXXXX-XXXXX" onChange={(event) => setAnswer(event.target.value.toUpperCase())} />
+            <p>{attempts} attempts remaining</p>
+            <Button type="submit" disabled={answer.length < 10}>Unlock</Button>
+          </form>}
+          {phase === "won" && <>
+            <Check aria-hidden="true" />
+            <h1 id="code-puzzle-title">Lock opened</h1>
+            <p>You remembered the code correctly. In the finished challenge, this stage would advance you toward the daily gift.</p>
+            <Button onClick={begin}><RotateCcw /> Play again</Button>
+          </>}
+          {phase === "failed" && <>
+            <div className="code-puzzle__failure-icon"><LockKeyhole aria-hidden="true" /></div>
+            <span className="code-puzzle__failure-label">SECURITY LOCKOUT</span>
+            <h1 id="code-puzzle-title">Access denied</h1>
+            <p>The timer expired or all attempts were used. The next run generates a completely different code.</p>
+            <Button onClick={begin}><RotateCcw /> Try again</Button>
+          </>}
+        </div>
+        <div className="code-puzzle__rail"><span style={{ width: phase === "memorize" ? `${String((seconds / 5) * 100)}%` : phase === "answer" ? `${String((seconds / 20) * 100)}%` : "100%" }} /></div>
+      </section>
+    </main>
+  );
+}
 
 function countdownLabel(value: string | null, now: number): string {
   if (!value) return "";
@@ -18,6 +145,8 @@ function countdownLabel(value: string | null, now: number): string {
 }
 
 export default function GiftPage() {
+  const [searchParams] = useSearchParams();
+  const puzzlePreview = searchParams.has("code-puzzle-preview");
   const [session, setSession] = useState<GiftChallengeState | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [copied, setCopied] = useState(false);
@@ -78,6 +207,7 @@ export default function GiftPage() {
     [now, state?.nextAvailableAt],
   );
 
+  if (puzzlePreview) return <CodePuzzlePreview />;
   if (status.isPending) return <PageSkeleton />;
   if (status.isError)
     return <ErrorState title="Gift challenge could not load" message={status.error.message} retry={() => void status.refetch()} />;
