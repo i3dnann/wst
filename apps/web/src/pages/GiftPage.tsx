@@ -170,7 +170,7 @@ export default function GiftPage() {
                 </Button>
               </>}
             </div>
-            <div className="code-puzzle__rail"><span style={{ width: `${String(((puzzlePhase === "memorize" ? revealSeconds : answerSeconds) / 20) * 100)}%` }} /></div>
+            <div className="code-puzzle__rail"><span style={{ width: `${String(((puzzlePhase === "memorize" ? revealSeconds : answerSeconds) / 10) * 100)}%` }} /></div>
           </div>
         )}
       </section>

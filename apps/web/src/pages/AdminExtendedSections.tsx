@@ -704,8 +704,8 @@ export function GiftChallengeManager() {
         <aside className="gift-admin__claim">
           <Gift aria-hidden="true" />
           <span>Current daily drop</span>
-          <strong>20-second code puzzle</strong>
-          <p>Visitors get 20 seconds to memorize, 20 seconds to answer, and 3 attempts.</p>
+          <strong>10-second code puzzle</strong>
+          <p>Visitors get 10 seconds to memorize, 10 seconds to answer, and 3 attempts.</p>
           <p>
             {data.claimed
               ? `Claimed ${data.claimedAt ? date(data.claimedAt) : "today"}. The next automatic gift opens ${data.nextAvailableAt ? date(data.nextAvailableAt) : "in 24 hours"}.`

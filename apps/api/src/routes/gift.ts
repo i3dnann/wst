@@ -18,12 +18,13 @@ const DEFAULT_CODE = "Adnanwashere2001";
 const DEFAULT_CLAIM_MESSAGE =
   "DM a World Star administrator on Discord and send this code to claim your gift.";
 const REQUIRED_CLICKS = 100;
-const REVEAL_WINDOW_MS = 20 * 1_000;
-const ANSWER_WINDOW_MS = 20 * 1_000;
-const ATTEMPT_WINDOW_MS = REVEAL_WINDOW_MS + ANSWER_WINDOW_MS;
+const REVEAL_WINDOW_MS = 10 * 1_000;
+const ANSWER_WINDOW_MS = 10 * 1_000;
+const SUBMISSION_GRACE_MS = 3 * 1_000;
+const ATTEMPT_WINDOW_MS = REVEAL_WINDOW_MS + ANSWER_WINDOW_MS + SUBMISSION_GRACE_MS;
 const PUZZLE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const tokenInput = z.object({ token: z.string().min(32).max(128) });
-const answerInput = tokenInput.extend({ answer: z.string().trim().min(10).max(11) });
+const answerInput = tokenInput.extend({ answer: z.string().trim().min(10).max(32) });
 const sessionInput = z.object({
   token: z.string().min(32).max(128).optional(),
   restart: z.boolean().optional().default(false),
@@ -42,6 +43,10 @@ function createPuzzleCode(): string {
     PUZZLE_ALPHABET[value % PUZZLE_ALPHABET.length] ?? "X",
   ).join("");
   return `${raw.slice(0, 5)}-${raw.slice(5)}`;
+}
+
+function normalizePuzzleCode(value: string): string {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
 function puzzleAttemptState(attempt: { puzzleCode: string | null; revealUntil: Date | null; answerUntil: Date | null; attemptsRemaining: number }, now: Date) {
@@ -168,13 +173,16 @@ export function giftRoutes(app: FastifyInstance): void {
       }
 
       const attempt = await prisma.giftChallengeAttempt.findUnique({ where: { tokenHash: hash } });
-      if (!attempt?.puzzleCode || !attempt.revealUntil || !attempt.answerUntil || attempt.answerUntil <= now || attempt.attemptsRemaining <= 0) {
+      const submissionDeadline = attempt?.answerUntil
+        ? new Date(attempt.answerUntil.getTime() + SUBMISSION_GRACE_MS)
+        : null;
+      if (!attempt?.puzzleCode || !attempt.revealUntil || !attempt.answerUntil || !submissionDeadline || submissionDeadline <= now || attempt.attemptsRemaining <= 0) {
         throw new HttpError(409, "GIFT_SESSION_EXPIRED", "This puzzle expired. Start a new challenge.");
       }
       if (attempt.revealUntil > now) {
         throw new HttpError(409, "GIFT_REVEAL_ACTIVE", "Wait until the code is hidden before answering.");
       }
-      if (answer.toUpperCase() !== attempt.puzzleCode) {
+      if (normalizePuzzleCode(answer) !== normalizePuzzleCode(attempt.puzzleCode)) {
         const updated = await prisma.giftChallengeAttempt.update({
           where: { tokenHash: hash },
           data: { attemptsRemaining: { decrement: 1 } },
